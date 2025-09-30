@@ -1,40 +1,98 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Users, Activity, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useEffect } from "react";
 
 const Dashboard = () => {
-  const { data: companies } = useQuery({
+  const queryClient = useQueryClient();
+
+  // Real-time subscription for dashboard updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-updates')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'companies' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["companies-count"] });
+          queryClient.invalidateQueries({ queryKey: ["companies-by-status"] });
+          queryClient.invalidateQueries({ queryKey: ["companies-by-priority"] });
+          queryClient.invalidateQueries({ queryKey: ["recent-companies"] });
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'outreach_activities' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["activities-count"] });
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'contacts' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["contacts-count"] });
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'pilot_programs' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["pilot-programs-count"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  const { data: companiesCount } = useQuery({
     queryKey: ["companies-count"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from("companies")
         .select("*", { count: "exact", head: true });
       if (error) throw error;
-      return data;
+      return count || 0;
     },
   });
 
-  const { data: contacts } = useQuery({
+  const { data: contactsCount } = useQuery({
     queryKey: ["contacts-count"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from("contacts")
         .select("*", { count: "exact", head: true });
       if (error) throw error;
-      return data;
+      return count || 0;
     },
   });
 
-  const { data: activities } = useQuery({
+  const { data: activitiesCount } = useQuery({
     queryKey: ["activities-count"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { count, error } = await supabase
         .from("outreach_activities")
-        .select("*", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", startOfMonth.toISOString());
       if (error) throw error;
-      return data;
+      return count || 0;
+    },
+  });
+
+  const { data: pilotProgramsCount } = useQuery({
+    queryKey: ["pilot-programs-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("pilot_programs")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "Active");
+      if (error) throw error;
+      return count || 0;
     },
   });
 
@@ -55,26 +113,26 @@ const Dashboard = () => {
     {
       title: "Total Companies",
       icon: Building2,
-      value: "0",
+      value: companiesCount?.toString() || "0",
       description: "Across all segments",
     },
     {
       title: "Total Contacts",
       icon: Users,
-      value: "0",
+      value: contactsCount?.toString() || "0",
       description: "Decision makers tracked",
     },
     {
       title: "Activities This Month",
       icon: Activity,
-      value: "0",
+      value: activitiesCount?.toString() || "0",
       description: "Outreach touchpoints",
     },
     {
-      title: "Pipeline Value",
+      title: "Active Pilot Programs",
       icon: TrendingUp,
-      value: "$0",
-      description: "Potential revenue",
+      value: pilotProgramsCount?.toString() || "0",
+      description: "Current pilot programs",
     },
   ];
 
