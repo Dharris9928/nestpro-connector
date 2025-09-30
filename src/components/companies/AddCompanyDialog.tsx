@@ -59,6 +59,11 @@ export function AddCompanyDialog({ open, onOpenChange, onSuccess }: AddCompanyDi
     primary_phone: "",
     is_franchise: false,
     parent_company_id: "",
+    franchise_name: "",
+    owner_name: "",
+    city: "",
+    nest_pro_industry: "",
+    notes: "",
   });
 
   useEffect(() => {
@@ -90,6 +95,11 @@ export function AddCompanyDialog({ open, onOpenChange, onSuccess }: AddCompanyDi
         primary_phone: formData.primary_phone || null,
         is_franchise: formData.is_franchise,
         parent_company_id: formData.parent_company_id || null,
+        franchise_name: formData.franchise_name || null,
+        owner_name: formData.owner_name || null,
+        city: formData.city || null,
+        nest_pro_industry: formData.nest_pro_industry || null,
+        notes: formData.notes || null,
         created_by: user.id,
       };
 
@@ -112,6 +122,11 @@ export function AddCompanyDialog({ open, onOpenChange, onSuccess }: AddCompanyDi
         primary_phone: "",
         is_franchise: false,
         parent_company_id: "",
+        franchise_name: "",
+        owner_name: "",
+        city: "",
+        nest_pro_industry: "",
+        notes: "",
       });
       onSuccess();
     } catch (error: any) {
@@ -205,24 +220,66 @@ export function AddCompanyDialog({ open, onOpenChange, onSuccess }: AddCompanyDi
               </Label>
             </div>
             {formData.is_franchise && (
-              <div className="grid gap-2">
-                <Label htmlFor="parent_company_id">Parent Company</Label>
-                <Select
-                  value={formData.parent_company_id}
-                  onValueChange={(value) => setFormData({ ...formData, parent_company_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select parent company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map((comp) => (
-                      <SelectItem key={comp.id} value={comp.id}>
-                        {comp.company_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="parent_company_id">Parent Company</Label>
+                  <Select
+                    value={formData.parent_company_id}
+                    onValueChange={(value) => setFormData({ ...formData, parent_company_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select parent company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((comp) => (
+                        <SelectItem key={comp.id} value={comp.id}>
+                          {comp.company_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="franchise_name">Franchise Name</Label>
+                  <Input
+                    id="franchise_name"
+                    value={formData.franchise_name}
+                    onChange={(e) => setFormData({ ...formData, franchise_name: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="owner_name">Owner</Label>
+                  <Input
+                    id="owner_name"
+                    value={formData.owner_name}
+                    onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="nest_pro_industry">Nest Pro Industry</Label>
+                  <Input
+                    id="nest_pro_industry"
+                    value={formData.nest_pro_industry}
+                    onChange={(e) => setFormData({ ...formData, nest_pro_industry: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Input
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  />
+                </div>
+              </>
             )}
           </div>
           <DialogFooter>

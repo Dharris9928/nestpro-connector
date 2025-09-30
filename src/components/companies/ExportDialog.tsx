@@ -304,6 +304,7 @@ const AVAILABLE_FIELDS = [
   { value: 'priority_tier', label: 'Priority' },
   { value: 'status', label: 'Status' },
   { value: 'primary_phone', label: 'Phone' },
+  { value: 'city', label: 'City' },
   { value: 'linkedin_company_url', label: 'LinkedIn' },
   { value: 'total_employees', label: 'Employees' },
   { value: 'annual_revenue_range', label: 'Revenue Range' },
@@ -311,6 +312,10 @@ const AVAILABLE_FIELDS = [
   { value: 'nest_pro_partner_id', label: 'Nest Pro ID' },
   { value: 'is_franchise', label: 'Is Franchise' },
   { value: 'parent_company_id', label: 'Parent Company' },
+  { value: 'franchise_name', label: 'Franchise Name' },
+  { value: 'owner_name', label: 'Owner' },
+  { value: 'nest_pro_industry', label: 'Nest Pro Industry' },
+  { value: 'notes', label: 'Notes' },
   { value: 'created_at', label: 'Created Date' },
   { value: 'updated_at', label: 'Updated Date' }
 ];

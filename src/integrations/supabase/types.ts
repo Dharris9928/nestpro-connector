@@ -20,18 +20,23 @@ export type Database = {
             | Database["public"]["Enums"]["revenue_range"]
             | null
           builder_segment: Database["public"]["Enums"]["builder_segment"] | null
+          city: string | null
           company_name: string
           contractor_segment:
             | Database["public"]["Enums"]["contractor_segment"]
             | null
           created_at: string | null
           created_by: string | null
+          franchise_name: string | null
           id: string
           industry_type: Database["public"]["Enums"]["industry_type"]
           is_franchise: boolean | null
           lead_score: number | null
           linkedin_company_url: string | null
+          nest_pro_industry: string | null
           nest_pro_partner_id: string | null
+          notes: string | null
+          owner_name: string | null
           parent_company_id: string | null
           primary_phone: string | null
           priority_tier: Database["public"]["Enums"]["priority_tier"] | null
@@ -51,18 +56,23 @@ export type Database = {
           builder_segment?:
             | Database["public"]["Enums"]["builder_segment"]
             | null
+          city?: string | null
           company_name: string
           contractor_segment?:
             | Database["public"]["Enums"]["contractor_segment"]
             | null
           created_at?: string | null
           created_by?: string | null
+          franchise_name?: string | null
           id?: string
           industry_type: Database["public"]["Enums"]["industry_type"]
           is_franchise?: boolean | null
           lead_score?: number | null
           linkedin_company_url?: string | null
+          nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          notes?: string | null
+          owner_name?: string | null
           parent_company_id?: string | null
           primary_phone?: string | null
           priority_tier?: Database["public"]["Enums"]["priority_tier"] | null
@@ -82,18 +92,23 @@ export type Database = {
           builder_segment?:
             | Database["public"]["Enums"]["builder_segment"]
             | null
+          city?: string | null
           company_name?: string
           contractor_segment?:
             | Database["public"]["Enums"]["contractor_segment"]
             | null
           created_at?: string | null
           created_by?: string | null
+          franchise_name?: string | null
           id?: string
           industry_type?: Database["public"]["Enums"]["industry_type"]
           is_franchise?: boolean | null
           lead_score?: number | null
           linkedin_company_url?: string | null
+          nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          notes?: string | null
+          owner_name?: string | null
           parent_company_id?: string | null
           primary_phone?: string | null
           priority_tier?: Database["public"]["Enums"]["priority_tier"] | null

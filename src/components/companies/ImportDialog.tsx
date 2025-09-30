@@ -316,6 +316,7 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
                         <SelectItem value="builder_segment">Builder Segment</SelectItem>
                         <SelectItem value="contractor_segment">Contractor Segment</SelectItem>
                         <SelectItem value="primary_phone">Phone</SelectItem>
+                        <SelectItem value="city">City</SelectItem>
                         <SelectItem value="linkedin_company_url">LinkedIn URL</SelectItem>
                         <SelectItem value="status">Status</SelectItem>
                         <SelectItem value="priority_tier">Priority Tier</SelectItem>
@@ -324,6 +325,10 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
                         <SelectItem value="years_in_business">Years in Business</SelectItem>
                         <SelectItem value="annual_revenue_range">Annual Revenue Range</SelectItem>
                         <SelectItem value="nest_pro_partner_id">Nest Pro Partner ID</SelectItem>
+                        <SelectItem value="franchise_name">Franchise Name</SelectItem>
+                        <SelectItem value="owner_name">Owner</SelectItem>
+                        <SelectItem value="nest_pro_industry">Nest Pro Industry</SelectItem>
+                        <SelectItem value="notes">Notes</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
