@@ -27,8 +27,8 @@ const Activities = () => {
       const { data, error } = await supabase
         .from("outreach_activities")
         .select("*, companies(company_name), contacts(first_name, last_name)")
-        .gte("created_at", dateRange.from.toISOString())
-        .lte("created_at", dateRange.to.toISOString())
+        .or(`completed_date.gte.${dateRange.from.toISOString()},scheduled_date.gte.${dateRange.from.toISOString()}`)
+        .or(`completed_date.lte.${dateRange.to.toISOString()},scheduled_date.lte.${dateRange.to.toISOString()}`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

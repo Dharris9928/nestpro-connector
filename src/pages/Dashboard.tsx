@@ -99,8 +99,8 @@ const Dashboard = () => {
       const { data, error } = await supabase
         .from("outreach_activities")
         .select("*")
-        .gte("created_at", firstDay.toISOString())
-        .lte("created_at", lastDay.toISOString());
+        .or(`completed_date.gte.${firstDay.toISOString()},scheduled_date.gte.${firstDay.toISOString()}`)
+        .or(`completed_date.lte.${lastDay.toISOString()},scheduled_date.lte.${lastDay.toISOString()}`);
       if (error) throw error;
       return data || [];
     },
