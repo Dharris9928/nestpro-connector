@@ -19,6 +19,7 @@ import {
 import { AddCompanyDialog } from "@/components/companies/AddCompanyDialog";
 import { AddActivityDialog } from "@/components/activities/AddActivityDialog";
 import { SegmentPerformanceGrid } from "@/components/dashboard/SegmentPerformanceGrid";
+import { PriorityDistributionCard } from "@/components/dashboard/PriorityDistributionCard";
 
 const Dashboard = () => {
   const queryClient = useQueryClient();
@@ -385,56 +386,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Priority Distribution Card */}
-        <Card 
-          className="cursor-pointer hover:shadow-lg hover:bg-accent/50 transition-all duration-200"
-          onClick={() => navigate('/companies')}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Priority Distribution</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {companiesByPriority.isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ) : companiesByPriority.isError ? (
-              <div className="space-y-2">
-                <Alert variant="destructive" className="py-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">Failed to load priorities</AlertDescription>
-                </Alert>
-                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); companiesByPriority.refetch(); }}>
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Retry
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl font-bold animate-in fade-in duration-300">
-                  {companiesByPriority.data?.reduce((sum, item) => sum + item.count, 0) || 0} Total
-                </div>
-                <div className="mt-4 space-y-2">
-                  {companiesByPriority.data?.map((item) => (
-                    <div
-                      key={item.priority}
-                      className="flex justify-between cursor-pointer hover:bg-accent/50 p-2 rounded transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/companies?priority=${item.priority}`);
-                      }}
-                    >
-                      <span className="text-sm text-muted-foreground">{item.priority.split(":")[0]}</span>
-                      <span className="text-sm font-semibold">{item.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <PriorityDistributionCard />
 
         {/* This Month's Activities Card */}
         <Card 
