@@ -17,6 +17,8 @@ const Companies = () => {
 
   const statusFilter = searchParams.get("status");
   const priorityFilter = searchParams.get("priority");
+  const builderSegmentFilter = searchParams.get("builder_segment");
+  const contractorSegmentFilter = searchParams.get("contractor_segment");
 
   const { data: companies, isLoading, refetch } = useQuery({
     queryKey: ["companies"],
@@ -42,9 +44,17 @@ const Companies = () => {
     if (priorityFilter) {
       filtered = filtered.filter(company => company.priority_tier === priorityFilter);
     }
+
+    if (builderSegmentFilter) {
+      filtered = filtered.filter(company => company.builder_segment === builderSegmentFilter);
+    }
+
+    if (contractorSegmentFilter) {
+      filtered = filtered.filter(company => company.contractor_segment === contractorSegmentFilter);
+    }
     
     return filtered;
-  }, [companies, statusFilter, priorityFilter]);
+  }, [companies, statusFilter, priorityFilter, builderSegmentFilter, contractorSegmentFilter]);
 
   const clearFilters = () => {
     setSearchParams({});
@@ -65,8 +75,8 @@ const Companies = () => {
         </Button>
       </div>
 
-      {(statusFilter || priorityFilter) && (
-        <div className="flex items-center gap-2">
+      {(statusFilter || priorityFilter || builderSegmentFilter || contractorSegmentFilter) && (
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">Active filters:</span>
           {statusFilter && (
             <Badge variant="secondary" className="gap-1">
@@ -89,6 +99,32 @@ const Companies = () => {
                 onClick={() => {
                   const newParams = new URLSearchParams(searchParams);
                   newParams.delete("priority");
+                  setSearchParams(newParams);
+                }}
+              />
+            </Badge>
+          )}
+          {builderSegmentFilter && (
+            <Badge variant="secondary" className="gap-1">
+              Builder: {builderSegmentFilter}
+              <X 
+                className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                onClick={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete("builder_segment");
+                  setSearchParams(newParams);
+                }}
+              />
+            </Badge>
+          )}
+          {contractorSegmentFilter && (
+            <Badge variant="secondary" className="gap-1">
+              Contractor: {contractorSegmentFilter}
+              <X 
+                className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                onClick={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete("contractor_segment");
                   setSearchParams(newParams);
                 }}
               />

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddCompanyDialog } from "@/components/companies/AddCompanyDialog";
 import { AddActivityDialog } from "@/components/activities/AddActivityDialog";
+import { SegmentPerformanceGrid } from "@/components/dashboard/SegmentPerformanceGrid";
 
 const Dashboard = () => {
   const queryClient = useQueryClient();
@@ -35,6 +36,7 @@ const Dashboard = () => {
           queryClient.invalidateQueries({ queryKey: ["companies-by-priority"] });
           queryClient.invalidateQueries({ queryKey: ["recent-companies"] });
           queryClient.invalidateQueries({ queryKey: ["pipeline-value"] });
+          queryClient.invalidateQueries({ queryKey: ["segment-performance"] });
         }
       )
       .on('postgres_changes',
@@ -591,6 +593,8 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      <SegmentPerformanceGrid />
+
       <AddCompanyDialog
         open={isAddCompanyOpen}
         onOpenChange={setIsAddCompanyOpen}
@@ -600,6 +604,7 @@ const Dashboard = () => {
           queryClient.invalidateQueries({ queryKey: ["companies-by-priority"] });
           queryClient.invalidateQueries({ queryKey: ["recent-companies"] });
           queryClient.invalidateQueries({ queryKey: ["pipeline-value"] });
+          queryClient.invalidateQueries({ queryKey: ["segment-performance"] });
           setIsAddCompanyOpen(false);
         }}
       />
