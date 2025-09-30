@@ -42,11 +42,11 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     /* Priority tier colors */
-    --priority-p1: 142 76% 36%;
+    --priority-p1: 0 84% 60%; /* Red for high priority */
     --priority-p1-foreground: 0 0% 100%;
-    --priority-p2: 221 83% 53%;
+    --priority-p2: 38 92% 50%; /* Yellow/Orange for medium priority */
     --priority-p2-foreground: 0 0% 100%;
-    --priority-p3: 38 92% 50%;
+    --priority-p3: 142 76% 36%; /* Green for standard priority */
     --priority-p3-foreground: 0 0% 100%;
 
     /* Sidebar colors */

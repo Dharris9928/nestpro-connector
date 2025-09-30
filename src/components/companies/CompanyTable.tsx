@@ -286,25 +286,31 @@ export function CompanyTable({
               )}
               {columnVisibility.score && (
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary"
-                        style={{ width: `${company.lead_score}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium">{company.lead_score}</span>
+                  <div 
+                    className={`text-center font-semibold ${
+                      company.lead_score >= 80 ? 'text-priority-p1' :
+                      company.lead_score >= 60 ? 'text-priority-p2' :
+                      company.lead_score >= 40 ? 'text-priority-p3' :
+                      'text-muted-foreground'
+                    }`}
+                  >
+                    {company.lead_score || 0}
                   </div>
                 </TableCell>
               )}
               
               {columnVisibility.priority && (
                 <TableCell>
-                  {company.priority_tier && (
-                    <Badge className={getPriorityColor(company.priority_tier)}>
-                      {company.priority_tier.split(":")[0]}
-                    </Badge>
-                  )}
+                  <Badge 
+                    className={
+                      company.priority_tier === 'P1' ? 'bg-priority-p1 text-priority-p1-foreground' :
+                      company.priority_tier === 'P2' ? 'bg-priority-p2 text-priority-p2-foreground' :
+                      company.priority_tier === 'P3' ? 'bg-priority-p3 text-priority-p3-foreground' :
+                      'bg-muted text-muted-foreground'
+                    }
+                  >
+                    {company.priority_tier || 'Unscored'}
+                  </Badge>
                 </TableCell>
               )}
 
