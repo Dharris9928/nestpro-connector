@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { createCompany } from '@/lib/companies/createCompany';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Building2, Users } from 'lucide-react';
 
 interface AddCompanyDialogProps {
   open: boolean;
@@ -28,6 +31,14 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
   const [industryType, setIndustryType] = useState<'Builder' | 'Contractor'>('Builder');
   const [segment, setSegment] = useState('');
   const [status, setStatus] = useState('Lead');
+  
+  // Parent-Subsidiary Relationship
+  const [companyType, setCompanyType] = useState<'standalone' | 'parent' | 'subsidiary'>('standalone');
+  const [parentCompanyId, setParentCompanyId] = useState('');
+  const [parentCompanies, setParentCompanies] = useState<any[]>([]);
+  
+  // Contractor Specialty (only for contractors)
+  const [contractorSpecialty, setContractorSpecialty] = useState('');
   
   // Business Metrics (For Scoring)
   const [annualVolume, setAnnualVolume] = useState('');
@@ -51,6 +62,28 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
   
   // Other
   const [notes, setNotes] = useState('');
+
+  // Load parent companies when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadParentCompanies();
+    }
+  }, [open]);
+
+  const loadParentCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, company_name, company_type')
+        .or('company_type.eq.parent,company_type.eq.standalone')
+        .order('company_name');
+
+      if (error) throw error;
+      setParentCompanies(data || []);
+    } catch (error) {
+      console.error('Error loading parent companies:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,18 +142,6 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
       setSegment('');
       setStatus('Lead');
       setAnnualVolume('');
-      setAnnualRevenueRange('');
-      setTotalEmployees('');
-      setYearsInBusiness('');
-      setAddressLine1('');
-      setCity('');
-      setState('');
-      setZip('');
-      setPrimaryPhone('');
-      setPrimaryEmail('');
-      setWebsiteUrl('');
-      setLinkedinCompanyUrl('');
-      setNotes('');
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -130,6 +151,28 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
     } finally {
       setSaving(false);
     }
+  };
+
+  const resetForm = () => {
+    setCompanyName('');
+    setIndustryType('Builder');
+    setSegment('');
+    setCompanyType('standalone');
+    setParentCompanyId('');
+    setContractorSpecialty('');
+    setAnnualVolume('');
+    setAnnualRevenueRange('');
+    setTotalEmployees('');
+    setYearsInBusiness('');
+    setAddressLine1('');
+    setCity('');
+    setState('');
+    setZip('');
+    setPrimaryPhone('');
+    setPrimaryEmail('');
+    setWebsiteUrl('');
+    setLinkedinCompanyUrl('');
+    setNotes('');
   };
 
   const BUILDER_SEGMENTS = [
@@ -249,6 +292,90 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </div>
+
+          {/* SECTION 1.5: COMPANY STRUCTURE & CONTRACTOR SPECIALTY */}
+          <div className="space-y-4 bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <h3 className="font-semibold text-sm uppercase text-orange-700 flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Company Structure & Details
+            </h3>
+            
+            <div className="space-y-4">
+              {/* Company Type Selection */}
+              <div>
+                <Label>Company Type</Label>
+                <RadioGroup value={companyType} onValueChange={(v: any) => setCompanyType(v)}>
+                  <div className="flex flex-col space-y-2 mt-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <RadioGroupItem value="standalone" id="standalone" />
+                      <span className="text-sm">
+                        <strong>Standalone Company</strong> - Independent company with no parent or subsidiaries
+                      </span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <RadioGroupItem value="parent" id="parent" />
+                      <span className="text-sm">
+                        <strong>Parent Company</strong> - Has subsidiary companies/divisions
+                      </span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <RadioGroupItem value="subsidiary" id="subsidiary" />
+                      <span className="text-sm">
+                        <strong>Subsidiary/Division</strong> - Part of a larger parent company
+                      </span>
+                    </label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Parent Company Selector (only shows if subsidiary) */}
+              {companyType === 'subsidiary' && (
+                <div>
+                  <Label htmlFor="parent_company">
+                    Parent Company <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={parentCompanyId} onValueChange={setParentCompanyId} required>
+                    <SelectTrigger id="parent_company">
+                      <SelectValue placeholder="Select parent company..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parentCompanies.map(company => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.company_name}
+                          {company.company_type === 'parent' && (
+                            <span className="text-xs text-muted-foreground ml-2">(Parent)</span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select the parent company this division belongs to
+                  </p>
+                </div>
+              )}
+
+              {/* Contractor Specialty (only shows for contractors) */}
+              {industryType === 'Contractor' && (
+                <div className="bg-background p-3 rounded border border-orange-300">
+                  <Label htmlFor="contractor_specialty" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Contractor Specialty / Trade
+                  </Label>
+                  <Input
+                    id="contractor_specialty"
+                    value={contractorSpecialty}
+                    onChange={(e) => setContractorSpecialty(e.target.value)}
+                    placeholder="e.g., HVAC Installation & Repair, Smart Home Integration, Emergency HVAC Services"
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Describe this contractor's primary specialty or trade (e.g., "Residential HVAC and Smart Thermostats")
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

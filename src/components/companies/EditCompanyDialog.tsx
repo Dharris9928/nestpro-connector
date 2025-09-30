@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { updateCompany } from '@/lib/companies/updateCompany';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Building2, Users } from 'lucide-react';
 
 interface EditCompanyDialogProps {
   open: boolean;
@@ -32,6 +34,14 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   const [industryType, setIndustryType] = useState<'Builder' | 'Contractor'>('Builder');
   const [segment, setSegment] = useState('');
   const [status, setStatus] = useState('Lead');
+  
+  // Parent-Subsidiary Relationship
+  const [companyType, setCompanyType] = useState<'standalone' | 'parent' | 'subsidiary'>('standalone');
+  const [parentCompanyId, setParentCompanyId] = useState('');
+  const [parentCompanies, setParentCompanies] = useState<any[]>([]);
+  
+  // Contractor Specialty (only for contractors)
+  const [contractorSpecialty, setContractorSpecialty] = useState('');
   
   // Business Metrics (For Scoring)
   const [annualVolume, setAnnualVolume] = useState('');
@@ -59,8 +69,25 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   useEffect(() => {
     if (open && companyId) {
       loadCompanyData();
+      loadParentCompanies();
     }
   }, [open, companyId]);
+
+  const loadParentCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, company_name, company_type')
+        .or('company_type.eq.parent,company_type.eq.standalone')
+        .neq('id', companyId) // Exclude current company
+        .order('company_name');
+
+      if (error) throw error;
+      setParentCompanies(data || []);
+    } catch (error) {
+      console.error('Error loading parent companies:', error);
+    }
+  };
 
   const loadCompanyData = async () => {
     setLoading(true);
@@ -85,6 +112,14 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
       }
       
       setStatus(company.status || 'Lead');
+      
+      // Parent-Subsidiary Relationship
+      setCompanyType((company.company_type as 'standalone' | 'parent' | 'subsidiary') || 'standalone');
+      setParentCompanyId(company.parent_company_id || '');
+      
+      // Contractor Specialty
+      setContractorSpecialty(company.contractor_specialty || '');
+      
       setAnnualVolume(company.annual_volume?.toString() || '');
       setAnnualRevenueRange(company.annual_revenue_range || '');
       setTotalEmployees(company.total_employees?.toString() || '');
@@ -119,6 +154,14 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         company_name: companyName,
         industry_type: industryType,
         status: status as any,
+        
+        // Parent-Subsidiary Relationship
+        company_type: companyType,
+        parent_company_id: companyType === 'subsidiary' ? parentCompanyId || null : null,
+        is_parent_company: companyType === 'parent',
+        
+        // Contractor Specialty (only saved if contractor)
+        contractor_specialty: industryType === 'Contractor' ? contractorSpecialty || null : null,
         
         // Business Metrics
         annual_volume: annualVolume ? parseInt(annualVolume) : undefined,
@@ -228,7 +271,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Company</DialogTitle>
         </DialogHeader>
@@ -302,6 +345,90 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </div>
+
+          {/* SECTION 1.5: COMPANY STRUCTURE & CONTRACTOR SPECIALTY */}
+          <div className="space-y-4 bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+            <h3 className="font-semibold text-sm uppercase text-orange-700 dark:text-orange-400 flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Company Structure & Details
+            </h3>
+            
+            <div className="space-y-4">
+              {/* Company Type Selection */}
+              <div>
+                <Label>Company Type</Label>
+                <RadioGroup value={companyType} onValueChange={(v: any) => setCompanyType(v)}>
+                  <div className="flex flex-col space-y-2 mt-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <RadioGroupItem value="standalone" id="standalone" />
+                      <span className="text-sm">
+                        <strong>Standalone Company</strong> - Independent company with no parent or subsidiaries
+                      </span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <RadioGroupItem value="parent" id="parent" />
+                      <span className="text-sm">
+                        <strong>Parent Company</strong> - Has subsidiary companies/divisions
+                      </span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <RadioGroupItem value="subsidiary" id="subsidiary" />
+                      <span className="text-sm">
+                        <strong>Subsidiary/Division</strong> - Part of a larger parent company
+                      </span>
+                    </label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Parent Company Selector (only shows if subsidiary) */}
+              {companyType === 'subsidiary' && (
+                <div>
+                  <Label htmlFor="parent_company">
+                    Parent Company <span className="text-red-500">*</span>
+                  </Label>
+                  <Select value={parentCompanyId} onValueChange={setParentCompanyId} required>
+                    <SelectTrigger id="parent_company">
+                      <SelectValue placeholder="Select parent company..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parentCompanies.map(company => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.company_name}
+                          {company.company_type === 'parent' && (
+                            <span className="text-xs text-muted-foreground ml-2">(Parent)</span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select the parent company this division belongs to
+                  </p>
+                </div>
+              )}
+
+              {/* Contractor Specialty (only shows for contractors) */}
+              {industryType === 'Contractor' && (
+                <div className="bg-background p-3 rounded border border-orange-300 dark:border-orange-700">
+                  <Label htmlFor="contractor_specialty" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Contractor Specialty / Trade
+                  </Label>
+                  <Input
+                    id="contractor_specialty"
+                    value={contractorSpecialty}
+                    onChange={(e) => setContractorSpecialty(e.target.value)}
+                    placeholder="e.g., HVAC Installation & Repair, Smart Home Integration, Emergency HVAC Services"
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Describe this contractor's primary specialty or trade (e.g., "Residential HVAC and Smart Thermostats")
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
