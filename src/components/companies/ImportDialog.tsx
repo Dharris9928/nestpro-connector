@@ -1,19 +1,19 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, Download, AlertCircle, CheckCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface ImportDialogProps {
@@ -25,282 +25,449 @@ interface ImportDialogProps {
 interface ImportResult {
   success: number;
   failed: number;
+  duplicates: number;
   errors: string[];
 }
 
 export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogProps) {
+  const [step, setStep] = useState<'upload' | 'map' | 'preview' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [progress, setProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
+  const [importProgress, setImportProgress] = useState(0);
+  const [importResults, setImportResults] = useState<ImportResult | null>(null);
   const { toast } = useToast();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (selectedFile) {
-      const validTypes = [
-        "text/csv",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ];
-      
-      if (validTypes.includes(selectedFile.type) || selectedFile.name.endsWith(".csv")) {
-        setFile(selectedFile);
-        setImportResult(null);
-      } else {
-        toast({
-          title: "Invalid File Type",
-          description: "Please select a CSV or Excel file",
-          variant: "destructive",
-        });
-      }
+  const handleFileUpload = async (uploadedFile: File) => {
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
+    if (uploadedFile.size > maxSize) {
+      toast({
+        title: "File too large",
+        description: "File size must be less than 10MB",
+        variant: "destructive",
+      });
+      return;
     }
-  };
 
-  const parseFile = async (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-      if (file.name.endsWith(".csv")) {
-        Papa.parse(file, {
+    // Validate file type
+    const validTypes = ["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
+    const fileExtension = uploadedFile.name.split('.').pop()?.toLowerCase();
+    
+    if (!validTypes.includes(uploadedFile.type) && !['csv', 'xlsx', 'xls'].includes(fileExtension || '')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a CSV or Excel file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFile(uploadedFile);
+    
+    try {
+      if (fileExtension === 'csv') {
+        Papa.parse(uploadedFile, {
           header: true,
           skipEmptyLines: true,
-          complete: (results) => resolve(results.data),
-          error: (error) => reject(error),
+          complete: (results) => {
+            setParsedData(results.data);
+            setHeaders(results.meta.fields || []);
+            setStep('map');
+          },
+          error: (error) => {
+            toast({
+              title: "Error parsing CSV",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
         });
-      } else {
+      } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
         const reader = new FileReader();
         reader.onload = (e) => {
           try {
             const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: "array" });
+            const workbook = XLSX.read(data, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-            resolve(jsonData);
-          } catch (error) {
-            reject(error);
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            if (jsonData.length > 0) {
+              const headerRow = jsonData[0] as string[];
+              const dataRows = jsonData.slice(1).map(row => {
+                const obj: any = {};
+                headerRow.forEach((header, index) => {
+                  obj[header] = (row as any[])[index];
+                });
+                return obj;
+              });
+              
+              setParsedData(dataRows);
+              setHeaders(headerRow);
+              setStep('map');
+            }
+          } catch (error: any) {
+            toast({
+              title: "Error parsing Excel",
+              description: error.message,
+              variant: "destructive",
+            });
           }
         };
-        reader.readAsArrayBuffer(file);
-      }
-    });
-  };
-
-  const mapImportData = (row: any) => {
-    return {
-      company_name: row["Company Name"] || row["company_name"],
-      industry_type: row["Industry Type"] || row["industry_type"] || "Builder",
-      status: row["Status"] || row["status"] || "Lead",
-      website_url: row["Website"] || row["website_url"] || null,
-      primary_phone: row["Phone"] || row["primary_phone"] || null,
-      linkedin_company_url: row["LinkedIn"] || row["linkedin_company_url"] || null,
-      builder_segment: row["Builder Segment"] || row["builder_segment"] || null,
-      contractor_segment: row["Contractor Segment"] || row["contractor_segment"] || null,
-      lead_score: parseInt(row["Lead Score"] || row["lead_score"]) || 0,
-      priority_tier: row["Priority Tier"] || row["priority_tier"] || null,
-      is_franchise: row["Is Franchise"] === "Yes" || row["is_franchise"] === true || false,
-      years_in_business: parseInt(row["Years in Business"] || row["years_in_business"]) || null,
-      total_employees: parseInt(row["Total Employees"] || row["total_employees"]) || null,
-      annual_revenue_range: row["Annual Revenue Range"] || row["annual_revenue_range"] || null,
-    };
-  };
-
-  const handleImport = async () => {
-    if (!file) return;
-
-    setIsImporting(true);
-    setProgress(0);
-
-    try {
-      const rawData = await parseFile(file);
-      
-      if (!rawData || rawData.length === 0) {
-        throw new Error("No data found in file");
-      }
-
-      const result: ImportResult = {
-        success: 0,
-        failed: 0,
-        errors: [],
-      };
-
-      const batchSize = 10;
-      const totalBatches = Math.ceil(rawData.length / batchSize);
-
-      for (let i = 0; i < rawData.length; i += batchSize) {
-        const batch = rawData.slice(i, i + batchSize);
-        const mappedBatch = batch.map(mapImportData);
-
-        try {
-          const { data, error } = await supabase
-            .from("companies")
-            .insert(mappedBatch)
-            .select();
-
-          if (error) {
-            result.failed += batch.length;
-            result.errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`);
-          } else {
-            result.success += data?.length || 0;
-          }
-        } catch (batchError: any) {
-          result.failed += batch.length;
-          result.errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${batchError.message}`);
-        }
-
-        setProgress(Math.round(((i + batchSize) / rawData.length) * 100));
-      }
-
-      setImportResult(result);
-
-      if (result.success > 0) {
-        toast({
-          title: "Import Complete",
-          description: `Successfully imported ${result.success} companies`,
-        });
-        onImportComplete();
-      }
-
-      if (result.failed > 0) {
-        toast({
-          title: "Import Issues",
-          description: `${result.failed} companies failed to import`,
-          variant: "destructive",
-        });
+        reader.readAsArrayBuffer(uploadedFile);
       }
     } catch (error: any) {
-      console.error("Import error:", error);
       toast({
-        title: "Import Failed",
-        description: error.message || "Failed to import companies",
+        title: "Error reading file",
+        description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setIsImporting(false);
     }
   };
 
-  const handleClose = () => {
+  const downloadTemplate = () => {
+    const template = [
+      ['company_name', 'website_url', 'industry_type', 'builder_segment', 'contractor_segment', 'primary_phone', 'linkedin_company_url', 'status', 'priority_tier', 'lead_score'],
+      ['Example Builder Inc', 'https://example.com', 'Builder', 'production_tract', '', '555-1234', 'https://linkedin.com/company/example', 'Lead', 'P1', '85'],
+      ['Sample HVAC Co', 'https://sample.com', 'Contractor', '', 'smart_home_champions', '555-5678', 'https://linkedin.com/company/sample', 'Contacted', 'P2', '70']
+    ];
+    
+    const worksheet = XLSX.utils.aoa_to_sheet(template);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
+    XLSX.writeFile(workbook, 'company_import_template.xlsx');
+  };
+
+  const handleImport = async () => {
+    setStep('importing');
+    setImportProgress(0);
+    
+    const results: ImportResult = {
+      success: 0,
+      failed: 0,
+      duplicates: 0,
+      errors: []
+    };
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+
+    for (let i = 0; i < parsedData.length; i++) {
+      const row = parsedData[i];
+      
+      try {
+        // Map columns
+        const mappedData: any = {};
+        Object.entries(columnMapping).forEach(([fileCol, crmField]) => {
+          if (crmField && row[fileCol] !== undefined && row[fileCol] !== null && row[fileCol] !== '') {
+            mappedData[crmField] = row[fileCol];
+          }
+        });
+
+        // Validate required fields
+        if (!mappedData.company_name) {
+          throw new Error('Company name is required');
+        }
+        if (!mappedData.industry_type) {
+          throw new Error('Industry type is required');
+        }
+
+        // Add created_by if user is authenticated
+        if (user) {
+          mappedData.created_by = user.id;
+        }
+
+        // Check for duplicates
+        const { data: existing } = await supabase
+          .from('companies')
+          .select('id')
+          .ilike('company_name', mappedData.company_name)
+          .maybeSingle();
+
+        if (existing) {
+          results.duplicates++;
+          results.errors.push(`Row ${i + 2}: Duplicate company "${mappedData.company_name}"`);
+          continue;
+        }
+
+        // Insert company
+        const { error } = await supabase
+          .from('companies')
+          .insert(mappedData);
+
+        if (error) throw error;
+        
+        results.success++;
+      } catch (error: any) {
+        results.failed++;
+        results.errors.push(`Row ${i + 2}: ${error.message}`);
+      }
+
+      setImportProgress(Math.round(((i + 1) / parsedData.length) * 100));
+    }
+
+    setImportResults(results);
+    setStep('complete');
+
+    if (results.success > 0) {
+      onImportComplete();
+    }
+  };
+
+  const resetDialog = () => {
+    setStep('upload');
     setFile(null);
-    setImportResult(null);
-    setProgress(0);
+    setParsedData([]);
+    setHeaders([]);
+    setColumnMapping({});
+    setImportProgress(0);
+    setImportResults(null);
+  };
+
+  const handleClose = () => {
+    resetDialog();
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import Companies</DialogTitle>
-          <DialogDescription>
-            Upload a CSV or Excel file with company data
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* File Upload */}
-          <div className="space-y-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            
-            <Button
-              variant="outline"
-              className="w-full h-32 border-2 border-dashed"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isImporting}
-            >
-              <div className="flex flex-col items-center gap-2">
-                <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
-                {file ? (
-                  <>
-                    <span className="font-medium">{file.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      Click to change file
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span>Click to select file</span>
-                    <span className="text-xs text-muted-foreground">
-                      CSV or Excel (.xlsx, .xls)
-                    </span>
-                  </>
-                )}
-              </div>
-            </Button>
-          </div>
+        {/* Step 1: Upload File */}
+        {step === 'upload' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                Upload a CSV or Excel file containing company data
+              </p>
+              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Download Template
+              </Button>
+            </div>
 
-          {/* Progress Bar */}
-          {isImporting && (
-            <div className="space-y-2">
-              <Progress value={progress} />
-              <p className="text-sm text-center text-muted-foreground">
-                Importing... {progress}%
+            <div
+              className="border-2 border-dashed border-border rounded-lg p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const droppedFile = e.dataTransfer.files[0];
+                if (droppedFile) handleFileUpload(droppedFile);
+              }}
+              onClick={() => document.getElementById('file-input')?.click()}
+            >
+              <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-medium mb-2">
+                Drag and drop your file here
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                or click to browse
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Supports CSV and Excel files (max 10MB)
+              </p>
+              <input
+                id="file-input"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0];
+                  if (selectedFile) handleFileUpload(selectedFile);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Map Columns */}
+        {step === 'map' && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium mb-2">Map File Columns to CRM Fields</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Match the columns from your file to the corresponding CRM fields. Required fields are marked with *.
               </p>
             </div>
-          )}
 
-          {/* Import Results */}
-          {importResult && (
-            <div className="space-y-2">
-              {importResult.success > 0 && (
-                <Alert className="bg-green-50 border-green-200">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription>
-                    Successfully imported {importResult.success} companies
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {importResult.failed > 0 && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {importResult.failed} companies failed to import
-                    {importResult.errors.length > 0 && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs">
-                          View errors
-                        </summary>
-                        <ul className="mt-2 text-xs space-y-1">
-                          {importResult.errors.slice(0, 5).map((error, idx) => (
-                            <li key={idx}>• {error}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {headers.map(header => (
+                <div key={header} className="flex items-center gap-4">
+                  <Label className="w-1/3 font-medium text-sm">{header}</Label>
+                  <div className="w-2/3">
+                    <Select
+                      value={columnMapping[header] || ''}
+                      onValueChange={(value) => 
+                        setColumnMapping({ ...columnMapping, [header]: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Skip this column" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="skip">Skip this column</SelectItem>
+                        <SelectItem value="company_name">Company Name *</SelectItem>
+                        <SelectItem value="website_url">Website URL</SelectItem>
+                        <SelectItem value="industry_type">Industry Type (Builder/Contractor) *</SelectItem>
+                        <SelectItem value="builder_segment">Builder Segment</SelectItem>
+                        <SelectItem value="contractor_segment">Contractor Segment</SelectItem>
+                        <SelectItem value="primary_phone">Phone</SelectItem>
+                        <SelectItem value="linkedin_company_url">LinkedIn URL</SelectItem>
+                        <SelectItem value="status">Status</SelectItem>
+                        <SelectItem value="priority_tier">Priority Tier</SelectItem>
+                        <SelectItem value="lead_score">Lead Score</SelectItem>
+                        <SelectItem value="total_employees">Total Employees</SelectItem>
+                        <SelectItem value="years_in_business">Years in Business</SelectItem>
+                        <SelectItem value="annual_revenue_range">Annual Revenue Range</SelectItem>
+                        <SelectItem value="nest_pro_partner_id">Nest Pro Partner ID</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
 
-          {/* Instructions */}
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              <strong>Required columns:</strong> Company Name, Industry Type
-              <br />
-              <strong>Optional columns:</strong> Status, Website, Phone, Builder Segment, Contractor Segment, Lead Score, Priority Tier, etc.
-            </AlertDescription>
-          </Alert>
-        </div>
+            <div className="flex justify-between pt-4 border-t">
+              <Button variant="outline" onClick={() => setStep('upload')}>
+                Back
+              </Button>
+              <Button 
+                onClick={() => setStep('preview')}
+                disabled={!Object.values(columnMapping).some(v => v === 'company_name') || 
+                         !Object.values(columnMapping).some(v => v === 'industry_type')}
+              >
+                Preview Import
+              </Button>
+            </div>
+          </div>
+        )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isImporting}>
-            {importResult ? "Close" : "Cancel"}
-          </Button>
-          {!importResult && (
-            <Button onClick={handleImport} disabled={!file || isImporting}>
-              <Upload className="h-4 w-4 mr-2" />
-              {isImporting ? "Importing..." : "Import"}
-            </Button>
-          )}
-        </DialogFooter>
+        {/* Step 3: Preview Data */}
+        {step === 'preview' && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium mb-2">Preview Import Data</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Review the first 10 rows before importing. Total rows: {parsedData.length}
+              </p>
+            </div>
+
+            <div className="border rounded-lg overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    {Object.entries(columnMapping).filter(([_, v]) => v && v !== 'skip').map(([_, field]) => (
+                      <th key={field} className="px-4 py-2 text-left font-medium">
+                        {field}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsedData.slice(0, 10).map((row, index) => (
+                    <tr key={index} className="border-t">
+                      {Object.entries(columnMapping).filter(([_, v]) => v && v !== 'skip').map(([fileCol, _]) => (
+                        <td key={fileCol} className="px-4 py-2">
+                          {row[fileCol]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-between pt-4 border-t">
+              <Button variant="outline" onClick={() => setStep('map')}>
+                Back
+              </Button>
+              <Button onClick={handleImport}>
+                Import {parsedData.length} Companies
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Importing Progress */}
+        {step === 'importing' && (
+          <div className="space-y-4 py-8">
+            <div className="text-center">
+              <Upload className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+              <h3 className="font-medium text-lg mb-2">Importing Companies...</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Please wait while we process your file
+              </p>
+            </div>
+
+            <Progress value={importProgress} className="h-2" />
+            <p className="text-center text-sm text-muted-foreground">
+              {Math.round(importProgress)}% complete
+            </p>
+          </div>
+        )}
+
+        {/* Step 5: Import Complete */}
+        {step === 'complete' && importResults && (
+          <div className="space-y-4">
+            <div className="text-center py-4">
+              {importResults.success > 0 ? (
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              ) : (
+                <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
+              )}
+              <h3 className="font-medium text-lg mb-2">Import Complete</h3>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {importResults.success}
+                </div>
+                <div className="text-sm text-green-700 dark:text-green-300">Successful</div>
+              </div>
+              <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {importResults.duplicates}
+                </div>
+                <div className="text-sm text-yellow-700 dark:text-yellow-300">Duplicates</div>
+              </div>
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                  {importResults.failed}
+                </div>
+                <div className="text-sm text-red-700 dark:text-red-300">Failed</div>
+              </div>
+            </div>
+
+            {importResults.errors.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">Errors:</h4>
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 max-h-48 overflow-y-auto">
+                  {importResults.errors.slice(0, 20).map((error, index) => (
+                    <div key={index} className="text-sm text-destructive mb-1">
+                      {error}
+                    </div>
+                  ))}
+                  {importResults.errors.length > 20 && (
+                    <div className="text-sm text-muted-foreground mt-2">
+                      ... and {importResults.errors.length - 20} more errors
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-4 border-t">
+              <Button onClick={handleClose}>
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
