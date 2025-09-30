@@ -1,16 +1,22 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { CompanyTable } from "@/components/companies/CompanyTable";
 import { AddCompanyDialog } from "@/components/companies/AddCompanyDialog";
 import { EditCompanyDialog } from "@/components/companies/EditCompanyDialog";
+import { useSearchParams } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 const Companies = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
+
+  const statusFilter = searchParams.get("status");
+  const priorityFilter = searchParams.get("priority");
 
   const { data: companies, isLoading, refetch } = useQuery({
     queryKey: ["companies"],
@@ -23,6 +29,26 @@ const Companies = () => {
       return data;
     },
   });
+
+  const filteredCompanies = useMemo(() => {
+    if (!companies) return [];
+    
+    let filtered = [...companies];
+    
+    if (statusFilter) {
+      filtered = filtered.filter(company => company.status === statusFilter);
+    }
+    
+    if (priorityFilter) {
+      filtered = filtered.filter(company => company.priority_tier === priorityFilter);
+    }
+    
+    return filtered;
+  }, [companies, statusFilter, priorityFilter]);
+
+  const clearFilters = () => {
+    setSearchParams({});
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -39,8 +65,43 @@ const Companies = () => {
         </Button>
       </div>
 
+      {(statusFilter || priorityFilter) && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Active filters:</span>
+          {statusFilter && (
+            <Badge variant="secondary" className="gap-1">
+              Status: {statusFilter}
+              <X 
+                className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                onClick={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete("status");
+                  setSearchParams(newParams);
+                }}
+              />
+            </Badge>
+          )}
+          {priorityFilter && (
+            <Badge variant="secondary" className="gap-1">
+              Priority: {priorityFilter.split(":")[0]}
+              <X 
+                className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                onClick={() => {
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete("priority");
+                  setSearchParams(newParams);
+                }}
+              />
+            </Badge>
+          )}
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            Clear all
+          </Button>
+        </div>
+      )}
+
       <CompanyTable
-        companies={companies || []}
+        companies={filteredCompanies}
         isLoading={isLoading}
         onEdit={(company) => {
           setSelectedCompany(company);

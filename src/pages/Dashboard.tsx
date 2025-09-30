@@ -1,12 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Users, Activity, TrendingUp } from "lucide-react";
+import { Building2, Users, Activity, TrendingUp, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Real-time subscription for dashboard updates
   useEffect(() => {
@@ -96,6 +98,42 @@ const Dashboard = () => {
     },
   });
 
+  const { data: companiesByStatus } = useQuery({
+    queryKey: ["companies-by-status"],
+    queryFn: async () => {
+      const statuses: Array<'Lead' | 'Contacted' | 'Engaged' | 'Pilot' | 'Active'> = ['Lead', 'Contacted', 'Engaged', 'Pilot', 'Active'];
+      const results = await Promise.all(
+        statuses.map(async (status) => {
+          const { count, error } = await supabase
+            .from("companies")
+            .select("*", { count: "exact", head: true })
+            .eq("status", status);
+          if (error) throw error;
+          return { status, count: count || 0 };
+        })
+      );
+      return results;
+    },
+  });
+
+  const { data: companiesByPriority } = useQuery({
+    queryKey: ["companies-by-priority"],
+    queryFn: async () => {
+      const priorities: Array<'P1: 80-100' | 'P2: 60-79' | 'P3: 40-59'> = ['P1: 80-100', 'P2: 60-79', 'P3: 40-59'];
+      const results = await Promise.all(
+        priorities.map(async (priority) => {
+          const { count, error } = await supabase
+            .from("companies")
+            .select("*", { count: "exact", head: true })
+            .eq("priority_tier", priority);
+          if (error) throw error;
+          return { priority, count: count || 0 };
+        })
+      );
+      return results;
+    },
+  });
+
   const { data: recentCompanies } = useQuery({
     queryKey: ["recent-companies"],
     queryFn: async () => {
@@ -108,33 +146,6 @@ const Dashboard = () => {
       return data;
     },
   });
-
-  const statCards = [
-    {
-      title: "Total Companies",
-      icon: Building2,
-      value: companiesCount?.toString() || "0",
-      description: "Across all segments",
-    },
-    {
-      title: "Total Contacts",
-      icon: Users,
-      value: contactsCount?.toString() || "0",
-      description: "Decision makers tracked",
-    },
-    {
-      title: "Activities This Month",
-      icon: Activity,
-      value: activitiesCount?.toString() || "0",
-      description: "Outreach touchpoints",
-    },
-    {
-      title: "Active Pilot Programs",
-      icon: TrendingUp,
-      value: pilotProgramsCount?.toString() || "0",
-      description: "Current pilot programs",
-    },
-  ];
 
   const getPriorityColor = (tier: string) => {
     if (tier?.includes("P1")) return "bg-priority-p1 text-priority-p1-foreground";
@@ -153,18 +164,95 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-              <card.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {/* Pipeline Summary Card */}
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/companies')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pipeline Summary</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{companiesCount} Companies</div>
+            <div className="mt-4 space-y-2">
+              {companiesByStatus?.map((item) => (
+                <div
+                  key={item.status}
+                  className="flex justify-between cursor-pointer hover:bg-accent/50 p-2 rounded transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/companies?status=${item.status}`);
+                  }}
+                >
+                  <span className="text-sm text-muted-foreground">{item.status}</span>
+                  <span className="text-sm font-semibold">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Priority Distribution Card */}
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/companies')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Priority Distribution</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {companiesByPriority?.reduce((sum, item) => sum + item.count, 0) || 0} Total
+            </div>
+            <div className="mt-4 space-y-2">
+              {companiesByPriority?.map((item) => (
+                <div
+                  key={item.priority}
+                  className="flex justify-between cursor-pointer hover:bg-accent/50 p-2 rounded transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/companies?priority=${item.priority}`);
+                  }}
+                >
+                  <span className="text-sm text-muted-foreground">{item.priority.split(":")[0]}</span>
+                  <span className="text-sm font-semibold">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* This Month's Activities Card */}
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/activities')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">This Month's Activities</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activitiesCount}</div>
+            <p className="text-xs text-muted-foreground mt-2">Outreach touchpoints</p>
+          </CardContent>
+        </Card>
+
+        {/* Active Pilot Programs Card */}
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/reports')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Pilot Programs</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pilotProgramsCount}</div>
+            <p className="text-xs text-muted-foreground mt-2">Current pilot programs</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
