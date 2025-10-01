@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Edit, ExternalLink, Trash2, Mail, Phone, Copy } from "lucide-react";
+import { MoreVertical, Edit, ExternalLink, Trash2, Mail, Phone, Copy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { calculateLeadScore } from "@/lib/scoring/leadScoring";
 
 interface QuickActionsMenuProps {
   company: any;
@@ -30,6 +31,7 @@ interface QuickActionsMenuProps {
 export function QuickActionsMenu({ company, onEdit, onDelete }: QuickActionsMenuProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const { toast } = useToast();
 
   const handleCopyToClipboard = (text: string, label: string) => {
@@ -38,6 +40,29 @@ export function QuickActionsMenu({ company, onEdit, onDelete }: QuickActionsMenu
       title: "Copied",
       description: `${label} copied to clipboard`,
     });
+  };
+
+  const handleRecalculateScore = async () => {
+    setIsRecalculating(true);
+    try {
+      const scoring = await calculateLeadScore(company.id);
+      
+      toast({
+        title: "Score Updated",
+        description: `New score: ${scoring.totalScore}/100 (${scoring.priorityTier})`,
+      });
+      
+      onDelete(); // Refresh the table
+    } catch (error) {
+      console.error("Error recalculating score:", error);
+      toast({
+        title: "Error",
+        description: "Failed to calculate score",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRecalculating(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -81,6 +106,11 @@ export function QuickActionsMenu({ company, onEdit, onDelete }: QuickActionsMenu
           <DropdownMenuItem onClick={onEdit}>
             <Edit className="h-4 w-4 mr-2" />
             Edit Details
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={handleRecalculateScore} disabled={isRecalculating}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRecalculating ? 'animate-spin' : ''}`} />
+            {isRecalculating ? 'Calculating...' : 'Recalculate Score'}
           </DropdownMenuItem>
           
           {company.website_url && (
