@@ -1,11 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import { calculateLeadScore } from '@/lib/scoring/leadScoring';
+import { validateCompanyData } from '@/lib/validation/companyValidation';
 import type { Database } from '@/integrations/supabase/types';
 
 type Company = Database['public']['Tables']['companies']['Insert'];
 
 export async function createCompany(companyData: Partial<Company>) {
   try {
+    // Validate company data
+    const validation = validateCompanyData(companyData);
+    if (!validation.valid) {
+      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+    }
     // 1. Insert company
     const { data: company, error } = await supabase
       .from('companies')
