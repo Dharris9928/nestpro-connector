@@ -1,4 +1,5 @@
 import { ScoringBreakdownReport } from '@/components/reports/ScoringBreakdownReport';
+import { ContactsScoringReport } from '@/components/reports/ContactsScoringReport';
 
 const Reports = () => {
   return (
@@ -9,6 +10,8 @@ const Reports = () => {
       </div>
       
       <ScoringBreakdownReport />
+      
+      <ContactsScoringReport />
     </div>
   );
 };
