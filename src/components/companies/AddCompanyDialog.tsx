@@ -10,6 +10,15 @@ import { createCompany } from '@/lib/companies/createCompany';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Users } from 'lucide-react';
+import { 
+  BUILDER_SEGMENTS, 
+  CONTRACTOR_SEGMENTS, 
+  STATUSES, 
+  US_STATES,
+  ANNUAL_REVENUE_RANGES,
+  PRICE_POINT_CATEGORIES,
+  SERVICE_AREA_TYPES
+} from './formOptions';
 
 interface AddCompanyDialogProps {
   open: boolean;
@@ -204,46 +213,6 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
     setEmergencyPercentage('');
   };
 
-  const BUILDER_SEGMENTS = [
-    { value: 'production_tract', label: 'Production/Tract Builders' },
-    { value: 'regional_mid_volume', label: 'Regional Mid-Volume Builders' },
-    { value: 'spec_home', label: 'Spec Home Builders' },
-    { value: 'luxury_custom', label: 'Luxury Custom Builders' },
-    { value: 'multi_family', label: 'Multi-Family Developers' },
-    { value: 'affordable_housing', label: 'Affordable Housing Builders' },
-    { value: 'active_adult', label: 'Active Adult/55+ Specialists' }
-  ];
-
-  const CONTRACTOR_SEGMENTS = [
-    { value: 'smart_home_champions', label: 'Smart Home Champions' },
-    { value: 'customer_experience', label: 'Customer Experience Innovators' },
-    { value: 'high_volume', label: 'High-Volume Installers' },
-    { value: 'premium_specialists', label: 'Premium Service Specialists' },
-    { value: 'regional_growth', label: 'Regional Growth Contractors' },
-    { value: 'specialty_integrators', label: 'Specialty HVAC Integrators' },
-    { value: 'traditionalists', label: 'Service-First Traditionalists' },
-    { value: 'emergency_repair', label: 'Emergency/Repair Specialists' }
-  ];
-
-  const US_STATES = [
-    { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
-    { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
-    { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' }, { code: 'FL', name: 'Florida' },
-    { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' }, { code: 'ID', name: 'Idaho' },
-    { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' }, { code: 'IA', name: 'Iowa' },
-    { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' }, { code: 'LA', name: 'Louisiana' },
-    { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' }, { code: 'MA', name: 'Massachusetts' },
-    { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' }, { code: 'MS', name: 'Mississippi' },
-    { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' }, { code: 'NE', name: 'Nebraska' },
-    { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' }, { code: 'NJ', name: 'New Jersey' },
-    { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' }, { code: 'NC', name: 'North Carolina' },
-    { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' }, { code: 'OK', name: 'Oklahoma' },
-    { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' }, { code: 'RI', name: 'Rhode Island' },
-    { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' }, { code: 'TN', name: 'Tennessee' },
-    { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' }, { code: 'VT', name: 'Vermont' },
-    { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
-    { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }
-  ];
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
@@ -311,13 +280,11 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Lead">Lead</SelectItem>
-                    <SelectItem value="Contacted">Contacted</SelectItem>
-                    <SelectItem value="Engaged">Engaged</SelectItem>
-                    <SelectItem value="Pilot">Pilot</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="Lost">Lost</SelectItem>
+                    {STATUSES.map(status => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

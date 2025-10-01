@@ -7,46 +7,15 @@ import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronRight, Save } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { BUILDER_SEGMENTS, CONTRACTOR_SEGMENTS, STATUSES } from './formOptions';
 
 interface CompaniesFilterSidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
   companyCounts?: number;
 }
-
-const BUILDER_SEGMENTS = [
-  { value: 'production_tract', label: 'Production/Tract Builders' },
-  { value: 'regional_mid_volume', label: 'Regional Mid-Volume Builders' },
-  { value: 'spec_home', label: 'Spec Home Builders' },
-  { value: 'luxury_custom', label: 'Luxury Custom Builders' },
-  { value: 'multi_family', label: 'Multi-Family Developers' },
-  { value: 'affordable_housing', label: 'Affordable Housing Builders' },
-  { value: 'active_adult', label: 'Active Adult/55+ Specialists' }
-];
-
-const CONTRACTOR_SEGMENTS = [
-  { value: 'smart_home_champions', label: 'Smart Home Champions' },
-  { value: 'customer_experience', label: 'Customer Experience Innovators' },
-  { value: 'high_volume', label: 'High-Volume Installers' },
-  { value: 'premium_specialists', label: 'Premium Service Specialists' },
-  { value: 'regional_growth', label: 'Regional Growth Contractors' },
-  { value: 'specialty_integrators', label: 'Specialty HVAC Integrators' },
-  { value: 'traditionalists', label: 'Service-First Traditionalists' },
-  { value: 'emergency_repair', label: 'Emergency/Repair Specialists' }
-];
-
-const STATUSES = [
-  { value: 'Lead', label: 'Lead' },
-  { value: 'Contacted', label: 'Contacted' },
-  { value: 'Engaged', label: 'Engaged' },
-  { value: 'Pilot', label: 'Pilot' },
-  { value: 'Active', label: 'Active' },
-  { value: 'Inactive', label: 'Inactive' },
-  { value: 'Lost', label: 'Lost' }
-];
 
 const PRIORITIES = [
   { value: 'P1: Strategic', label: 'P1: Strategic' },
