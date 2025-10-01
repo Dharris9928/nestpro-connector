@@ -96,13 +96,11 @@ export type Database = {
             | null
           annual_volume: number | null
           average_home_price: number | null
-          builder_segment: Database["public"]["Enums"]["builder_segment"] | null
+          builder_segment: string | null
           city: string | null
           company_name: string
           company_type: string | null
-          contractor_segment:
-            | Database["public"]["Enums"]["contractor_segment"]
-            | null
+          contractor_segment: string | null
           contractor_specialty: string | null
           created_at: string | null
           created_by: string | null
@@ -112,22 +110,25 @@ export type Database = {
           industry_type: Database["public"]["Enums"]["industry_type"]
           is_franchise: boolean | null
           is_parent_company: boolean | null
+          last_contact_date: string | null
           lead_score: number | null
           linkedin_company_url: string | null
           maintenance_contract_percentage: number | null
           nest_pro_industry: string | null
           nest_pro_partner_id: string | null
+          next_activity_date: string | null
+          next_activity_type: string | null
           notes: string | null
           owner_name: string | null
           parent_company_id: string | null
+          partner_introduction_date: string | null
+          partner_relationship_status: string | null
           price_point_category: string | null
           primary_email: string | null
           primary_phone: string | null
           priority_tier: Database["public"]["Enums"]["priority_tier"] | null
           score_calculated_at: string | null
-          segment_confidence:
-            | Database["public"]["Enums"]["segment_confidence"]
-            | null
+          segment_confidence: string | null
           service_area_type: string | null
           state: string | null
           status: Database["public"]["Enums"]["company_status"] | null
@@ -144,15 +145,11 @@ export type Database = {
             | null
           annual_volume?: number | null
           average_home_price?: number | null
-          builder_segment?:
-            | Database["public"]["Enums"]["builder_segment"]
-            | null
+          builder_segment?: string | null
           city?: string | null
           company_name: string
           company_type?: string | null
-          contractor_segment?:
-            | Database["public"]["Enums"]["contractor_segment"]
-            | null
+          contractor_segment?: string | null
           contractor_specialty?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -162,22 +159,25 @@ export type Database = {
           industry_type: Database["public"]["Enums"]["industry_type"]
           is_franchise?: boolean | null
           is_parent_company?: boolean | null
+          last_contact_date?: string | null
           lead_score?: number | null
           linkedin_company_url?: string | null
           maintenance_contract_percentage?: number | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          next_activity_date?: string | null
+          next_activity_type?: string | null
           notes?: string | null
           owner_name?: string | null
           parent_company_id?: string | null
+          partner_introduction_date?: string | null
+          partner_relationship_status?: string | null
           price_point_category?: string | null
           primary_email?: string | null
           primary_phone?: string | null
           priority_tier?: Database["public"]["Enums"]["priority_tier"] | null
           score_calculated_at?: string | null
-          segment_confidence?:
-            | Database["public"]["Enums"]["segment_confidence"]
-            | null
+          segment_confidence?: string | null
           service_area_type?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["company_status"] | null
@@ -194,15 +194,11 @@ export type Database = {
             | null
           annual_volume?: number | null
           average_home_price?: number | null
-          builder_segment?:
-            | Database["public"]["Enums"]["builder_segment"]
-            | null
+          builder_segment?: string | null
           city?: string | null
           company_name?: string
           company_type?: string | null
-          contractor_segment?:
-            | Database["public"]["Enums"]["contractor_segment"]
-            | null
+          contractor_segment?: string | null
           contractor_specialty?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -212,22 +208,25 @@ export type Database = {
           industry_type?: Database["public"]["Enums"]["industry_type"]
           is_franchise?: boolean | null
           is_parent_company?: boolean | null
+          last_contact_date?: string | null
           lead_score?: number | null
           linkedin_company_url?: string | null
           maintenance_contract_percentage?: number | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          next_activity_date?: string | null
+          next_activity_type?: string | null
           notes?: string | null
           owner_name?: string | null
           parent_company_id?: string | null
+          partner_introduction_date?: string | null
+          partner_relationship_status?: string | null
           price_point_category?: string | null
           primary_email?: string | null
           primary_phone?: string | null
           priority_tier?: Database["public"]["Enums"]["priority_tier"] | null
           score_calculated_at?: string | null
-          segment_confidence?:
-            | Database["public"]["Enums"]["segment_confidence"]
-            | null
+          segment_confidence?: string | null
           service_area_type?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["company_status"] | null
@@ -961,14 +960,6 @@ export type Database = {
         | "Demo"
         | "Training"
       app_role: "admin" | "sales_manager" | "sales_rep" | "read_only"
-      builder_segment:
-        | "Production/Tract Builders"
-        | "Regional Mid-Volume Builders"
-        | "Spec Home Builders"
-        | "Luxury Custom Builders"
-        | "Multi-Family Developers"
-        | "Affordable Housing Builders"
-        | "Active Adult/55+ Specialists"
       company_status:
         | "Lead"
         | "Contacted"
@@ -978,15 +969,6 @@ export type Database = {
         | "Inactive"
         | "Lost"
       contact_method: "Email" | "Phone" | "LinkedIn" | "Text"
-      contractor_segment:
-        | "Smart Home Champions"
-        | "Customer Experience Innovators"
-        | "High-Volume Installers"
-        | "Premium Service Specialists"
-        | "Regional Growth Contractors"
-        | "Specialty HVAC Integrators"
-        | "Service-First Traditionalists"
-        | "Emergency/Repair Specialists"
       decision_tier: "Primary" | "Secondary" | "Influencer"
       industry_type: "Builder" | "Contractor"
       priority_tier: "P1: 80-100" | "P2: 60-79" | "P3: 40-59"
@@ -1018,7 +1000,6 @@ export type Database = {
         | "$3M-$5.9M"
         | "$6M-$10M"
         | "$10M+"
-      segment_confidence: "High 90%+" | "Medium 70-89%" | "Low <70%"
       training_type:
         | "Touch 1: Business Benefits"
         | "Touch 2: Product Training"
@@ -1171,15 +1152,6 @@ export const Constants = {
         "Training",
       ],
       app_role: ["admin", "sales_manager", "sales_rep", "read_only"],
-      builder_segment: [
-        "Production/Tract Builders",
-        "Regional Mid-Volume Builders",
-        "Spec Home Builders",
-        "Luxury Custom Builders",
-        "Multi-Family Developers",
-        "Affordable Housing Builders",
-        "Active Adult/55+ Specialists",
-      ],
       company_status: [
         "Lead",
         "Contacted",
@@ -1190,16 +1162,6 @@ export const Constants = {
         "Lost",
       ],
       contact_method: ["Email", "Phone", "LinkedIn", "Text"],
-      contractor_segment: [
-        "Smart Home Champions",
-        "Customer Experience Innovators",
-        "High-Volume Installers",
-        "Premium Service Specialists",
-        "Regional Growth Contractors",
-        "Specialty HVAC Integrators",
-        "Service-First Traditionalists",
-        "Emergency/Repair Specialists",
-      ],
       decision_tier: ["Primary", "Secondary", "Influencer"],
       industry_type: ["Builder", "Contractor"],
       priority_tier: ["P1: 80-100", "P2: 60-79", "P3: 40-59"],
@@ -1235,7 +1197,6 @@ export const Constants = {
         "$6M-$10M",
         "$10M+",
       ],
-      segment_confidence: ["High 90%+", "Medium 70-89%", "Low <70%"],
       training_type: [
         "Touch 1: Business Benefits",
         "Touch 2: Product Training",

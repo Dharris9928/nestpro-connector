@@ -18,18 +18,24 @@ interface CompaniesFilterSidebarProps {
 }
 
 const BUILDER_SEGMENTS = [
-  { value: 'Production Builders', label: 'Production/Tract' },
-  { value: 'Custom Builders', label: 'Regional Mid-Volume' },
-  { value: 'Remodelers', label: 'Spec Home' },
-  { value: 'Multi-Family', label: 'Multi-Family' },
-  { value: 'Commercial', label: 'Commercial' }
+  { value: 'production_tract', label: 'Production/Tract Builders' },
+  { value: 'regional_mid_volume', label: 'Regional Mid-Volume Builders' },
+  { value: 'spec_home', label: 'Spec Home Builders' },
+  { value: 'luxury_custom', label: 'Luxury Custom Builders' },
+  { value: 'multi_family', label: 'Multi-Family Developers' },
+  { value: 'affordable_housing', label: 'Affordable Housing Builders' },
+  { value: 'active_adult', label: 'Active Adult/55+ Specialists' }
 ];
 
 const CONTRACTOR_SEGMENTS = [
-  { value: 'Retrofit Specialists', label: 'Smart Home Champions' },
-  { value: 'New Construction', label: 'Customer Experience Innovators' },
-  { value: 'Service & Repair', label: 'High-Volume Installers' },
-  { value: 'Commercial HVAC', label: 'Commercial HVAC' }
+  { value: 'smart_home_champions', label: 'Smart Home Champions' },
+  { value: 'customer_experience', label: 'Customer Experience Innovators' },
+  { value: 'high_volume', label: 'High-Volume Installers' },
+  { value: 'premium_specialists', label: 'Premium Service Specialists' },
+  { value: 'regional_growth', label: 'Regional Growth Contractors' },
+  { value: 'specialty_integrators', label: 'Specialty HVAC Integrators' },
+  { value: 'traditionalists', label: 'Service-First Traditionalists' },
+  { value: 'emergency_repair', label: 'Emergency/Repair Specialists' }
 ];
 
 const STATUSES = [

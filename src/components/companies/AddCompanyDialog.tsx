@@ -209,22 +209,22 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
   };
 
   const BUILDER_SEGMENTS = [
-    { value: 'production_tract', label: 'Production/Tract' },
-    { value: 'regional_mid_volume', label: 'Regional Mid-Volume' },
-    { value: 'spec_home', label: 'Spec Home' },
-    { value: 'luxury_custom', label: 'Luxury Custom' },
-    { value: 'multi_family', label: 'Multi-Family' },
-    { value: 'affordable_housing', label: 'Affordable Housing' },
-    { value: 'active_adult', label: 'Active Adult/55+' }
+    { value: 'production_tract', label: 'Production/Tract Builders' },
+    { value: 'regional_mid_volume', label: 'Regional Mid-Volume Builders' },
+    { value: 'spec_home', label: 'Spec Home Builders' },
+    { value: 'luxury_custom', label: 'Luxury Custom Builders' },
+    { value: 'multi_family', label: 'Multi-Family Developers' },
+    { value: 'affordable_housing', label: 'Affordable Housing Builders' },
+    { value: 'active_adult', label: 'Active Adult/55+ Specialists' }
   ];
 
   const CONTRACTOR_SEGMENTS = [
     { value: 'smart_home_champions', label: 'Smart Home Champions' },
     { value: 'customer_experience', label: 'Customer Experience Innovators' },
     { value: 'high_volume', label: 'High-Volume Installers' },
-    { value: 'premium_specialists', label: 'Premium Specialists' },
-    { value: 'regional_growth', label: 'Regional Growth' },
-    { value: 'specialty_integrators', label: 'Specialty Integrators' },
+    { value: 'premium_specialists', label: 'Premium Service Specialists' },
+    { value: 'regional_growth', label: 'Regional Growth Contractors' },
+    { value: 'specialty_integrators', label: 'Specialty HVAC Integrators' },
     { value: 'traditionalists', label: 'Service-First Traditionalists' },
     { value: 'emergency_repair', label: 'Emergency/Repair Specialists' }
   ];
