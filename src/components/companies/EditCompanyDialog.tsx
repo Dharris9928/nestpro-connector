@@ -241,9 +241,9 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         offers_smart_security: offersSmartSecurity,
         offers_home_automation: offersHomeAutomation,
         
-        // Builder-specific
-        average_home_price: industryType === 'Builder' && averageHomePrice 
-          ? parseInt(averageHomePrice) 
+        // Builder-specific - NOW USING RANGE
+        average_home_price_range: industryType === 'Builder' 
+          ? averageHomePriceRange || undefined 
           : undefined,
         price_point_category: industryType === 'Builder' 
           ? priceCategoryState || undefined 
@@ -511,10 +511,6 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 </Select>
                 <p className="text-xs text-blue-600 mt-1">
                   📈 Select the range that best fits annual {industryType === 'Builder' ? 'home completions' : 'service calls'}
-                </p>
-                  {industryType === 'Builder' 
-                    ? 'Number of homes built annually' 
-                    : 'Number of service calls annually'}
                 </p>
               </div>
 
