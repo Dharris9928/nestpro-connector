@@ -1,74 +1,66 @@
 import { supabase } from '@/integrations/supabase/client';
+import { getScoreForRange } from './rangeScoringEngine';
 import {
-  calculateWebsiteScore,
-  calculateSocialMediaScore,
-  calculateTechnologyScore,
-  calculateDecisionAuthorityScore,
-  calculateLinkedInScore,
-  calculateConfidence,
-  calculateGeographicScore
+  calculateGeographicScore,
+  assignPriorityTier,
+  calculateConfidence
 } from './sharedScoring';
 
 export interface ContractorScoringBreakdown {
   // Firmographic (50 points)
-  volumeScore: number; // 0-15
-  revenueScore: number; // 0-10
-  geographicScore: number; // 0-10
-  stabilityScore: number; // 0-10
-  businessModelScore: number; // 0-5
-  firmographicTotal: number; // 0-50
+  volumeScore: number; // 0-12 points
+  revenueScore: number; // 0-12 points
+  businessModelScore: number; // 0-8 points
+  geographicScore: number; // 0-10 points
+  stabilityScore: number; // 0-8 points (employees + years)
+  firmographicTotal: number;
   
-  // Digital (30 points)
-  websiteQualityScore: number; // 0-10
-  socialMediaScore: number; // 0-10
-  technologyAdoptionScore: number; // 0-10
-  digitalTotal: number; // 0-30
+  // Digital Engagement (30 points)
+  websiteQualityScore: number; // 0-10 points
+  linkedinActivityScore: number; // 0-10 points
+  technologyAdoptionScore: number; // 0-10 points
+  digitalTotal: number;
   
-  // Contact (20 points)
-  decisionAuthorityScore: number; // 0-10
-  linkedinProfessionalScore: number; // 0-10
-  contactTotal: number; // 0-20
+  // Contact Quality (20 points)
+  decisionAuthorityScore: number; // 0-10 points
+  linkedinProfessionalScore: number; // 0-10 points
+  contactTotal: number;
   
-  // Total
-  totalScore: number; // 0-100
+  totalScore: number;
   priorityTier: 'P1' | 'P2' | 'P3' | 'Unscored';
   confidence: 'High' | 'Medium' | 'Low';
 }
 
 /**
- * Calculate lead score for CONTRACTORS
+ * Calculate lead score for CONTRACTORS using range-based scoring
  */
 export async function calculateContractorScore(companyId: string): Promise<ContractorScoringBreakdown> {
-  // Fetch company with related data
   const { data: company, error } = await supabase
     .from('companies')
     .select(`
       *,
-      contacts:contacts(id, title, linkedin_url, linkedin_connections, linkedin_activity_score),
-      installations:installation_history(product_type, installation_date)
+      contacts:contacts(id, title, linkedin_url, linkedin_connections, linkedin_activity_score)
     `)
     .eq('id', companyId)
     .single();
 
   if (error || !company) {
-    throw new Error(`Company not found: ${companyId}`);
+    throw new Error('Company not found');
   }
 
-  console.log('Contractor scoring - Company data:', {
-    companyName: company.company_name,
-    contactCount: company.contacts?.length || 0,
-    installationCount: company.installations?.length || 0
-  });
+  if (company.industry_type !== 'Contractor') {
+    throw new Error('Company is not a Contractor');
+  }
 
   const scoring: ContractorScoringBreakdown = {
     volumeScore: 0,
     revenueScore: 0,
+    businessModelScore: 0,
     geographicScore: 0,
     stabilityScore: 0,
-    businessModelScore: 0,
     firmographicTotal: 0,
     websiteQualityScore: 0,
-    socialMediaScore: 0,
+    linkedinActivityScore: 0,
     technologyAdoptionScore: 0,
     digitalTotal: 0,
     decisionAuthorityScore: 0,
@@ -80,184 +72,207 @@ export async function calculateContractorScore(companyId: string): Promise<Contr
   };
 
   // ============================================
-  // FIRMOGRAPHIC (50 points)
+  // CONTRACTOR FIRMOGRAPHIC SCORING (50 points)
   // ============================================
-
-  // 1. Volume Score (0-15 points) - SERVICE CALLS PER YEAR
-  scoring.volumeScore = calculateContractorVolumeScore(company.annual_volume);
-
-  // 2. Revenue Score (0-10 points) - REVENUE RANGE
-  scoring.revenueScore = calculateContractorRevenueScore(company.annual_revenue_range);
-
-  // 3. Geographic Score (0-10 points)
+  
+  // 1. Volume Score (0-12 points) - FROM RANGE
+  if (company.annual_volume_range) {
+    scoring.volumeScore = await getScoreForRange(
+      'annual_volume_range',
+      company.annual_volume_range,
+      'Contractor'
+    );
+  }
+  
+  // 2. Revenue Score (0-12 points) - Already uses ranges
+  if (company.annual_revenue_range) {
+    const revenueMap: Record<string, number> = {
+      '$10M+': 12,
+      '$6M-$10M': 11,
+      '$3M-$5.9M': 10,
+      '$1M-$2.9M': 8,
+      '$500K-$999K': 6,
+      '<$500K': 3
+    };
+    scoring.revenueScore = revenueMap[company.annual_revenue_range] || 0;
+  }
+  
+  // 3. Business Model Score (0-8 points) - Still uses percentages
+  let businessModelScore = 0;
+  
+  if (company.maintenance_contract_percentage !== null && company.maintenance_contract_percentage !== undefined) {
+    if (company.maintenance_contract_percentage >= 60) businessModelScore += 5;
+    else if (company.maintenance_contract_percentage >= 40) businessModelScore += 4;
+    else if (company.maintenance_contract_percentage >= 20) businessModelScore += 3;
+    else if (company.maintenance_contract_percentage >= 10) businessModelScore += 2;
+    else businessModelScore += 1;
+  }
+  
+  if (company.emergency_service_percentage !== null && company.emergency_service_percentage !== undefined) {
+    if (company.emergency_service_percentage < 20) businessModelScore += 3;
+    else if (company.emergency_service_percentage < 40) businessModelScore += 2;
+    else if (company.emergency_service_percentage < 60) businessModelScore += 1;
+  }
+  
+  scoring.businessModelScore = Math.min(businessModelScore, 8);
+  
+  // 4. Geographic Score (0-10 points)
   scoring.geographicScore = calculateGeographicScore(company.state);
-
-  // 4. Stability Score (0-10 points)
-  scoring.stabilityScore = calculateContractorStabilityScore({
-    yearsInBusiness: company.years_in_business,
-    employees: company.total_employees
-  });
-
-  // 5. Business Model Score (0-5 points) - MAINTENANCE/EMERGENCY MIX
-  scoring.businessModelScore = calculateBusinessModelScore({
-    maintenancePercentage: company.maintenance_contract_percentage,
-    emergencyPercentage: company.emergency_service_percentage
-  });
+  
+  // 5. Stability Score (0-8 points) - Employees (4pts) + Years (4pts)
+  let stabilityScore = 0;
+  
+  // Employees component (0-4 points) - FROM RANGE
+  if (company.total_employees_range) {
+    const employeeScore = await getScoreForRange(
+      'total_employees_range',
+      company.total_employees_range,
+      'Contractor'
+    );
+    stabilityScore += Math.min(employeeScore, 4);
+  }
+  
+  // Years component (0-4 points) - FROM RANGE
+  if (company.years_in_business_range) {
+    const yearsScore = await getScoreForRange(
+      'years_in_business_range',
+      company.years_in_business_range,
+      'Contractor'
+    );
+    stabilityScore += Math.min(yearsScore, 4);
+  }
+  
+  scoring.stabilityScore = Math.min(stabilityScore, 8);
 
   scoring.firmographicTotal = 
     scoring.volumeScore +
     scoring.revenueScore +
+    scoring.businessModelScore +
     scoring.geographicScore +
-    scoring.stabilityScore +
-    scoring.businessModelScore;
+    scoring.stabilityScore;
 
   // ============================================
   // DIGITAL ENGAGEMENT (30 points)
   // ============================================
-
-  scoring.websiteQualityScore = calculateWebsiteScore(company.website_url);
-  scoring.socialMediaScore = calculateSocialMediaScore(company.linkedin_company_url);
-  scoring.technologyAdoptionScore = calculateTechnologyScore(company.installations || []);
-
+  
+  // 1. Website Quality (0-10 points) - FROM RANGE
+  if (company.website_quality) {
+    scoring.websiteQualityScore = await getScoreForRange(
+      'website_quality',
+      company.website_quality,
+      'Contractor'
+    );
+  }
+  
+  // 2. LinkedIn Activity (0-10 points) - FROM RANGE
+  if (company.linkedin_activity_level) {
+    scoring.linkedinActivityScore = await getScoreForRange(
+      'linkedin_activity_level',
+      company.linkedin_activity_level,
+      'Contractor'
+    );
+  }
+  
+  // 3. Technology Adoption (0-10 points)
+  let techScore = 0;
+  if (company.technology_adoption_level) {
+    techScore = await getScoreForRange(
+      'technology_adoption_level',
+      company.technology_adoption_level,
+      'Contractor'
+    );
+  } else if (company.nest_installation_volume_range) {
+    techScore = await getScoreForRange(
+      'nest_installation_volume_range',
+      company.nest_installation_volume_range,
+      'Contractor'
+    );
+  }
+  
+  scoring.technologyAdoptionScore = Math.min(techScore, 10);
+  
   scoring.digitalTotal = 
     scoring.websiteQualityScore +
-    scoring.socialMediaScore +
+    scoring.linkedinActivityScore +
     scoring.technologyAdoptionScore;
 
   // ============================================
-  // CONTACT (20 points)
+  // CONTACT QUALITY (20 points)
   // ============================================
+  
+  let maxRoleScore = 0;
+  let maxLinkedInScore = 0;
+  
+  if (company.contacts && company.contacts.length > 0) {
+    const titleScores: Record<string, number> = {
+      'CEO': 10, 'President': 10, 'Owner': 10, 'Founder': 10,
+      'COO': 10, 'CFO': 10, 'CMO': 10, 'CTO': 10,
+      'VP': 8, 'Vice President': 8,
+      'Director': 6,
+      'Manager': 4
+    };
 
-  console.log('Contractor scoring - Contacts:', company.contacts);
-  scoring.decisionAuthorityScore = calculateDecisionAuthorityScore(company.contacts || []);
-  scoring.linkedinProfessionalScore = calculateLinkedInScore(company.contacts || []);
-  console.log('Contractor scoring - Contact scores:', {
-    decisionAuthorityScore: scoring.decisionAuthorityScore,
-    linkedinProfessionalScore: scoring.linkedinProfessionalScore
-  });
-
+    company.contacts.forEach((contact: any) => {
+      const title = (contact.title || '').toUpperCase();
+      for (const [keyword, score] of Object.entries(titleScores)) {
+        if (title.includes(keyword.toUpperCase())) {
+          maxRoleScore = Math.max(maxRoleScore, score);
+        }
+      }
+      
+      let contactLinkedInScore = 0;
+      if (contact.linkedin_url) {
+        contactLinkedInScore += 3;
+        
+        if (contact.linkedin_connections >= 1000) contactLinkedInScore += 4;
+        else if (contact.linkedin_connections >= 500) contactLinkedInScore += 3;
+        else if (contact.linkedin_connections >= 250) contactLinkedInScore += 2;
+        else if (contact.linkedin_connections >= 100) contactLinkedInScore += 1;
+        
+        if (contact.linkedin_activity_score >= 80) contactLinkedInScore += 3;
+        else if (contact.linkedin_activity_score >= 50) contactLinkedInScore += 2;
+        else if (contact.linkedin_activity_score >= 20) contactLinkedInScore += 1;
+      }
+      
+      maxLinkedInScore = Math.max(maxLinkedInScore, contactLinkedInScore);
+    });
+  }
+  
+  scoring.decisionAuthorityScore = maxRoleScore;
+  scoring.linkedinProfessionalScore = Math.min(maxLinkedInScore, 10);
+  
   scoring.contactTotal = 
     scoring.decisionAuthorityScore +
     scoring.linkedinProfessionalScore;
 
   // ============================================
-  // TOTAL SCORE & PRIORITY TIER
+  // TOTAL SCORE
   // ============================================
-
+  
   scoring.totalScore = 
     scoring.firmographicTotal +
     scoring.digitalTotal +
     scoring.contactTotal;
 
-  if (scoring.totalScore >= 80) {
-    scoring.priorityTier = 'P1';
-  } else if (scoring.totalScore >= 60) {
-    scoring.priorityTier = 'P2';
-  } else if (scoring.totalScore >= 40) {
-    scoring.priorityTier = 'P3';
-  } else {
-    scoring.priorityTier = 'Unscored';
-  }
+  scoring.priorityTier = assignPriorityTier(scoring.totalScore);
+  scoring.confidence = calculateConfidence(company);
 
-  const baseConfidence = calculateConfidence(company);
-  
-  // Format confidence for details table (with percentage range)
-  let formattedConfidence: string;
-  if (baseConfidence === 'High') formattedConfidence = 'High 90%+';
-  else if (baseConfidence === 'Medium') formattedConfidence = 'Medium 70-89%';
-  else formattedConfidence = 'Low <70%';
-  
-  scoring.confidence = baseConfidence;
+  await saveContractorScore(companyId, scoring);
 
-  // Save to database with formatted confidence
-  await saveContractorScoreToDatabase(companyId, scoring, formattedConfidence);
+  await supabase
+    .from('companies')
+    .update({
+      lead_score: scoring.totalScore,
+      priority_tier: scoring.priorityTier,
+      segment_confidence: scoring.confidence,
+      score_calculated_at: new Date().toISOString()
+    } as any)
+    .eq('id', companyId);
 
   return scoring;
 }
 
-// ============================================
-// CONTRACTOR-SPECIFIC HELPER FUNCTIONS
-// ============================================
-
-function calculateContractorVolumeScore(volume?: number): number {
-  if (!volume) return 0;
-
-  // Contractors scored on SERVICE CALLS per year
-  if (volume >= 2500) return 15;
-  if (volume >= 1000) return 12;
-  if (volume >= 500) return 10;
-  if (volume >= 250) return 8;
-  return 5;
-}
-
-function calculateContractorRevenueScore(revenueRange?: string): number {
-  if (!revenueRange) return 0;
-
-  const revenueMap: Record<string, number> = {
-    '$10M+': 10,
-    '$6M-$10M': 9,
-    '$3M-$5.9M': 8,
-    '$1M-$2.9M': 6,
-    '$500K-$999K': 4,
-    '<$500K': 2
-  };
-
-  return revenueMap[revenueRange] || 0;
-}
-
-function calculateContractorStabilityScore(data: {
-  yearsInBusiness?: number;
-  employees?: number;
-}): number {
-  let score = 0;
-
-  // Years in business (0-5 points)
-  if (data.yearsInBusiness) {
-    if (data.yearsInBusiness >= 15) score += 5;
-    else if (data.yearsInBusiness >= 10) score += 4;
-    else if (data.yearsInBusiness >= 5) score += 3;
-    else if (data.yearsInBusiness >= 3) score += 2;
-  }
-
-  // Employee count (0-5 points)
-  if (data.employees) {
-    if (data.employees >= 50) score += 5;
-    else if (data.employees >= 25) score += 4;
-    else if (data.employees >= 10) score += 3;
-    else if (data.employees >= 5) score += 2;
-  }
-
-  return Math.min(score, 10);
-}
-
-function calculateBusinessModelScore(data: {
-  maintenancePercentage?: number;
-  emergencyPercentage?: number;
-}): number {
-  let score = 0;
-
-  // Maintenance contracts indicate recurring revenue stability (0-3 points)
-  if (data.maintenancePercentage) {
-    if (data.maintenancePercentage >= 40) score += 3;
-    else if (data.maintenancePercentage >= 25) score += 2;
-    else if (data.maintenancePercentage >= 10) score += 1;
-  }
-
-  // Emergency service capability indicates full-service offering (0-2 points)
-  if (data.emergencyPercentage) {
-    if (data.emergencyPercentage >= 20) score += 2;
-    else if (data.emergencyPercentage >= 10) score += 1;
-  }
-
-  return Math.min(score, 5);
-}
-
-async function saveContractorScoreToDatabase(
-  companyId: string,
-  scoring: ContractorScoringBreakdown,
-  formattedConfidence: string
-): Promise<void> {
-  // Save detailed breakdown to contractor_scoring_details (with formatted confidence)
+async function saveContractorScore(companyId: string, scoring: ContractorScoringBreakdown) {
   await supabase
     .from('contractor_scoring_details')
     .upsert(
@@ -265,12 +280,12 @@ async function saveContractorScoreToDatabase(
         company_id: companyId,
         volume_score: scoring.volumeScore,
         revenue_score: scoring.revenueScore,
+        business_model_score: scoring.businessModelScore,
         geographic_score: scoring.geographicScore,
         stability_score: scoring.stabilityScore,
-        business_model_score: scoring.businessModelScore,
         firmographic_total: scoring.firmographicTotal,
         website_quality_score: scoring.websiteQualityScore,
-        social_media_score: scoring.socialMediaScore,
+        social_media_score: scoring.linkedinActivityScore,
         technology_adoption_score: scoring.technologyAdoptionScore,
         digital_total: scoring.digitalTotal,
         decision_authority_score: scoring.decisionAuthorityScore,
@@ -278,19 +293,9 @@ async function saveContractorScoreToDatabase(
         contact_total: scoring.contactTotal,
         total_score: scoring.totalScore,
         priority_tier: scoring.priorityTier,
-        confidence: formattedConfidence,
+        confidence: scoring.confidence,
         calculated_at: new Date().toISOString()
       },
       { onConflict: 'company_id' }
     );
-
-  // Update company with total score
-  await supabase
-    .from('companies')
-    .update({
-      lead_score: scoring.totalScore,
-      segment_confidence: scoring.confidence,
-      score_calculated_at: new Date().toISOString()
-    } as any)
-    .eq('id', companyId);
 }
