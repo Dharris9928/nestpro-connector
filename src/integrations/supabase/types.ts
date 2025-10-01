@@ -93,28 +93,43 @@ export type Database = {
           address_line1: string | null
           annual_revenue_range: string | null
           annual_volume: number | null
+          annual_volume_range: string | null
           average_home_price: number | null
+          average_home_price_range: string | null
           city: string | null
           company_name: string
           company_type: string | null
           contractor_specialty: string | null
           created_at: string | null
           created_by: string
+          current_smart_home_offerings: string[] | null
           emergency_service_percentage: number | null
+          facebook_url: string | null
           franchise_name: string | null
+          has_google_business_profile: boolean | null
           id: string
           industry_type: string
+          instagram_url: string | null
           is_franchise: boolean | null
           is_parent_company: boolean | null
           last_contact_date: string | null
           lead_score: number | null
+          linkedin_activity_level: string | null
           linkedin_company_url: string | null
+          linkedin_followers_range: string | null
           maintenance_contract_percentage: number | null
+          nest_installation_volume_range: string | null
           nest_pro_industry: string | null
           nest_pro_partner_id: string | null
+          nest_product_mix: string[] | null
           next_activity_date: string | null
           next_activity_type: string | null
           notes: string | null
+          offers_home_automation: boolean | null
+          offers_smart_security: boolean | null
+          offers_smart_thermostats: boolean | null
+          online_review_count_range: string | null
+          online_review_rating: number | null
           owner_name: string | null
           parent_company_id: string | null
           partner_introduction_date: string | null
@@ -127,40 +142,63 @@ export type Database = {
           segment: string | null
           segment_confidence: string | null
           service_area_type: string | null
+          social_media_presence: string | null
           state: string | null
           status: string | null
+          technology_adoption_level: string | null
           total_employees: number | null
+          total_employees_range: string | null
           updated_at: string | null
+          website_has_smart_home_content: boolean | null
+          website_last_updated: string | null
+          website_quality: string | null
           website_url: string | null
           years_in_business: number | null
+          years_in_business_range: string | null
+          youtube_url: string | null
           zip: string | null
         }
         Insert: {
           address_line1?: string | null
           annual_revenue_range?: string | null
           annual_volume?: number | null
+          annual_volume_range?: string | null
           average_home_price?: number | null
+          average_home_price_range?: string | null
           city?: string | null
           company_name: string
           company_type?: string | null
           contractor_specialty?: string | null
           created_at?: string | null
           created_by: string
+          current_smart_home_offerings?: string[] | null
           emergency_service_percentage?: number | null
+          facebook_url?: string | null
           franchise_name?: string | null
+          has_google_business_profile?: boolean | null
           id?: string
           industry_type: string
+          instagram_url?: string | null
           is_franchise?: boolean | null
           is_parent_company?: boolean | null
           last_contact_date?: string | null
           lead_score?: number | null
+          linkedin_activity_level?: string | null
           linkedin_company_url?: string | null
+          linkedin_followers_range?: string | null
           maintenance_contract_percentage?: number | null
+          nest_installation_volume_range?: string | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          nest_product_mix?: string[] | null
           next_activity_date?: string | null
           next_activity_type?: string | null
           notes?: string | null
+          offers_home_automation?: boolean | null
+          offers_smart_security?: boolean | null
+          offers_smart_thermostats?: boolean | null
+          online_review_count_range?: string | null
+          online_review_rating?: number | null
           owner_name?: string | null
           parent_company_id?: string | null
           partner_introduction_date?: string | null
@@ -173,40 +211,63 @@ export type Database = {
           segment?: string | null
           segment_confidence?: string | null
           service_area_type?: string | null
+          social_media_presence?: string | null
           state?: string | null
           status?: string | null
+          technology_adoption_level?: string | null
           total_employees?: number | null
+          total_employees_range?: string | null
           updated_at?: string | null
+          website_has_smart_home_content?: boolean | null
+          website_last_updated?: string | null
+          website_quality?: string | null
           website_url?: string | null
           years_in_business?: number | null
+          years_in_business_range?: string | null
+          youtube_url?: string | null
           zip?: string | null
         }
         Update: {
           address_line1?: string | null
           annual_revenue_range?: string | null
           annual_volume?: number | null
+          annual_volume_range?: string | null
           average_home_price?: number | null
+          average_home_price_range?: string | null
           city?: string | null
           company_name?: string
           company_type?: string | null
           contractor_specialty?: string | null
           created_at?: string | null
           created_by?: string
+          current_smart_home_offerings?: string[] | null
           emergency_service_percentage?: number | null
+          facebook_url?: string | null
           franchise_name?: string | null
+          has_google_business_profile?: boolean | null
           id?: string
           industry_type?: string
+          instagram_url?: string | null
           is_franchise?: boolean | null
           is_parent_company?: boolean | null
           last_contact_date?: string | null
           lead_score?: number | null
+          linkedin_activity_level?: string | null
           linkedin_company_url?: string | null
+          linkedin_followers_range?: string | null
           maintenance_contract_percentage?: number | null
+          nest_installation_volume_range?: string | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          nest_product_mix?: string[] | null
           next_activity_date?: string | null
           next_activity_type?: string | null
           notes?: string | null
+          offers_home_automation?: boolean | null
+          offers_smart_security?: boolean | null
+          offers_smart_thermostats?: boolean | null
+          online_review_count_range?: string | null
+          online_review_rating?: number | null
           owner_name?: string | null
           parent_company_id?: string | null
           partner_introduction_date?: string | null
@@ -219,12 +280,20 @@ export type Database = {
           segment?: string | null
           segment_confidence?: string | null
           service_area_type?: string | null
+          social_media_presence?: string | null
           state?: string | null
           status?: string | null
+          technology_adoption_level?: string | null
           total_employees?: number | null
+          total_employees_range?: string | null
           updated_at?: string | null
+          website_has_smart_home_content?: boolean | null
+          website_last_updated?: string | null
+          website_quality?: string | null
           website_url?: string | null
           years_in_business?: number | null
+          years_in_business_range?: string | null
+          youtube_url?: string | null
           zip?: string | null
         }
         Relationships: [
@@ -804,6 +873,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scoring_configuration: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          field_name: string
+          id: string
+          industry_type: string | null
+          range_value: string
+          score_points: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          field_name: string
+          id?: string
+          industry_type?: string | null
+          range_value: string
+          score_points: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          field_name?: string
+          id?: string
+          industry_type?: string | null
+          range_value?: string
+          score_points?: number
+        }
+        Relationships: []
       }
       segmentation_scores: {
         Row: {
