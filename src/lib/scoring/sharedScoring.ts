@@ -10,32 +10,53 @@ import { supabase } from '@/integrations/supabase/client';
 
 export function calculateWebsiteScore(websiteUrl?: string): number {
   if (!websiteUrl) return 0;
-  // Has website = 6 points base
-  return 6;
+  
+  // Rubric: 5pts for professional site, 3pts for smart home mentions, 2pts for updates
+  // Without crawling, we give base score for having a professional domain
+  // Enhanced scoring would require website analysis
+  return 5; // Base score for having a website (assumes professional if builder has site)
 }
 
 export function calculateSocialMediaScore(linkedinUrl?: string): number {
   if (!linkedinUrl) return 0;
-  // Has LinkedIn = 5 points base
-  return 5;
+  
+  // Rubric: 4pts active LinkedIn, 3pts recent posts, 2pts thought leadership, 1pt 500+ followers
+  // Without API access, we give base score for having LinkedIn presence
+  // Enhanced scoring would require LinkedIn API integration
+  return 4; // Base score for having LinkedIn company page
 }
 
 export function calculateTechnologyScore(installations: any[]): number {
   if (!installations || installations.length === 0) return 0;
 
-  // Score based on installation count and recency
+  let score = 0;
+  
+  // Rubric: 7pts for smart home offerings, 2pts for energy efficiency, 1pt for modern construction
+  // Using installation history as indicator of smart home adoption
+  
+  if (installations.length > 0) {
+    score += 7; // Has smart home offerings (proven by installations)
+  }
+  
+  // Check for recent/active adoption (proxy for ongoing commitment)
   const recentInstalls = installations.filter(i => {
-    const monthsSince = 
-      (Date.now() - new Date(i.installation_date).getTime()) / 
-      (1000 * 60 * 60 * 24 * 30);
-    return monthsSince <= 12;
+    const installDate = new Date(i.installation_date);
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    return installDate >= oneYearAgo;
   });
+  
+  if (recentInstalls.length > 0) {
+    score += 2; // Active/recent = likely energy efficiency focus
+  }
+  
+  // If multiple product types, shows innovation/modern methods
+  const uniqueProducts = new Set(installations.map(i => i.product_type));
+  if (uniqueProducts.size > 1) {
+    score += 1; // Diverse product adoption = modern construction methods
+  }
 
-  if (recentInstalls.length >= 20) return 10;
-  if (recentInstalls.length >= 10) return 8;
-  if (recentInstalls.length >= 5) return 6;
-  if (recentInstalls.length >= 1) return 4;
-  return 0;
+  return Math.min(score, 10);
 }
 
 // ============================================
@@ -73,17 +94,29 @@ export function calculateLinkedInScore(contacts: any[]): number {
 
   let maxScore = 0;
 
-  contacts.forEach(contact => {
-    let contactScore = 0;
-
-    // Has LinkedIn URL = 3 points
-    if (contact.linkedin_url) contactScore += 3;
-
-    // 1000+ connections = 4 points
-    if (contact.linkedin_connections >= 1000) contactScore += 4;
-
-    maxScore = Math.max(maxScore, contactScore);
-  });
+  // Rubric: 4pts for 1,000+ connections, 3pts for recent posts, 2pts for groups, 1pt for speaking
+  for (const contact of contacts) {
+    let score = 0;
+    
+    if (contact.linkedin_url) {
+      // Connection count scoring
+      if (contact.linkedin_connections) {
+        if (contact.linkedin_connections >= 1000) score += 4; // Well-networked
+        else if (contact.linkedin_connections >= 500) score += 3; // Active networker
+        else if (contact.linkedin_connections >= 200) score += 2; // Growing network
+        else score += 1; // Present on LinkedIn
+      }
+      
+      // LinkedIn activity score (if available)
+      if (contact.linkedin_activity_score) {
+        if (contact.linkedin_activity_score >= 80) score += 3; // Active engagement
+        else if (contact.linkedin_activity_score >= 50) score += 2; // Moderate activity
+        else if (contact.linkedin_activity_score >= 20) score += 1; // Some activity
+      }
+    }
+    
+    maxScore = Math.max(maxScore, score);
+  }
 
   return Math.min(maxScore, 10);
 }

@@ -165,14 +165,11 @@ function calculateBuilderVolumeScore(volume?: number): number {
 function calculateBuilderPriceScore(averageHomePrice?: number): number {
   if (!averageHomePrice) return 0;
 
-  // Score based on average home price
-  if (averageHomePrice >= 1000000) return 10; // $1M+ homes
-  if (averageHomePrice >= 750000) return 9;   // $750K+
-  if (averageHomePrice >= 500000) return 8;   // $500K+
-  if (averageHomePrice >= 400000) return 7;   // $400K+
-  if (averageHomePrice >= 300000) return 6;   // $300K+
-  if (averageHomePrice >= 250000) return 5;   // $250K+
-  return 3; // Under $250K
+  // Score based on average home price - matching rubric
+  if (averageHomePrice >= 800000) return 10; // $800K+ (luxury premium)
+  if (averageHomePrice >= 400000) return 8;  // $400K-$799K (sweet spot)
+  if (averageHomePrice >= 200000) return 6;  // $200K-$399K (volume opportunity)
+  return 4; // <$200K (limited margin)
 }
 
 function calculateBuilderStabilityScore(data: {
@@ -181,21 +178,25 @@ function calculateBuilderStabilityScore(data: {
 }): number {
   let score = 0;
 
-  // Years in business (0-8 points)
+  // Revenue growth indicators (0-5 points)
+  // Using years in business as proxy for stability/growth
   if (data.yearsInBusiness) {
-    if (data.yearsInBusiness >= 15) score += 8;
-    else if (data.yearsInBusiness >= 10) score += 6;
-    else if (data.yearsInBusiness >= 5) score += 4;
-    else if (data.yearsInBusiness >= 3) score += 2;
+    if (data.yearsInBusiness >= 10) score += 5; // Established with track record
+    else if (data.yearsInBusiness >= 5) score += 3; // Growing/stable
+    else if (data.yearsInBusiness >= 3) score += 2; // New but present
   }
 
-  // Employee count (0-7 points)
+  // Multiple active projects/communities (0-5 points)
+  // Using employee count as proxy for project capacity
   if (data.employees) {
-    if (data.employees >= 100) score += 7;
-    else if (data.employees >= 50) score += 5;
-    else if (data.employees >= 25) score += 4;
-    else if (data.employees >= 10) score += 2;
+    if (data.employees >= 50) score += 5; // Large operation
+    else if (data.employees >= 25) score += 4; // Mid-size with capacity
+    else if (data.employees >= 10) score += 3; // Small but active
+    else if (data.employees >= 5) score += 2; // Micro but viable
   }
+
+  // Note: Awards/recognition (3pts) and reviews/reputation (2pts) 
+  // would require additional data fields to score accurately
 
   return Math.min(score, 15);
 }
