@@ -1,226 +1,219 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Shield, ShieldAlert, ShieldCheck, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database['public']['Enums']['app_role'];
 
 interface UserProfile {
   id: string;
+  email: string;
+  role: 'admin' | 'sales_manager' | 'sales_rep' | 'read_only';
   first_name: string | null;
   last_name: string | null;
-  role: AppRole;
+  created_at: string;
 }
 
-export const UserManagement = () => {
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+export function UserManagement() {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Check if current user is admin
   useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        setCurrentUserRole(data?.role || null);
-      }
-    };
-    checkUserRole();
+    loadUsers();
+    loadCurrentUser();
   }, []);
 
-  // Fetch all users
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: async () => {
+  const loadCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: userData } = await supabase.auth.admin.getUserById(user.id);
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+    
+    if (profile && userData?.user) {
+      setCurrentUser({
+        ...profile,
+        email: userData.user.email!,
+      } as UserProfile);
+    }
+  };
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return profiles as UserProfile[];
-    },
-    enabled: currentUserRole === 'admin' || currentUserRole === 'sales_manager',
-  });
+      if (error) {
+        if (error.code === 'PGRST301') {
+          return;
+        }
+        throw error;
+      }
 
-  // Update user role mutation
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
+      const usersWithEmails = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
+          return {
+            ...profile,
+            email: userData?.user?.email || 'Unknown',
+          } as UserProfile;
+        })
+      );
+
+      setUsers(usersWithEmails);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: 'admin' | 'sales_manager' | 'sales_rep' | 'read_only') => {
+    try {
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole })
         .eq('id', userId);
 
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success("User role updated successfully");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to update user role");
-    },
-  });
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-500 hover:bg-red-600 text-white';
-      case 'sales_manager':
-        return 'bg-blue-500 hover:bg-blue-600 text-white';
-      case 'sales_rep':
-        return 'bg-green-500 hover:bg-green-600 text-white';
-      case 'read_only':
-        return 'bg-gray-500 hover:bg-gray-600 text-white';
-      default:
-        return 'bg-gray-500 hover:bg-gray-600 text-white';
+      toast.success('User role updated successfully');
+      loadUsers();
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast.error('Failed to update user role');
     }
   };
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'Admin';
-      case 'sales_manager':
-        return 'Sales Manager';
-      case 'sales_rep':
-        return 'Sales Rep';
-      case 'read_only':
-        return 'Read Only';
-      default:
-        return role;
-    }
+  const getRoleBadge = (role: string) => {
+    const variants: Record<string, { variant: any; icon: any; label: string }> = {
+      admin: { 
+        variant: 'destructive', 
+        icon: ShieldAlert, 
+        label: 'Admin' 
+      },
+      sales_manager: { 
+        variant: 'default', 
+        icon: ShieldCheck, 
+        label: 'Sales Manager' 
+      },
+      sales_rep: { 
+        variant: 'secondary', 
+        icon: Shield, 
+        label: 'Sales Rep' 
+      },
+      read_only: { 
+        variant: 'outline', 
+        icon: Eye, 
+        label: 'Read Only' 
+      },
+    };
+
+    const config = variants[role] || variants.read_only;
+    const Icon = config.icon;
+
+    return (
+      <Badge variant={config.variant} className="gap-1">
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
   };
 
-  // Only show to admins and sales managers
-  if (currentUserRole !== 'admin' && currentUserRole !== 'sales_manager') {
-    return null;
+  const isAdmin = currentUser?.role === 'admin';
+
+  if (!isAdmin) {
+    return (
+      <Alert>
+        <ShieldAlert className="h-4 w-4" />
+        <AlertDescription>
+          You need administrator privileges to access user management.
+        </AlertDescription>
+      </Alert>
+    );
   }
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
-          <CardTitle>User Administration</CardTitle>
-        </div>
+        <CardTitle>User Management</CardTitle>
         <CardDescription>
-          Manage user roles and security clearances
+          Manage user roles and security clearances. Only administrators can modify user permissions.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {currentUserRole === 'sales_manager' && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              As a Sales Manager, you can view users but only Admins can modify roles.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Loading users...
-          </div>
-        ) : users && users.length > 0 ? (
-          <div className="space-y-4">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="p-2 bg-primary/10 rounded-full">
-                    <Users className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      {user.first_name || user.last_name
-                        ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-                        : 'Unnamed User'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">User ID: {user.id.slice(0, 8)}...</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {currentUserRole === 'admin' ? (
-                    <Select
-                      value={user.role}
-                      onValueChange={(newRole) => {
-                        updateRoleMutation.mutate({
-                          userId: user.id,
-                          newRole: newRole as AppRole,
-                        });
-                      }}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4" />
-                            <span>Admin</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="sales_manager">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span>Sales Manager</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="sales_rep">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span>Sales Rep</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="read_only">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span>Read Only</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge className={getRoleBadgeColor(user.role)}>
-                      {getRoleLabel(user.role)}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+      <CardContent>
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading users...</div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">No users found</div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            No users found
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    {user.first_name && user.last_name 
+                      ? `${user.first_name} ${user.last_name}`
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">{user.email}</TableCell>
+                  <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell>
+                    {user.id === currentUser?.id ? (
+                      <span className="text-sm text-muted-foreground">You</span>
+                    ) : (
+                      <Select
+                        value={user.role}
+                        onValueChange={(value) => updateUserRole(user.id, value as 'admin' | 'sales_manager' | 'sales_rep' | 'read_only')}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="sales_manager">Sales Manager</SelectItem>
+                          <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                          <SelectItem value="read_only">Read Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
 
-        <div className="pt-4 border-t">
-          <div className="text-sm text-muted-foreground space-y-2">
-            <div className="font-medium">Role Permissions:</div>
-            <ul className="space-y-1 ml-4">
-              <li>• <strong>Admin:</strong> Full access to all features and user management</li>
-              <li>• <strong>Sales Manager:</strong> Can view all companies, manage data, view users</li>
-              <li>• <strong>Sales Rep:</strong> Can only view and edit companies they created</li>
-              <li>• <strong>Read Only:</strong> Can view companies they created but cannot edit</li>
-            </ul>
-          </div>
+        <div className="mt-6 space-y-2 text-sm text-muted-foreground">
+          <p><strong>Role Permissions:</strong></p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li><strong>Admin:</strong> Full access to all features and data, can manage users</li>
+            <li><strong>Sales Manager:</strong> Can view and edit all companies</li>
+            <li><strong>Sales Rep:</strong> Can only view and edit their own companies</li>
+            <li><strong>Read Only:</strong> Can only view their own companies, cannot edit</li>
+          </ul>
         </div>
       </CardContent>
     </Card>
   );
-};
+}
