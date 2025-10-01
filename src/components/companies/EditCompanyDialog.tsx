@@ -10,6 +10,7 @@ import { updateCompany } from '@/lib/companies/updateCompany';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Users } from 'lucide-react';
+import { DigitalEngagementSection } from './DigitalEngagementSection';
 import { 
   BUILDER_SEGMENTS, 
   CONTRACTOR_SEGMENTS, 
@@ -52,11 +53,11 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   // Contractor Specialty (only for contractors)
   const [contractorSpecialty, setContractorSpecialty] = useState('');
   
-  // Business Metrics (For Scoring)
-  const [annualVolume, setAnnualVolume] = useState('');
+  // Business Metrics (For Scoring) - NOW USING RANGES
+  const [annualVolumeRange, setAnnualVolumeRange] = useState('');
   const [annualRevenueRange, setAnnualRevenueRange] = useState('');
-  const [totalEmployees, setTotalEmployees] = useState('');
-  const [yearsInBusiness, setYearsInBusiness] = useState('');
+  const [totalEmployeesRange, setTotalEmployeesRange] = useState('');
+  const [yearsInBusinessRange, setYearsInBusinessRange] = useState('');
   
   // Location (For Scoring)
   const [addressLine1, setAddressLine1] = useState('');
@@ -68,15 +69,26 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   const [primaryPhone, setPrimaryPhone] = useState('');
   const [primaryEmail, setPrimaryEmail] = useState('');
   
-  // Digital Presence (For Scoring)
+  // Digital Presence (For Scoring) - ENHANCED
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [websiteQuality, setWebsiteQuality] = useState('');
+  const [websiteHasSmartContent, setWebsiteHasSmartContent] = useState(false);
   const [linkedinCompanyUrl, setLinkedinCompanyUrl] = useState('');
+  const [linkedinActivityLevel, setLinkedinActivityLevel] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [technologyAdoptionLevel, setTechnologyAdoptionLevel] = useState('');
+  const [nestInstallationVolume, setNestInstallationVolume] = useState('');
+  const [offersSmartThermostats, setOffersSmartThermostats] = useState(false);
+  const [offersSmartSecurity, setOffersSmartSecurity] = useState(false);
+  const [offersHomeAutomation, setOffersHomeAutomation] = useState(false);
   
   // Other
   const [notes, setNotes] = useState('');
 
-  // Builder-specific fields
-  const [averageHomePrice, setAverageHomePrice] = useState('');
+  // Builder-specific fields - NOW USING RANGE
+  const [averageHomePriceRange, setAverageHomePriceRange] = useState('');
   const [priceCategoryState, setPriceCategoryState] = useState('');
 
   // Contractor-specific fields
@@ -134,10 +146,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
       // Contractor Specialty
       setContractorSpecialty(company.contractor_specialty || '');
       
-      setAnnualVolume(company.annual_volume?.toString() || '');
+      setAnnualVolumeRange(company.annual_volume_range || '');
       setAnnualRevenueRange(company.annual_revenue_range || '');
-      setTotalEmployees(company.total_employees?.toString() || '');
-      setYearsInBusiness(company.years_in_business?.toString() || '');
+      setTotalEmployeesRange(company.total_employees_range || '');
+      setYearsInBusinessRange(company.years_in_business_range || '');
       setAddressLine1(company.address_line1 || '');
       setCity(company.city || '');
       setState(company.state || '');
@@ -146,11 +158,22 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
       setPrimaryEmail(company.primary_email || '');
       setWebsiteUrl(company.website_url || '');
       setLinkedinCompanyUrl(company.linkedin_company_url || '');
+      setWebsiteQuality(company.website_quality || '');
+      setWebsiteHasSmartContent(!!company.website_has_smart_home_content);
+      setLinkedinActivityLevel(company.linkedin_activity_level || '');
+      setFacebookUrl(company.facebook_url || '');
+      setInstagramUrl(company.instagram_url || '');
+      setYoutubeUrl(company.youtube_url || '');
+      setTechnologyAdoptionLevel(company.technology_adoption_level || '');
+      setNestInstallationVolume(company.nest_installation_volume_range || '');
+      setOffersSmartThermostats(!!company.offers_smart_thermostats);
+      setOffersSmartSecurity(!!company.offers_smart_security);
+      setOffersHomeAutomation(!!company.offers_home_automation);
       setNotes(company.notes || '');
       
       // Builder-specific fields
       const companyAny = company as any;
-      setAverageHomePrice(companyAny.average_home_price?.toString() || '');
+      setAverageHomePriceRange(companyAny.average_home_price_range || '');
       setPriceCategoryState(companyAny.price_point_category || '');
       
       // Contractor-specific fields
@@ -187,11 +210,11 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         // Contractor Specialty (only saved if contractor)
         contractor_specialty: industryType === 'Contractor' ? contractorSpecialty || null : null,
         
-        // Business Metrics
-        annual_volume: annualVolume ? parseInt(annualVolume) : undefined,
+        // Business Metrics - NOW USING RANGES
+        annual_volume_range: annualVolumeRange || undefined,
         annual_revenue_range: annualRevenueRange || undefined,
-        total_employees: totalEmployees ? parseInt(totalEmployees) : undefined,
-        years_in_business: yearsInBusiness ? parseInt(yearsInBusiness) : undefined,
+        total_employees_range: totalEmployeesRange || undefined,
+        years_in_business_range: yearsInBusinessRange || undefined,
         
         // Location
         address_line1: addressLine1 || undefined,
@@ -203,9 +226,20 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         primary_phone: primaryPhone || undefined,
         primary_email: primaryEmail || undefined,
         
-        // Digital
+        // Digital - ENHANCED
         website_url: websiteUrl || undefined,
+        website_quality: websiteQuality || undefined,
+        website_has_smart_home_content: websiteHasSmartContent,
         linkedin_company_url: linkedinCompanyUrl || undefined,
+        linkedin_activity_level: linkedinActivityLevel || undefined,
+        facebook_url: facebookUrl || undefined,
+        instagram_url: instagramUrl || undefined,
+        youtube_url: youtubeUrl || undefined,
+        technology_adoption_level: technologyAdoptionLevel || undefined,
+        nest_installation_volume_range: nestInstallationVolume || undefined,
+        offers_smart_thermostats: offersSmartThermostats,
+        offers_smart_security: offersSmartSecurity,
+        offers_home_automation: offersHomeAutomation,
         
         // Builder-specific
         average_home_price: industryType === 'Builder' && averageHomePrice 
@@ -438,15 +472,46 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="annual_volume">Annual Volume</Label>
-                <Input
-                  id="annual_volume"
-                  type="number"
-                  value={annualVolume}
-                  onChange={(e) => setAnnualVolume(e.target.value)}
-                  placeholder={industryType === 'Builder' ? 'Homes per year' : 'Service calls per year'}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
+                <Label htmlFor="annual_volume_range">
+                  Annual Volume {industryType === 'Builder' ? '(Homes Built)' : '(Service Calls)'} <span className="text-red-500">*</span>
+                </Label>
+                <Select value={annualVolumeRange} onValueChange={setAnnualVolumeRange}>
+                  <SelectTrigger id="annual_volume_range">
+                    <SelectValue placeholder="Select range..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {industryType === 'Builder' ? (
+                      <>
+                        <SelectItem value="1,000+">1,000+ homes/year (15 pts) - Major builder</SelectItem>
+                        <SelectItem value="500-999">500-999 homes/year (14 pts) - Large production</SelectItem>
+                        <SelectItem value="250-499">250-499 homes/year (13 pts) - Production</SelectItem>
+                        <SelectItem value="100-249">100-249 homes/year (12 pts) - Regional production</SelectItem>
+                        <SelectItem value="50-99">50-99 homes/year (10 pts) - Regional mid-volume</SelectItem>
+                        <SelectItem value="25-49">25-49 homes/year (8 pts) - Small to mid-volume</SelectItem>
+                        <SelectItem value="10-24">10-24 homes/year (6 pts) - Spec home</SelectItem>
+                        <SelectItem value="5-9">5-9 homes/year (4 pts) - Small custom</SelectItem>
+                        <SelectItem value="1-4">1-4 homes/year (2 pts) - Very small</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="10,000+">10,000+ calls/year (12 pts) - Very high volume</SelectItem>
+                        <SelectItem value="5,000-9,999">5,000-9,999 calls/year (11 pts) - High volume</SelectItem>
+                        <SelectItem value="3,000-4,999">3,000-4,999 calls/year (10 pts) - High volume</SelectItem>
+                        <SelectItem value="2,000-2,999">2,000-2,999 calls/year (9 pts) - Medium-high</SelectItem>
+                        <SelectItem value="1,500-1,999">1,500-1,999 calls/year (8 pts) - Medium-high</SelectItem>
+                        <SelectItem value="1,000-1,499">1,000-1,499 calls/year (7 pts) - Medium</SelectItem>
+                        <SelectItem value="750-999">750-999 calls/year (6 pts) - Medium</SelectItem>
+                        <SelectItem value="500-749">500-749 calls/year (5 pts) - Small-medium</SelectItem>
+                        <SelectItem value="250-499">250-499 calls/year (4 pts) - Small-medium</SelectItem>
+                        <SelectItem value="100-249">100-249 calls/year (3 pts) - Small</SelectItem>
+                        <SelectItem value="<100">&lt;100 calls/year (1 pt) - Very small</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-blue-600 mt-1">
+                  📈 Select the range that best fits annual {industryType === 'Builder' ? 'home completions' : 'service calls'}
+                </p>
                   {industryType === 'Builder' 
                     ? 'Number of homes built annually' 
                     : 'Number of service calls annually'}
@@ -471,25 +536,40 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
               </div>
 
               <div>
-                <Label htmlFor="total_employees">Total Employees</Label>
-                <Input
-                  id="total_employees"
-                  type="number"
-                  value={totalEmployees}
-                  onChange={(e) => setTotalEmployees(e.target.value)}
-                  placeholder="Number of employees"
-                />
+                <Label htmlFor="employees_range">Total Employees</Label>
+                <Select value={totalEmployeesRange} onValueChange={setTotalEmployeesRange}>
+                  <SelectTrigger id="employees_range">
+                    <SelectValue placeholder="Select range..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="500+">500+ employees</SelectItem>
+                    <SelectItem value="250-499">250-499 employees</SelectItem>
+                    <SelectItem value="100-249">100-249 employees</SelectItem>
+                    <SelectItem value="50-99">50-99 employees</SelectItem>
+                    <SelectItem value="25-49">25-49 employees</SelectItem>
+                    <SelectItem value="10-24">10-24 employees</SelectItem>
+                    <SelectItem value="5-9">5-9 employees</SelectItem>
+                    <SelectItem value="1-4">1-4 employees</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <Label htmlFor="years_in_business">Years in Business</Label>
-                <Input
-                  id="years_in_business"
-                  type="number"
-                  value={yearsInBusiness}
-                  onChange={(e) => setYearsInBusiness(e.target.value)}
-                  placeholder="How many years?"
-                />
+                <Label htmlFor="years_range">Years in Business</Label>
+                <Select value={yearsInBusinessRange} onValueChange={setYearsInBusinessRange}>
+                  <SelectTrigger id="years_range">
+                    <SelectValue placeholder="Select range..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30+">30+ years</SelectItem>
+                    <SelectItem value="20-29">20-29 years</SelectItem>
+                    <SelectItem value="15-19">15-19 years</SelectItem>
+                    <SelectItem value="10-14">10-14 years</SelectItem>
+                    <SelectItem value="6-9">6-9 years</SelectItem>
+                    <SelectItem value="3-5">3-5 years</SelectItem>
+                    <SelectItem value="0-2">0-2 years</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -502,17 +582,29 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="average_home_price">Average Home Price</Label>
-                    <Input
-                      id="average_home_price"
-                      type="number"
-                      value={averageHomePrice}
-                      onChange={(e) => setAverageHomePrice(e.target.value)}
-                      placeholder="e.g., 450000"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Average price of homes built (affects price point scoring)
-                    </p>
+                    <Label htmlFor="home_price_range">
+                      Average Home Price <span className="text-red-500">*</span>
+                    </Label>
+                    <Select value={averageHomePriceRange} onValueChange={setAverageHomePriceRange}>
+                      <SelectTrigger id="home_price_range">
+                        <SelectValue placeholder="Select price range..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="$3M+">$3M+ (15 pts) - Ultra luxury</SelectItem>
+                        <SelectItem value="$2M-$2.99M">$2M-$2.99M (14 pts) - Ultra luxury</SelectItem>
+                        <SelectItem value="$1.5M-$1.99M">$1.5M-$1.99M (13 pts) - Luxury high</SelectItem>
+                        <SelectItem value="$1M-$1.49M">$1M-$1.49M (12 pts) - Luxury</SelectItem>
+                        <SelectItem value="$800K-$999K">$800K-$999K (11 pts) - Premium high</SelectItem>
+                        <SelectItem value="$600K-$799K">$600K-$799K (10 pts) - Premium</SelectItem>
+                        <SelectItem value="$500K-$599K">$500K-$599K (9 pts) - Move-up high</SelectItem>
+                        <SelectItem value="$400K-$499K">$400K-$499K (8 pts) - Move-up</SelectItem>
+                        <SelectItem value="$300K-$399K">$300K-$399K (7 pts) - Mid-range high</SelectItem>
+                        <SelectItem value="$250K-$299K">$250K-$299K (6 pts) - Mid-range</SelectItem>
+                        <SelectItem value="$200K-$249K">$200K-$249K (4 pts) - Entry-level</SelectItem>
+                        <SelectItem value="$150K-$199K">$150K-$199K (3 pts) - Entry low</SelectItem>
+                        <SelectItem value="<$150K">&lt;$150K (2 pts) - Very affordable</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -683,39 +775,36 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
             </div>
           </div>
 
-          {/* SECTION 5: DIGITAL PRESENCE */}
-          <div className="space-y-4 bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-            <h3 className="font-semibold text-sm uppercase text-purple-700 dark:text-purple-400 flex items-center gap-2">
-              <span className="text-lg">🌐</span> Digital Presence
-              <span className="text-xs font-normal normal-case text-purple-600 dark:text-purple-500">
-                (Used for digital engagement scoring - adds up to 30 points)
-              </span>
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="website">Website URL</Label>
-                <Input
-                  id="website"
-                  type="url"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  placeholder="https://example.com"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="linkedin">LinkedIn Company Page</Label>
-                <Input
-                  id="linkedin"
-                  type="url"
-                  value={linkedinCompanyUrl}
-                  onChange={(e) => setLinkedinCompanyUrl(e.target.value)}
-                  placeholder="https://linkedin.com/company/example"
-                />
-              </div>
-            </div>
-          </div>
+          {/* SECTION 5: DIGITAL ENGAGEMENT */}
+          <DigitalEngagementSection
+            industryType={industryType}
+            websiteUrl={websiteUrl}
+            onWebsiteUrlChange={setWebsiteUrl}
+            websiteQuality={websiteQuality}
+            onWebsiteQualityChange={setWebsiteQuality}
+            websiteHasSmartContent={websiteHasSmartContent}
+            onWebsiteHasSmartContentChange={setWebsiteHasSmartContent}
+            linkedinUrl={linkedinCompanyUrl}
+            onLinkedinUrlChange={setLinkedinCompanyUrl}
+            linkedinActivityLevel={linkedinActivityLevel}
+            onLinkedinActivityLevelChange={setLinkedinActivityLevel}
+            facebookUrl={facebookUrl}
+            onFacebookUrlChange={setFacebookUrl}
+            instagramUrl={instagramUrl}
+            onInstagramUrlChange={setInstagramUrl}
+            youtubeUrl={youtubeUrl}
+            onYoutubeUrlChange={setYoutubeUrl}
+            technologyAdoptionLevel={technologyAdoptionLevel}
+            onTechnologyAdoptionLevelChange={setTechnologyAdoptionLevel}
+            nestInstallationVolume={nestInstallationVolume}
+            onNestInstallationVolumeChange={setNestInstallationVolume}
+            offersSmartThermostats={offersSmartThermostats}
+            onOffersSmartThermostatsChange={setOffersSmartThermostats}
+            offersSmartSecurity={offersSmartSecurity}
+            onOffersSmartSecurityChange={setOffersSmartSecurity}
+            offersHomeAutomation={offersHomeAutomation}
+            onOffersHomeAutomationChange={setOffersHomeAutomation}
+          />
 
           {/* SECTION 6: NOTES */}
           <div className="space-y-4">
