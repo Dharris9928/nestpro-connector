@@ -164,8 +164,13 @@ export function ScoringBreakdownReport() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
+        {scoringData.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No scoring data found. Calculate scores for companies to see their breakdown here.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[200px]">Company</TableHead>
@@ -256,6 +261,7 @@ export function ScoringBreakdownReport() {
             </TableBody>
           </Table>
         </div>
+        )}
       </CardContent>
     </Card>
   );

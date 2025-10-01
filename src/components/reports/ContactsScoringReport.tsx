@@ -170,8 +170,13 @@ export function ContactsScoringReport() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
+        {contactScores.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No contacts found. Add contacts to companies to see their scoring breakdown.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[150px]">Contact Name</TableHead>
@@ -262,6 +267,7 @@ export function ContactsScoringReport() {
             </TableBody>
           </Table>
         </div>
+        )}
       </CardContent>
     </Card>
   );
