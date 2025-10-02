@@ -1,4 +1,14 @@
 import { useState, useEffect } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,11 +49,29 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showCloseWarning, setShowCloseWarning] = useState(false);
   
   const handleClose = () => {
+    if (hasUnsavedChanges && !showCloseWarning) {
+      setShowCloseWarning(true);
+      return;
+    }
+    if (onClose) onClose();
+    if (onOpenChange) onOpenChange(false);
+    setShowCloseWarning(false);
+    setHasUnsavedChanges(false);
+  };
+  
+  const confirmClose = () => {
+    setShowCloseWarning(false);
+    setHasUnsavedChanges(false);
     if (onClose) onClose();
     if (onOpenChange) onOpenChange(false);
   };
+
+  // Track any field change
+  const markChanged = () => setHasUnsavedChanges(true);
   
   // Basic Info
   const [companyName, setCompanyName] = useState('');
@@ -135,6 +163,9 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         .single();
 
       if (error) throw error;
+
+      // Reset unsaved changes when loading fresh data
+      setHasUnsavedChanges(false);
 
       // Populate all form fields with existing data
       setCompanyName(company.company_name || '');
@@ -280,6 +311,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         description: 'Company updated and score recalculated'
       });
 
+      setHasUnsavedChanges(false);
       onSuccess();
       handleClose();
     } catch (error: any) {
@@ -307,8 +339,9 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Edit Company</DialogTitle>
@@ -345,7 +378,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   id="company_name"
                   required
                   value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
+                  onChange={(e) => {
+                    setCompanyName(e.target.value);
+                    setHasUnsavedChanges(true);
+                  }}
                   placeholder="Premier Builders Inc."
                 />
               </div>
@@ -354,7 +390,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 <Label htmlFor="industry_type">
                   Industry Type <span className="text-destructive">*</span>
                 </Label>
-                <Select value={industryType} onValueChange={(v: any) => setIndustryType(v)}>
+                <Select value={industryType} onValueChange={(v: any) => {
+                  setIndustryType(v);
+                  setHasUnsavedChanges(true);
+                }}>
                   <SelectTrigger id="industry_type">
                     <SelectValue />
                   </SelectTrigger>
@@ -367,7 +406,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
 
               <div>
                 <Label htmlFor="segment">Segment</Label>
-                <Select value={segment} onValueChange={setSegment}>
+                <Select value={segment} onValueChange={(v) => {
+                  setSegment(v);
+                  markChanged();
+                }}>
                   <SelectTrigger id="segment">
                     <SelectValue placeholder="Auto-assigned or select..." />
                   </SelectTrigger>
@@ -383,7 +425,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
 
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select value={status} onValueChange={setStatus}>
+                <Select value={status} onValueChange={(v) => {
+                  setStatus(v);
+                  markChanged();
+                }}>
                   <SelectTrigger id="status">
                     <SelectValue />
                   </SelectTrigger>
@@ -410,7 +455,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
               {/* Company Type Selection */}
               <div>
                 <Label>Company Type</Label>
-                <RadioGroup value={companyType} onValueChange={(v: any) => setCompanyType(v)}>
+                <RadioGroup value={companyType} onValueChange={(v: any) => {
+                  setCompanyType(v);
+                  markChanged();
+                }}>
                   <div className="flex flex-col space-y-2 mt-2">
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <RadioGroupItem value="standalone" id="standalone" />
@@ -440,7 +488,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   <Label htmlFor="parent_company">
                     Parent Company <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={parentCompanyId} onValueChange={setParentCompanyId} required>
+                  <Select value={parentCompanyId} onValueChange={(v) => {
+                    setParentCompanyId(v);
+                    markChanged();
+                  }} required>
                     <SelectTrigger id="parent_company">
                       <SelectValue placeholder="Select parent company..." />
                     </SelectTrigger>
@@ -471,7 +522,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   <Input
                     id="contractor_specialty"
                     value={contractorSpecialty}
-                    onChange={(e) => setContractorSpecialty(e.target.value)}
+                    onChange={(e) => {
+                      setContractorSpecialty(e.target.value);
+                      markChanged();
+                    }}
                     placeholder="e.g., HVAC Installation & Repair, Smart Home Integration, Emergency HVAC Services"
                     className="mt-2"
                   />
@@ -497,7 +551,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 <Label htmlFor="annual_volume_range">
                   Annual Volume {industryType === 'Builder' ? '(Homes Built)' : '(Service Calls)'} <span className="text-red-500">*</span>
                 </Label>
-                <Select value={annualVolumeRange} onValueChange={setAnnualVolumeRange}>
+                <Select value={annualVolumeRange} onValueChange={(v) => {
+                  setAnnualVolumeRange(v);
+                  markChanged();
+                }}>
                   <SelectTrigger id="annual_volume_range">
                     <SelectValue placeholder="Select range..." />
                   </SelectTrigger>
@@ -545,7 +602,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                     </span>
                   )}
                 </Label>
-                <Select value={annualRevenueRange} onValueChange={setAnnualRevenueRange}>
+                <Select value={annualRevenueRange} onValueChange={(v) => {
+                  setAnnualRevenueRange(v);
+                  markChanged();
+                }}>
                   <SelectTrigger id="revenue_range">
                     <SelectValue placeholder="Select range..." />
                   </SelectTrigger>
@@ -582,7 +642,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
 
               <div>
                 <Label htmlFor="employees_range">Total Employees</Label>
-                <Select value={totalEmployeesRange} onValueChange={setTotalEmployeesRange}>
+                <Select value={totalEmployeesRange} onValueChange={(v) => {
+                  setTotalEmployeesRange(v);
+                  markChanged();
+                }}>
                   <SelectTrigger id="employees_range">
                     <SelectValue placeholder="Select range..." />
                   </SelectTrigger>
@@ -601,7 +664,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
 
               <div>
                 <Label htmlFor="years_range">Years in Business</Label>
-                <Select value={yearsInBusinessRange} onValueChange={setYearsInBusinessRange}>
+                <Select value={yearsInBusinessRange} onValueChange={(v) => {
+                  setYearsInBusinessRange(v);
+                  markChanged();
+                }}>
                   <SelectTrigger id="years_range">
                     <SelectValue placeholder="Select range..." />
                   </SelectTrigger>
@@ -630,7 +696,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                     <Label htmlFor="home_price_range">
                       Average Home Price <span className="text-red-500">*</span>
                     </Label>
-                    <Select value={averageHomePriceRange} onValueChange={setAverageHomePriceRange}>
+                    <Select value={averageHomePriceRange} onValueChange={(v) => {
+                      setAverageHomePriceRange(v);
+                      markChanged();
+                    }}>
                       <SelectTrigger id="home_price_range">
                         <SelectValue placeholder="Select price range..." />
                       </SelectTrigger>
@@ -654,7 +723,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
 
                   <div>
                     <Label htmlFor="price_category">Price Point Category</Label>
-                    <Select value={priceCategoryState} onValueChange={setPriceCategoryState}>
+                    <Select value={priceCategoryState} onValueChange={(v) => {
+                      setPriceCategoryState(v);
+                      markChanged();
+                    }}>
                       <SelectTrigger id="price_category">
                         <SelectValue placeholder="Auto-calculated or select..." />
                       </SelectTrigger>
@@ -681,7 +753,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="service_area">Service Area Type</Label>
-                    <Select value={serviceAreaType} onValueChange={setServiceAreaType}>
+                    <Select value={serviceAreaType} onValueChange={(v) => {
+                      setServiceAreaType(v);
+                      markChanged();
+                    }}>
                       <SelectTrigger id="service_area">
                         <SelectValue placeholder="Select..." />
                       </SelectTrigger>
@@ -702,7 +777,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                       min="0"
                       max="100"
                       value={maintenancePercentage}
-                      onChange={(e) => setMaintenancePercentage(e.target.value)}
+                      onChange={(e) => {
+                        setMaintenancePercentage(e.target.value);
+                        markChanged();
+                      }}
                       placeholder="e.g., 30"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
@@ -718,7 +796,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                       min="0"
                       max="100"
                       value={emergencyPercentage}
-                      onChange={(e) => setEmergencyPercentage(e.target.value)}
+                      onChange={(e) => {
+                        setEmergencyPercentage(e.target.value);
+                        markChanged();
+                      }}
                       placeholder="e.g., 20"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
@@ -745,7 +826,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 <Input
                   id="address"
                   value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
+                  onChange={(e) => {
+                    setAddressLine1(e.target.value);
+                    markChanged();
+                  }}
                   placeholder="123 Main Street"
                 />
               </div>
@@ -755,14 +839,20 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 <Input
                   id="city"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    markChanged();
+                  }}
                   placeholder="Austin"
                 />
               </div>
 
               <div>
                 <Label htmlFor="state">State</Label>
-                <Select value={state} onValueChange={setState}>
+                <Select value={state} onValueChange={(v) => {
+                  setState(v);
+                  markChanged();
+                }}>
                   <SelectTrigger id="state">
                     <SelectValue placeholder="Select state..." />
                   </SelectTrigger>
@@ -781,7 +871,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 <Input
                   id="zip"
                   value={zip}
-                  onChange={(e) => setZip(e.target.value)}
+                  onChange={(e) => {
+                    setZip(e.target.value);
+                    markChanged();
+                  }}
                   placeholder="78701"
                   maxLength={10}
                 />
@@ -802,7 +895,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   id="phone"
                   type="tel"
                   value={primaryPhone}
-                  onChange={(e) => setPrimaryPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPrimaryPhone(e.target.value);
+                    markChanged();
+                  }}
                   placeholder="(555) 123-4567"
                 />
               </div>
@@ -813,7 +909,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   id="email"
                   type="email"
                   value={primaryEmail}
-                  onChange={(e) => setPrimaryEmail(e.target.value)}
+                  onChange={(e) => {
+                    setPrimaryEmail(e.target.value);
+                    markChanged();
+                  }}
                   placeholder="contact@company.com"
                 />
               </div>
@@ -824,31 +923,31 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
           <DigitalEngagementSection
             industryType={industryType}
             websiteUrl={websiteUrl}
-            onWebsiteUrlChange={setWebsiteUrl}
+            onWebsiteUrlChange={(v) => { setWebsiteUrl(v); markChanged(); }}
             websiteQuality={websiteQuality}
-            onWebsiteQualityChange={setWebsiteQuality}
+            onWebsiteQualityChange={(v) => { setWebsiteQuality(v); markChanged(); }}
             websiteHasSmartContent={websiteHasSmartContent}
-            onWebsiteHasSmartContentChange={setWebsiteHasSmartContent}
+            onWebsiteHasSmartContentChange={(v) => { setWebsiteHasSmartContent(v); markChanged(); }}
             linkedinUrl={linkedinCompanyUrl}
-            onLinkedinUrlChange={setLinkedinCompanyUrl}
+            onLinkedinUrlChange={(v) => { setLinkedinCompanyUrl(v); markChanged(); }}
             linkedinActivityLevel={linkedinActivityLevel}
-            onLinkedinActivityLevelChange={setLinkedinActivityLevel}
+            onLinkedinActivityLevelChange={(v) => { setLinkedinActivityLevel(v); markChanged(); }}
             facebookUrl={facebookUrl}
-            onFacebookUrlChange={setFacebookUrl}
+            onFacebookUrlChange={(v) => { setFacebookUrl(v); markChanged(); }}
             instagramUrl={instagramUrl}
-            onInstagramUrlChange={setInstagramUrl}
+            onInstagramUrlChange={(v) => { setInstagramUrl(v); markChanged(); }}
             youtubeUrl={youtubeUrl}
-            onYoutubeUrlChange={setYoutubeUrl}
+            onYoutubeUrlChange={(v) => { setYoutubeUrl(v); markChanged(); }}
             technologyAdoptionLevel={technologyAdoptionLevel}
-            onTechnologyAdoptionLevelChange={setTechnologyAdoptionLevel}
+            onTechnologyAdoptionLevelChange={(v) => { setTechnologyAdoptionLevel(v); markChanged(); }}
             nestInstallationVolume={nestInstallationVolume}
-            onNestInstallationVolumeChange={setNestInstallationVolume}
+            onNestInstallationVolumeChange={(v) => { setNestInstallationVolume(v); markChanged(); }}
             offersSmartThermostats={offersSmartThermostats}
-            onOffersSmartThermostatsChange={setOffersSmartThermostats}
+            onOffersSmartThermostatsChange={(v) => { setOffersSmartThermostats(v); markChanged(); }}
             offersSmartSecurity={offersSmartSecurity}
-            onOffersSmartSecurityChange={setOffersSmartSecurity}
+            onOffersSmartSecurityChange={(v) => { setOffersSmartSecurity(v); markChanged(); }}
             offersHomeAutomation={offersHomeAutomation}
-            onOffersHomeAutomationChange={setOffersHomeAutomation}
+            onOffersHomeAutomationChange={(v) => { setOffersHomeAutomation(v); markChanged(); }}
           />
 
           {/* SECTION 6: NOTES */}
@@ -862,7 +961,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
               <Textarea
                 id="notes"
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  markChanged();
+                }}
                 placeholder="Any additional information about this company..."
                 rows={4}
               />
@@ -929,5 +1031,26 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
     </Tabs>
       </DialogContent>
     </Dialog>
+
+      {/* Unsaved Changes Warning */}
+      <AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes that will be lost if you close this dialog. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowCloseWarning(false)}>
+              Keep Editing
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClose}>
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

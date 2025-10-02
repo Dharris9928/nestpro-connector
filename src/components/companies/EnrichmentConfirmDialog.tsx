@@ -50,17 +50,24 @@ export function EnrichmentConfirmDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm Data Enrichment</AlertDialogTitle>
           <AlertDialogDescription>
-            The enrichment will update {fieldsEnriched.length} fields.
+            <strong className="text-warning">⚠️ IMPORTANT: This will research and automatically update ALL company data fields.</strong>
+            <br /><br />
+            The enrichment will update {fieldsEnriched.length} fields based on comprehensive research from multiple sources including Apollo.io and AI analysis.
             {overwriteCount > 0 && (
-              <span className="text-warning font-medium">
-                {' '}{overwriteCount} existing fields will be overwritten.
+              <span className="text-warning font-medium block mt-2">
+                {overwriteCount} existing fields will be overwritten with newly researched data.
               </span>
             )}
             {newFieldsCount > 0 && (
-              <span className="text-muted-foreground">
-                {' '}{newFieldsCount} empty fields will be filled.
+              <span className="text-muted-foreground block mt-1">
+                {newFieldsCount} empty fields will be filled with researched data.
               </span>
             )}
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded">
+              <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+                📊 Business metrics, digital engagement, and contact information will all be comprehensively researched and auto-updated.
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
