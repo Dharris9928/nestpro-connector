@@ -1166,6 +1166,28 @@ export type Database = {
       }
     }
     Functions: {
+      get_company_hierarchy: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          company_name: string
+          full_path: string
+          id: string
+          level: number
+          parent_company_id: string
+          path: string[]
+        }[]
+      }
+      get_company_hierarchy_for_company: {
+        Args: { _company_id: string }
+        Returns: {
+          company_name: string
+          full_path: string
+          id: string
+          level: number
+          parent_company_id: string
+          path: string[]
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
