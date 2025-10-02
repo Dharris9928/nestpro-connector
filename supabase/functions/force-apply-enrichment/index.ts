@@ -125,28 +125,56 @@ serve(async (req) => {
     let { data: updatedCompany, error: updateError } = await tryUpdate();
     let failedFields: string[] = [];
 
-    // Handle constraint failures by removing problematic fields and retrying
-    if (updateError) {
-      console.error('Initial update failed:', updateError);
+    // Handle constraint failures by iteratively removing problematic fields
+    const maxRetries = Object.keys(updates).length;
+    let retryCount = 0;
+    
+    while (updateError && retryCount < maxRetries) {
       const msg = (updateError as any).message || '';
+      console.error(`Update failed (attempt ${retryCount + 1}):`, msg);
       
-      // Handle specific constraint failures
-      if (msg.includes('companies_social_media_presence_check') && 'social_media_presence' in updates) {
-        console.log('Removing social_media_presence due to constraint violation');
-        failedFields.push('social_media_presence');
-        delete updates.social_media_presence;
+      // Check if it's a constraint violation
+      if (msg.includes('violates check constraint') || (updateError as any).code === '23514') {
+        // Extract constraint name if possible
+        const constraintMatch = msg.match(/constraint "([^"]+)"/);
+        const constraintName = constraintMatch ? constraintMatch[1] : 'unknown';
+        console.log(`Constraint violation detected: ${constraintName}`);
+        
+        // Try to identify and remove the problematic field
+        // Common patterns: companies_fieldname_check
+        const fieldMatch = constraintName.match(/companies_([^_]+(?:_[^_]+)*)_check/);
+        let removedField = false;
+        
+        if (fieldMatch && fieldMatch[1] in updates) {
+          const fieldName = fieldMatch[1];
+          console.log(`Removing field '${fieldName}' due to constraint violation`);
+          failedFields.push(fieldName);
+          delete updates[fieldName];
+          removedField = true;
+        } else {
+          // If we can't identify the field, try removing fields one by one
+          const remainingFields = Object.keys(updates).filter(f => !failedFields.includes(f));
+          if (remainingFields.length > 0) {
+            const fieldToRemove = remainingFields[0];
+            console.log(`Cannot identify problematic field, removing '${fieldToRemove}' and retrying`);
+            failedFields.push(fieldToRemove);
+            delete updates[fieldToRemove];
+            removedField = true;
+          }
+        }
+        
+        if (!removedField || Object.keys(updates).length === 0) {
+          break; // No more fields to remove
+        }
+        
+        // Retry the update
         const retry = await tryUpdate();
         updatedCompany = retry.data;
         updateError = retry.error as any;
-      }
-      
-      if (updateError && msg.includes('companies_technology_adoption_level_check') && 'technology_adoption_level' in updates) {
-        console.log('Removing technology_adoption_level due to constraint violation');
-        failedFields.push('technology_adoption_level');
-        delete updates.technology_adoption_level;
-        const retry = await tryUpdate();
-        updatedCompany = retry.data;
-        updateError = retry.error as any;
+        retryCount++;
+      } else {
+        // Not a constraint violation, break the loop
+        break;
       }
     }
 
