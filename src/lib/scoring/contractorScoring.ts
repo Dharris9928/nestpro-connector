@@ -116,54 +116,64 @@ export async function calculateContractorScore(companyId: string): Promise<Contr
   // 4. Geographic Score (0-10 points)
   scoring.geographicScore = calculateGeographicScore(company.state);
   
-  // 5. Stability Score (0-8 points) - Employees (2.5pts) + Years (2.5pts) + Financial Health (3pts)
+  // 5. Stability Score (0-8 points) - Employees (2pts) + Years (2pts) + Financial Health (2.5pts) + Rubric (1.5pts)
   let stabilityScore = 0;
   
-  // Employees component (0-2.5 points) - FROM RANGE
+  // Employees component (0-2 points) - FROM RANGE
   if (company.total_employees_range) {
     const employeeScore = await getScoreForRange(
       'total_employees_range',
       company.total_employees_range,
       'Contractor'
     );
-    stabilityScore += Math.min(Math.round(employeeScore * 0.625 * 10) / 10, 2.5);
+    stabilityScore += Math.min(employeeScore * 0.5, 2);
   }
   
-  // Years component (0-2.5 points) - FROM RANGE
+  // Years component (0-2 points) - FROM RANGE
   if (company.years_in_business_range) {
     const yearsScore = await getScoreForRange(
       'years_in_business_range',
       company.years_in_business_range,
       'Contractor'
     );
-    stabilityScore += Math.min(Math.round(yearsScore * 0.625 * 10) / 10, 2.5);
+    stabilityScore += Math.min(yearsScore * 0.5, 2);
   }
   
-  // Financial Health component (0-3 points)
+  // Financial Health component (0-2.5 points)
   let financialScore = 0;
   
-  // Revenue Growth Trend (0-1 point)
-  if (company.revenue_growth_trend === 'Rapid Growth (>20% YoY)') financialScore += 1;
-  else if (company.revenue_growth_trend === 'Strong Growth (10-20% YoY)') financialScore += 0.8;
-  else if (company.revenue_growth_trend === 'Moderate Growth (5-10% YoY)') financialScore += 0.6;
-  else if (company.revenue_growth_trend === 'Stable (0-5% YoY)') financialScore += 0.4;
+  // Revenue Growth Trend (0-0.8 points)
+  if (company.revenue_growth_trend === 'Rapid Growth (>20% YoY)') financialScore += 0.8;
+  else if (company.revenue_growth_trend === 'Strong Growth (10-20% YoY)') financialScore += 0.65;
+  else if (company.revenue_growth_trend === 'Moderate Growth (5-10% YoY)') financialScore += 0.5;
+  else if (company.revenue_growth_trend === 'Stable (0-5% YoY)') financialScore += 0.3;
   else if (company.revenue_growth_trend === 'Declining (<0% YoY)') financialScore += 0;
   
-  // Profitability Level (0-1 point)
-  if (company.profitability_level === 'Highly Profitable (>15% margin)') financialScore += 1;
-  else if (company.profitability_level === 'Profitable (8-15% margin)') financialScore += 0.8;
-  else if (company.profitability_level === 'Moderately Profitable (5-8% margin)') financialScore += 0.6;
-  else if (company.profitability_level === 'Break-even (0-5% margin)') financialScore += 0.4;
+  // Profitability Level (0-0.8 points)
+  if (company.profitability_level === 'Highly Profitable (>15% margin)') financialScore += 0.8;
+  else if (company.profitability_level === 'Profitable (8-15% margin)') financialScore += 0.65;
+  else if (company.profitability_level === 'Moderately Profitable (5-8% margin)') financialScore += 0.5;
+  else if (company.profitability_level === 'Break-even (0-5% margin)') financialScore += 0.3;
   else if (company.profitability_level === 'Unprofitable (<0% margin)') financialScore += 0;
   
-  // Financial Health Rating (0-1 point)
-  if (company.financial_health_rating === 'Excellent') financialScore += 1;
-  else if (company.financial_health_rating === 'Good') financialScore += 0.75;
+  // Financial Health Rating (0-0.9 points)
+  if (company.financial_health_rating === 'Excellent') financialScore += 0.9;
+  else if (company.financial_health_rating === 'Good') financialScore += 0.7;
   else if (company.financial_health_rating === 'Fair') financialScore += 0.5;
   else if (company.financial_health_rating === 'Poor') financialScore += 0.25;
   else if (company.financial_health_rating === 'At Risk') financialScore += 0;
   
-  stabilityScore += Math.min(financialScore, 3);
+  stabilityScore += Math.min(financialScore, 2.5);
+  
+  // Financial Stability Rubric - 15-point binary system scaled to 1.5 points (0-1.5 points)
+  let rubricScore = 0;
+  if (company.revenue_growth_indicators) rubricScore += 5; // 5 pts
+  if (company.multiple_active_projects) rubricScore += 5; // 5 pts
+  if (company.industry_awards_recognition) rubricScore += 3; // 3 pts
+  if (company.positive_reviews_reputation) rubricScore += 2; // 2 pts
+  // Scale 15-point rubric to 1.5 points: (rubricScore / 15) * 1.5
+  stabilityScore += Math.min((rubricScore / 15) * 1.5, 1.5);
+  
   scoring.stabilityScore = Math.min(stabilityScore, 8);
 
   scoring.firmographicTotal = 

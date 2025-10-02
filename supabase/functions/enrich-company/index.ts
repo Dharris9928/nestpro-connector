@@ -407,6 +407,12 @@ CRITICAL PRIORITIES - Fill ALL possible fields:
 8. Profitability level - estimate profit margins
 9. Overall financial health rating
 
+**FINANCIAL STABILITY RUBRIC (BINARY ASSESSMENT - YES/NO):**
+10. Revenue Growth Indicators - Check for: expansion, new communities, market entry, new office locations, increased capacity (5 pts if YES)
+11. Multiple Active Projects - Check for: multiple active communities/projects running simultaneously (5 pts if YES)
+12. Industry Awards/Recognition - Check for: builder awards, national rankings, design awards, certifications (3 pts if YES)
+13. Positive Reviews/Reputation - Check for: BBB A- or higher, OR 4+ stars average, OR strong testimonials (2 pts if YES)
+
 **DIGITAL ENGAGEMENT (HIGH PRIORITY):**
 1. Website quality and professionalism level
 2. Website content about smart home/technology
@@ -461,6 +467,12 @@ Research the company thoroughly using the website and LinkedIn URLs provided. Be
               revenue_growth_trend: { type: 'string', enum: ['Rapid Growth (>20% YoY)', 'Strong Growth (10-20% YoY)', 'Moderate Growth (5-10% YoY)', 'Stable (0-5% YoY)', 'Declining (<0% YoY)', 'Unknown'] },
               profitability_level: { type: 'string', enum: ['Highly Profitable (>15% margin)', 'Profitable (8-15% margin)', 'Moderately Profitable (5-8% margin)', 'Break-even (0-5% margin)', 'Unprofitable (<0% margin)', 'Unknown'] },
               financial_health_rating: { type: 'string', enum: ['Excellent', 'Good', 'Fair', 'Poor', 'At Risk', 'Unknown'] },
+              
+              // Financial Stability Rubric (Binary YES/NO assessments)
+              revenue_growth_indicators: { type: 'boolean', description: 'Evidence of expansion, new markets, increased capacity' },
+              multiple_active_projects: { type: 'boolean', description: 'Multiple active communities/projects simultaneously' },
+              industry_awards_recognition: { type: 'boolean', description: 'Has received industry awards or recognition' },
+              positive_reviews_reputation: { type: 'boolean', description: 'BBB A- or higher, OR 4+ stars, OR strong testimonials' },
               
               // Digital Engagement
               website_url: { type: 'string', description: 'Company website if found' },
@@ -531,6 +543,12 @@ Research the company thoroughly using the website and LinkedIn URLs provided. Be
   if (enrichedData.profitability_level && enrichedData.profitability_level !== 'Unknown') companyUpdates.profitability_level = enrichedData.profitability_level;
   if (enrichedData.financial_health_rating && enrichedData.financial_health_rating !== 'Unknown') companyUpdates.financial_health_rating = enrichedData.financial_health_rating;
   
+  // Financial Stability Rubric (Binary)
+  if (enrichedData.revenue_growth_indicators !== undefined) companyUpdates.revenue_growth_indicators = enrichedData.revenue_growth_indicators;
+  if (enrichedData.multiple_active_projects !== undefined) companyUpdates.multiple_active_projects = enrichedData.multiple_active_projects;
+  if (enrichedData.industry_awards_recognition !== undefined) companyUpdates.industry_awards_recognition = enrichedData.industry_awards_recognition;
+  if (enrichedData.positive_reviews_reputation !== undefined) companyUpdates.positive_reviews_reputation = enrichedData.positive_reviews_reputation;
+  
   // Digital engagement
   if (enrichedData.website_url) companyUpdates.website_url = enrichedData.website_url;
   if (enrichedData.website_quality) companyUpdates.website_quality = enrichedData.website_quality;
@@ -598,6 +616,12 @@ CRITICAL PRIORITIES - Research and fill ALL possible fields:
 - Profitability level and margins
 - Overall financial health assessment
 
+**FINANCIAL STABILITY RUBRIC (BINARY ASSESSMENT - YES/NO):**
+- Revenue Growth Indicators - Look for: expansion, new communities, market entry, new locations, increased capacity (5 pts if YES)
+- Multiple Active Projects - Look for: multiple active communities/projects simultaneously (5 pts if YES)
+- Industry Awards/Recognition - Look for: builder awards, national rankings, certifications (3 pts if YES)
+- Positive Reviews/Reputation - Look for: BBB A- or higher, OR 4+ stars, OR strong testimonials (2 pts if YES)
+
 **DIGITAL ENGAGEMENT (HIGHEST PRIORITY):**
 - Website quality, professionalism, content depth
 - Smart home/technology content on website
@@ -664,6 +688,12 @@ Fill as many fields as possible with accurate data.`;
             revenue_growth_trend: { type: 'string', enum: ['Rapid Growth (>20% YoY)', 'Strong Growth (10-20% YoY)', 'Moderate Growth (5-10% YoY)', 'Stable (0-5% YoY)', 'Declining (<0% YoY)', 'Unknown'] },
             profitability_level: { type: 'string', enum: ['Highly Profitable (>15% margin)', 'Profitable (8-15% margin)', 'Moderately Profitable (5-8% margin)', 'Break-even (0-5% margin)', 'Unprofitable (<0% margin)', 'Unknown'] },
             financial_health_rating: { type: 'string', enum: ['Excellent', 'Good', 'Fair', 'Poor', 'At Risk', 'Unknown'] },
+            
+            // Financial Stability Rubric (Binary YES/NO assessments)
+            revenue_growth_indicators: { type: 'boolean', description: 'Evidence of expansion, new markets, increased capacity' },
+            multiple_active_projects: { type: 'boolean', description: 'Multiple active communities/projects simultaneously' },
+            industry_awards_recognition: { type: 'boolean', description: 'Has received industry awards or recognition' },
+            positive_reviews_reputation: { type: 'boolean', description: 'BBB A- or higher, OR 4+ stars, OR strong testimonials' },
             
             // Digital Engagement
             website_url: { type: 'string' },
@@ -733,6 +763,12 @@ Fill as many fields as possible with accurate data.`;
   if (enrichedData.revenue_growth_trend && enrichedData.revenue_growth_trend !== 'Unknown') companyUpdates.revenue_growth_trend = enrichedData.revenue_growth_trend;
   if (enrichedData.profitability_level && enrichedData.profitability_level !== 'Unknown') companyUpdates.profitability_level = enrichedData.profitability_level;
   if (enrichedData.financial_health_rating && enrichedData.financial_health_rating !== 'Unknown') companyUpdates.financial_health_rating = enrichedData.financial_health_rating;
+  
+  // Financial Stability Rubric (Binary)
+  if (enrichedData.revenue_growth_indicators !== undefined) companyUpdates.revenue_growth_indicators = enrichedData.revenue_growth_indicators;
+  if (enrichedData.multiple_active_projects !== undefined) companyUpdates.multiple_active_projects = enrichedData.multiple_active_projects;
+  if (enrichedData.industry_awards_recognition !== undefined) companyUpdates.industry_awards_recognition = enrichedData.industry_awards_recognition;
+  if (enrichedData.positive_reviews_reputation !== undefined) companyUpdates.positive_reviews_reputation = enrichedData.positive_reviews_reputation;
   
   // Digital engagement
   if (enrichedData.website_url) companyUpdates.website_url = enrichedData.website_url;

@@ -95,44 +95,44 @@ export async function calculateBuilderScore(companyId: string): Promise<BuilderS
   // 3. Geographic Score (0-10 points)
   scoring.geographicScore = calculateGeographicScore(company.state);
   
-  // 4. Stability Score (0-10 points) - Employees (3pts) + Years (3pts) + Financial Health (4pts)
+  // 4. Stability Score (0-10 points) - Employees (2pts) + Years (2pts) + Financial Health (3pts) + Rubric (3pts)
   let stabilityScore = 0;
   
-  // Employees component (0-3 points) - FROM RANGE
+  // Employees component (0-2 points) - FROM RANGE
   if (company.total_employees_range) {
     const employeeScore = await getScoreForRange(
       'total_employees_range',
       company.total_employees_range,
       'Builder'
     );
-    stabilityScore += Math.min(Math.round(employeeScore * 0.6), 3);
+    stabilityScore += Math.min(Math.round(employeeScore * 0.4), 2);
   }
   
-  // Years component (0-3 points) - FROM RANGE
+  // Years component (0-2 points) - FROM RANGE
   if (company.years_in_business_range) {
     const yearsScore = await getScoreForRange(
       'years_in_business_range',
       company.years_in_business_range,
       'Builder'
     );
-    stabilityScore += Math.min(Math.round(yearsScore * 0.6), 3);
+    stabilityScore += Math.min(Math.round(yearsScore * 0.4), 2);
   }
   
-  // Financial Health component (0-4 points)
+  // Financial Health component (0-3 points)
   let financialScore = 0;
   
-  // Revenue Growth Trend (0-1.5 points)
-  if (company.revenue_growth_trend === 'Rapid Growth (>20% YoY)') financialScore += 1.5;
-  else if (company.revenue_growth_trend === 'Strong Growth (10-20% YoY)') financialScore += 1.2;
-  else if (company.revenue_growth_trend === 'Moderate Growth (5-10% YoY)') financialScore += 0.8;
-  else if (company.revenue_growth_trend === 'Stable (0-5% YoY)') financialScore += 0.5;
+  // Revenue Growth Trend (0-1 point)
+  if (company.revenue_growth_trend === 'Rapid Growth (>20% YoY)') financialScore += 1;
+  else if (company.revenue_growth_trend === 'Strong Growth (10-20% YoY)') financialScore += 0.8;
+  else if (company.revenue_growth_trend === 'Moderate Growth (5-10% YoY)') financialScore += 0.6;
+  else if (company.revenue_growth_trend === 'Stable (0-5% YoY)') financialScore += 0.4;
   else if (company.revenue_growth_trend === 'Declining (<0% YoY)') financialScore += 0;
   
-  // Profitability Level (0-1.5 points)
-  if (company.profitability_level === 'Highly Profitable (>15% margin)') financialScore += 1.5;
-  else if (company.profitability_level === 'Profitable (8-15% margin)') financialScore += 1.2;
-  else if (company.profitability_level === 'Moderately Profitable (5-8% margin)') financialScore += 0.8;
-  else if (company.profitability_level === 'Break-even (0-5% margin)') financialScore += 0.5;
+  // Profitability Level (0-1 point)
+  if (company.profitability_level === 'Highly Profitable (>15% margin)') financialScore += 1;
+  else if (company.profitability_level === 'Profitable (8-15% margin)') financialScore += 0.8;
+  else if (company.profitability_level === 'Moderately Profitable (5-8% margin)') financialScore += 0.6;
+  else if (company.profitability_level === 'Break-even (0-5% margin)') financialScore += 0.4;
   else if (company.profitability_level === 'Unprofitable (<0% margin)') financialScore += 0;
   
   // Financial Health Rating (0-1 point)
@@ -142,7 +142,17 @@ export async function calculateBuilderScore(companyId: string): Promise<BuilderS
   else if (company.financial_health_rating === 'Poor') financialScore += 0.25;
   else if (company.financial_health_rating === 'At Risk') financialScore += 0;
   
-  stabilityScore += Math.min(financialScore, 4);
+  stabilityScore += Math.min(financialScore, 3);
+  
+  // Financial Stability Rubric - 15-point binary system scaled to 3 points (0-3 points)
+  let rubricScore = 0;
+  if (company.revenue_growth_indicators) rubricScore += 5; // 5 pts
+  if (company.multiple_active_projects) rubricScore += 5; // 5 pts
+  if (company.industry_awards_recognition) rubricScore += 3; // 3 pts
+  if (company.positive_reviews_reputation) rubricScore += 2; // 2 pts
+  // Scale 15-point rubric to 3 points: (rubricScore / 15) * 3
+  stabilityScore += Math.min((rubricScore / 15) * 3, 3);
+  
   scoring.stabilityScore = Math.min(stabilityScore, 10);
 
   scoring.firmographicTotal = 

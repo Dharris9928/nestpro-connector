@@ -100,6 +100,12 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
   const [revenueGrowthTrend, setRevenueGrowthTrend] = useState('');
   const [profitabilityLevel, setProfitabilityLevel] = useState('');
   const [financialHealthRating, setFinancialHealthRating] = useState('');
+  
+  // Financial Stability Rubric (15-point binary system)
+  const [revenueGrowthIndicators, setRevenueGrowthIndicators] = useState(false);
+  const [multipleActiveProjects, setMultipleActiveProjects] = useState(false);
+  const [industryAwardsRecognition, setIndustryAwardsRecognition] = useState(false);
+  const [positiveReviewsReputation, setPositiveReviewsReputation] = useState(false);
 
   // Load parent companies when dialog opens
   useEffect(() => {
@@ -187,6 +193,10 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
         revenue_growth_trend: revenueGrowthTrend || undefined,
         profitability_level: profitabilityLevel || undefined,
         financial_health_rating: financialHealthRating || undefined,
+        revenue_growth_indicators: revenueGrowthIndicators,
+        multiple_active_projects: multipleActiveProjects,
+        industry_awards_recognition: industryAwardsRecognition,
+        positive_reviews_reputation: positiveReviewsReputation,
         
         // Other
         notes: notes || undefined
@@ -257,6 +267,10 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
     setRevenueGrowthTrend('');
     setProfitabilityLevel('');
     setFinancialHealthRating('');
+    setRevenueGrowthIndicators(false);
+    setMultipleActiveProjects(false);
+    setIndustryAwardsRecognition(false);
+    setPositiveReviewsReputation(false);
   };
 
 
@@ -620,6 +634,92 @@ export function AddCompanyDialog({ open, onClose, onOpenChange, onSuccess }: Add
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+            </div>
+
+            {/* FINANCIAL STABILITY RUBRIC (15-POINT BINARY SYSTEM) */}
+            <div className="mt-4 pt-4 border-t border-green-300 space-y-4">
+              <h4 className="font-medium text-sm text-green-800 dark:text-green-300 flex items-center gap-2">
+                ✅ Financial Stability Rubric
+                <span className="text-xs font-normal text-green-600 dark:text-green-500">(15-point binary scoring)</span>
+              </h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-start space-x-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="revenue_growth_indicators"
+                    checked={revenueGrowthIndicators}
+                    onChange={(e) => setRevenueGrowthIndicators(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="revenue_growth_indicators" className="font-medium cursor-pointer">
+                      Revenue Growth Indicators (5 pts)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Expansion, new markets, increased production capacity
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="multiple_active_projects"
+                    checked={multipleActiveProjects}
+                    onChange={(e) => setMultipleActiveProjects(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="multiple_active_projects" className="font-medium cursor-pointer">
+                      Multiple Active Projects (5 pts)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Multiple active communities/projects simultaneously
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="industry_awards_recognition"
+                    checked={industryAwardsRecognition}
+                    onChange={(e) => setIndustryAwardsRecognition(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="industry_awards_recognition" className="font-medium cursor-pointer">
+                      Industry Awards/Recognition (3 pts)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Builder awards, national rankings, certifications
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="positive_reviews_reputation"
+                    checked={positiveReviewsReputation}
+                    onChange={(e) => setPositiveReviewsReputation(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="positive_reviews_reputation" className="font-medium cursor-pointer">
+                      Positive Reviews/Reputation (2 pts)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      BBB A- or higher, 4+ stars average, strong testimonials
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-xs text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 p-2 rounded">
+                <strong>Total Score: {(revenueGrowthIndicators ? 5 : 0) + (multipleActiveProjects ? 5 : 0) + (industryAwardsRecognition ? 3 : 0) + (positiveReviewsReputation ? 2 : 0)}/15 points</strong>
               </div>
             </div>
 

@@ -150,6 +150,7 @@ export type Database = {
           franchise_name: string | null
           has_google_business_profile: boolean | null
           id: string
+          industry_awards_recognition: boolean | null
           industry_type: string
           instagram_url: string | null
           is_franchise: boolean | null
@@ -160,6 +161,7 @@ export type Database = {
           linkedin_company_url: string | null
           linkedin_followers_range: string | null
           maintenance_contract_percentage: number | null
+          multiple_active_projects: boolean | null
           nest_installation_volume_range: string | null
           nest_pro_industry: string | null
           nest_pro_partner_id: string | null
@@ -176,11 +178,13 @@ export type Database = {
           parent_company_id: string | null
           partner_introduction_date: string | null
           partner_relationship_status: string | null
+          positive_reviews_reputation: boolean | null
           price_point_category: string | null
           primary_email: string | null
           primary_phone: string | null
           priority_tier: string | null
           profitability_level: string | null
+          revenue_growth_indicators: boolean | null
           revenue_growth_trend: string | null
           score_calculated_at: string | null
           segment: string | null
@@ -223,6 +227,7 @@ export type Database = {
           franchise_name?: string | null
           has_google_business_profile?: boolean | null
           id?: string
+          industry_awards_recognition?: boolean | null
           industry_type: string
           instagram_url?: string | null
           is_franchise?: boolean | null
@@ -233,6 +238,7 @@ export type Database = {
           linkedin_company_url?: string | null
           linkedin_followers_range?: string | null
           maintenance_contract_percentage?: number | null
+          multiple_active_projects?: boolean | null
           nest_installation_volume_range?: string | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
@@ -249,11 +255,13 @@ export type Database = {
           parent_company_id?: string | null
           partner_introduction_date?: string | null
           partner_relationship_status?: string | null
+          positive_reviews_reputation?: boolean | null
           price_point_category?: string | null
           primary_email?: string | null
           primary_phone?: string | null
           priority_tier?: string | null
           profitability_level?: string | null
+          revenue_growth_indicators?: boolean | null
           revenue_growth_trend?: string | null
           score_calculated_at?: string | null
           segment?: string | null
@@ -296,6 +304,7 @@ export type Database = {
           franchise_name?: string | null
           has_google_business_profile?: boolean | null
           id?: string
+          industry_awards_recognition?: boolean | null
           industry_type?: string
           instagram_url?: string | null
           is_franchise?: boolean | null
@@ -306,6 +315,7 @@ export type Database = {
           linkedin_company_url?: string | null
           linkedin_followers_range?: string | null
           maintenance_contract_percentage?: number | null
+          multiple_active_projects?: boolean | null
           nest_installation_volume_range?: string | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
@@ -322,11 +332,13 @@ export type Database = {
           parent_company_id?: string | null
           partner_introduction_date?: string | null
           partner_relationship_status?: string | null
+          positive_reviews_reputation?: boolean | null
           price_point_category?: string | null
           primary_email?: string | null
           primary_phone?: string | null
           priority_tier?: string | null
           profitability_level?: string | null
+          revenue_growth_indicators?: boolean | null
           revenue_growth_trend?: string | null
           score_calculated_at?: string | null
           segment?: string | null
