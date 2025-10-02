@@ -84,17 +84,13 @@ export async function calculateContractorScore(companyId: string): Promise<Contr
     );
   }
   
-  // 2. Revenue Score (0-12 points) - Already uses ranges
+  // 2. Revenue Score (0-12 points) - FROM DATABASE
   if (company.annual_revenue_range) {
-    const revenueMap: Record<string, number> = {
-      '$10M+': 12,
-      '$6M-$10M': 11,
-      '$3M-$5.9M': 10,
-      '$1M-$2.9M': 8,
-      '$500K-$999K': 6,
-      '<$500K': 3
-    };
-    scoring.revenueScore = revenueMap[company.annual_revenue_range] || 0;
+    scoring.revenueScore = await getScoreForRange(
+      'annual_revenue_range',
+      company.annual_revenue_range,
+      'Contractor'
+    );
   }
   
   // 3. Business Model Score (0-8 points) - Still uses percentages
