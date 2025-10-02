@@ -214,15 +214,19 @@ export function CompanyTable({
           </TableHeader>
           <TableBody>
             {companies.map((company) => (
-              <TableRow key={company.id}>
-                <TableCell>
+              <TableRow 
+                key={company.id}
+                className="cursor-pointer hover:bg-accent/50"
+                onClick={() => onEdit(company)}
+              >
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedRows.includes(company.id)}
                     onCheckedChange={() => handleSelectRow(company.id)}
                   />
                 </TableCell>
                 
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -246,14 +250,12 @@ export function CompanyTable({
                 
                 {columnVisibility.companyName && (
                   <TableCell className="font-medium">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="cursor-default">{company.company_name}</span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Click actions menu to view details</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <button 
+                      className="text-primary hover:underline text-left"
+                      onClick={() => onEdit(company)}
+                    >
+                      {company.company_name}
+                    </button>
                   </TableCell>
                 )}
 
@@ -325,7 +327,7 @@ export function CompanyTable({
               )}
               
               {columnVisibility.status && (
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   {editingStatus === company.id ? (
                     <Select
                       defaultValue={company.status}
@@ -421,7 +423,7 @@ export function CompanyTable({
               )}
 
               {columnVisibility.website && (
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   {company.website_url ? (
                     <a 
                       href={company.website_url} 
@@ -444,7 +446,7 @@ export function CompanyTable({
                 </TableCell>
               )}
               
-              <TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
                 <QuickActionsMenu
                   company={company}
                   onEdit={() => onEdit(company)}
