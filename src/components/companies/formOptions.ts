@@ -2,7 +2,9 @@
 
 export const INDUSTRY_TYPES = [
   { value: 'Builder', label: 'Builder' },
-  { value: 'Contractor', label: 'Contractor' }
+  { value: 'Contractor', label: 'Contractor' },
+  { value: 'Energy Implementer', label: 'Energy Implementer' },
+  { value: 'Engineer/Architect', label: 'Engineer/Architect' }
 ];
 
 export const BUILDER_SEGMENTS = [
@@ -24,6 +26,26 @@ export const CONTRACTOR_SEGMENTS = [
   { value: 'specialty_integrators', label: 'Specialty Integrators' },
   { value: 'traditionalists', label: 'Service-First Traditionalists' },
   { value: 'emergency_repair', label: 'Emergency/Repair Specialists' }
+];
+
+export const ENERGY_IMPLEMENTER_SEGMENTS = [
+  { value: 'solar_installers', label: 'Solar Installers' },
+  { value: 'hvac_energy_specialists', label: 'HVAC Energy Specialists' },
+  { value: 'energy_auditors', label: 'Energy Auditors' },
+  { value: 'retrofit_specialists', label: 'Retrofit Specialists' },
+  { value: 'green_building_consultants', label: 'Green Building Consultants' },
+  { value: 'battery_storage', label: 'Battery Storage Specialists' },
+  { value: 'ev_charging', label: 'EV Charging Installers' }
+];
+
+export const ENGINEER_ARCHITECT_SEGMENTS = [
+  { value: 'residential_architects', label: 'Residential Architects' },
+  { value: 'commercial_architects', label: 'Commercial Architects' },
+  { value: 'structural_engineers', label: 'Structural Engineers' },
+  { value: 'mep_engineers', label: 'MEP Engineers' },
+  { value: 'green_building_designers', label: 'Green Building Designers' },
+  { value: 'smart_home_specialists', label: 'Smart Home Design Specialists' },
+  { value: 'urban_planners', label: 'Urban Planners' }
 ];
 
 export const INDUSTRY_SPECIALTIES = [

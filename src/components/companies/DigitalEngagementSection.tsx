@@ -10,7 +10,7 @@ import { Globe, Linkedin, Facebook, Instagram, Youtube, Star } from 'lucide-reac
 import { getFieldScoringOptions } from '@/lib/scoring/rangeScoringEngine';
 
 interface DigitalEngagementSectionProps {
-  industryType: 'Builder' | 'Contractor';
+  industryType: 'Builder' | 'Contractor' | 'Energy Implementer' | 'Engineer/Architect';
   
   // Website
   websiteUrl: string;
@@ -60,10 +60,13 @@ export function DigitalEngagementSection(props: DigitalEngagementSectionProps) {
   }, [props.industryType]);
 
   const loadScoringOptions = async () => {
-    const website = await getFieldScoringOptions('website_quality', props.industryType);
-    const linkedin = await getFieldScoringOptions('linkedin_activity_level', props.industryType);
-    const tech = await getFieldScoringOptions('technology_adoption_level', props.industryType);
-    const nest = await getFieldScoringOptions('nest_installation_volume_range', props.industryType);
+    // Map new types to existing scoring (use Contractor as default for new types)
+    const scoringType = (props.industryType === 'Builder') ? 'Builder' : 'Contractor';
+    
+    const website = await getFieldScoringOptions('website_quality', scoringType);
+    const linkedin = await getFieldScoringOptions('linkedin_activity_level', scoringType);
+    const tech = await getFieldScoringOptions('technology_adoption_level', scoringType);
+    const nest = await getFieldScoringOptions('nest_installation_volume_range', scoringType);
     
     setWebsiteScoring(website);
     setLinkedinScoring(linkedin);

@@ -9,7 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { BUILDER_SEGMENTS, CONTRACTOR_SEGMENTS, STATUSES } from './formOptions';
+import { 
+  BUILDER_SEGMENTS, 
+  CONTRACTOR_SEGMENTS, 
+  ENERGY_IMPLEMENTER_SEGMENTS,
+  ENGINEER_ARCHITECT_SEGMENTS,
+  STATUSES 
+} from './formOptions';
 
 interface CompaniesFilterSidebarProps {
   isCollapsed: boolean;
@@ -159,7 +165,7 @@ export function CompaniesFilterSidebar({ isCollapsed, onToggle }: CompaniesFilte
           onToggle={() => toggleSection('industry')}
         >
           <div className="space-y-2">
-            {['Builder', 'Contractor'].map((type) => (
+            {['Builder', 'Contractor', 'Energy Implementer', 'Engineer/Architect'].map((type) => (
               <div key={type} className="flex items-center space-x-2">
                 <Checkbox
                   id={`industry-${type}`}
@@ -221,6 +227,60 @@ export function CompaniesFilterSidebar({ isCollapsed, onToggle }: CompaniesFilte
                   />
                   <Label
                     htmlFor={`contractor-${segment.value}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {segment.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {/* Energy Implementer Segments */}
+        {industryType === 'Energy Implementer' && (
+          <FilterSection
+            title="Energy Implementer Segments"
+            isCollapsed={collapsedSections.has('energy-segments')}
+            onToggle={() => toggleSection('energy-segments')}
+          >
+            <div className="space-y-2">
+              {ENERGY_IMPLEMENTER_SEGMENTS.map(segment => (
+                <div key={segment.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`energy-${segment.value}`}
+                    checked={isActiveFilter("segment", segment.value)}
+                    onCheckedChange={() => handleFilterClick("segment", segment.value)}
+                  />
+                  <Label
+                    htmlFor={`energy-${segment.value}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {segment.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {/* Engineer/Architect Segments */}
+        {industryType === 'Engineer/Architect' && (
+          <FilterSection
+            title="Engineer/Architect Segments"
+            isCollapsed={collapsedSections.has('engineer-segments')}
+            onToggle={() => toggleSection('engineer-segments')}
+          >
+            <div className="space-y-2">
+              {ENGINEER_ARCHITECT_SEGMENTS.map(segment => (
+                <div key={segment.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`engineer-${segment.value}`}
+                    checked={isActiveFilter("segment", segment.value)}
+                    onCheckedChange={() => handleFilterClick("segment", segment.value)}
+                  />
+                  <Label
+                    htmlFor={`engineer-${segment.value}`}
                     className="text-sm font-normal cursor-pointer"
                   >
                     {segment.label}

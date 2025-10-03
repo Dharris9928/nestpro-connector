@@ -21,6 +21,7 @@ export async function calculateLeadScore(companyId: string): Promise<ScoringBrea
   }
 
   // Route to correct scoring algorithm based on industry
+  // Builder uses builder scoring, all others use contractor scoring
   if (company.industry_type === 'Builder') {
     return await calculateBuilderScore(companyId);
   } else {
