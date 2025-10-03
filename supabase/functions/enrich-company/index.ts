@@ -169,6 +169,28 @@ serve(async (req) => {
       ]));
     }
 
+    // Use Perplexity as final fallback to fill remaining blank fields
+    const missingFields = identifyMissingFields(company, enrichmentResult.companyUpdates);
+    if (missingFields.length > 0) {
+      console.log(`Attempting Perplexity fallback for ${missingFields.length} missing fields:`, missingFields);
+      try {
+        const perplexityData = await enrichWithPerplexity(company, missingFields);
+        if (perplexityData && Object.keys(perplexityData).length > 0) {
+          console.log(`Perplexity filled ${Object.keys(perplexityData).length} additional fields`);
+          enrichmentResult.companyUpdates = {
+            ...enrichmentResult.companyUpdates,
+            ...perplexityData
+          };
+          enrichmentResult.fieldsEnriched = Array.from(new Set([
+            ...enrichmentResult.fieldsEnriched,
+            ...Object.keys(perplexityData)
+          ]));
+        }
+      } catch (error) {
+        console.log('Perplexity fallback failed:', error instanceof Error ? error.message : 'Unknown error');
+      }
+    }
+
     // If preview mode, return what would be changed without updating
     if (previewOnly) {
       const fieldsToOverwrite: Record<string, { current: any; new: any }> = {};
@@ -382,6 +404,213 @@ serve(async (req) => {
     );
   }
 });
+
+// Identify which critical fields are still missing
+function identifyMissingFields(company: any, updates: any): string[] {
+  const criticalFields = [
+    'website_url',
+    'linkedin_company_url',
+    'primary_phone',
+    'total_employees',
+    'total_employees_range',
+    'annual_revenue_range',
+    'years_in_business',
+    'city',
+    'state',
+    'facebook_url',
+    'instagram_url',
+    'technology_adoption_level',
+    'online_review_rating'
+  ];
+
+  const missing: string[] = [];
+  
+  for (const field of criticalFields) {
+    const currentValue = company[field];
+    const updatedValue = updates[field];
+    
+    // Field is missing if it's null/empty in both current company and updates
+    if ((!currentValue || currentValue === '') && (!updatedValue || updatedValue === '')) {
+      missing.push(field);
+    }
+  }
+  
+  return missing;
+}
+
+// Use Perplexity to search for specific missing company information
+async function enrichWithPerplexity(company: any, missingFields: string[]): Promise<Record<string, any>> {
+  const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
+  
+  if (!PERPLEXITY_API_KEY) {
+    throw new Error('PERPLEXITY_API_KEY not configured');
+  }
+
+  const fieldDescriptions: Record<string, string> = {
+    website_url: 'official company website URL',
+    linkedin_company_url: 'LinkedIn company page URL',
+    primary_phone: 'main business phone number',
+    total_employees: 'number of employees',
+    total_employees_range: 'employee count range (1-5, 6-10, 11-25, 26-50, 51-100, 101-250, 251-500, 500+)',
+    annual_revenue_range: 'annual revenue range (<$500K, $500K-$999K, $1M-$2.9M, $3M-$5.9M, $6M-$10M, $10M+)',
+    years_in_business: 'years the company has been operating',
+    city: 'city where company is headquartered',
+    state: 'state where company is headquartered (2-letter code)',
+    facebook_url: 'Facebook page URL',
+    instagram_url: 'Instagram profile URL',
+    technology_adoption_level: 'technology adoption level (Traditional, Late Adopter, Mainstream, Early Adopter, Industry Leader)',
+    online_review_rating: 'average online review rating (0-5 scale)'
+  };
+
+  const searchableFields = missingFields.filter(f => fieldDescriptions[f]);
+  if (searchableFields.length === 0) return {};
+
+  const fieldsList = searchableFields.map(f => `- ${f}: ${fieldDescriptions[f]}`).join('\n');
+
+  const prompt = `Find the following missing information about ${company.company_name}${company.industry_type ? `, a ${company.industry_type} company` : ''}${company.website_url ? ` (${company.website_url})` : ''}:
+
+${fieldsList}
+
+Return ONLY factual information you can verify. If you cannot find accurate information for a field, omit it. Be specific and concise.`;
+
+  console.log('Perplexity search prompt:', prompt);
+
+  const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.1-sonar-large-128k-online',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a business data researcher. Provide only verified, factual information in a structured format. For URLs, provide complete URLs. For phone numbers, use standard format. For location data, be precise.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 1000,
+      return_related_questions: false
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Perplexity API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices[0]?.message?.content;
+  
+  if (!content) {
+    console.log('No content returned from Perplexity');
+    return {};
+  }
+
+  console.log('Perplexity response:', content);
+
+  // Parse the response to extract structured data
+  const enrichedData: Record<string, any> = {};
+
+  // Helper function to extract URLs
+  const extractUrl = (text: string, keywords: string[]): string | null => {
+    for (const keyword of keywords) {
+      const regex = new RegExp(`${keyword}[:\\s]+([https://]+[^\\s,]+)`, 'i');
+      const match = text.match(regex);
+      if (match) return match[1].trim();
+    }
+    return null;
+  };
+
+  // Helper function to extract phone
+  const extractPhone = (text: string): string | null => {
+    const phoneRegex = /(?:phone|tel|contact)[:\s]*(\+?[\d\s\-\(\)]+)/i;
+    const match = text.match(phoneRegex);
+    if (match) {
+      const phone = match[1].replace(/\D/g, '');
+      if (phone.length >= 10) return phone;
+    }
+    return null;
+  };
+
+  // Helper function to extract number
+  const extractNumber = (text: string, keywords: string[]): number | null => {
+    for (const keyword of keywords) {
+      const regex = new RegExp(`${keyword}[:\\s]*(\\d+[,\\d]*)`, 'i');
+      const match = text.match(regex);
+      if (match) {
+        return parseInt(match[1].replace(/,/g, ''));
+      }
+    }
+    return null;
+  };
+
+  // Extract specific fields
+  if (missingFields.includes('website_url')) {
+    const url = extractUrl(content, ['website', 'site', 'web']);
+    if (url) enrichedData.website_url = url;
+  }
+
+  if (missingFields.includes('linkedin_company_url')) {
+    const url = extractUrl(content, ['linkedin', 'linkedin.com']);
+    if (url && url.includes('linkedin.com')) enrichedData.linkedin_company_url = url;
+  }
+
+  if (missingFields.includes('facebook_url')) {
+    const url = extractUrl(content, ['facebook', 'facebook.com', 'fb']);
+    if (url && url.includes('facebook.com')) enrichedData.facebook_url = url;
+  }
+
+  if (missingFields.includes('instagram_url')) {
+    const url = extractUrl(content, ['instagram', 'instagram.com']);
+    if (url && url.includes('instagram.com')) enrichedData.instagram_url = url;
+  }
+
+  if (missingFields.includes('primary_phone')) {
+    const phone = extractPhone(content);
+    if (phone) enrichedData.primary_phone = phone;
+  }
+
+  if (missingFields.includes('total_employees')) {
+    const employees = extractNumber(content, ['employees', 'staff', 'team size', 'workforce']);
+    if (employees) enrichedData.total_employees = employees;
+  }
+
+  if (missingFields.includes('years_in_business')) {
+    const years = extractNumber(content, ['years in business', 'established', 'founded', 'since']);
+    if (years) {
+      const currentYear = new Date().getFullYear();
+      enrichedData.years_in_business = years > 1900 ? currentYear - years : years;
+    }
+  }
+
+  // Extract city and state
+  if (missingFields.includes('city') || missingFields.includes('state')) {
+    const locationRegex = /(?:location|headquarter|based in|located)[:\s]*([A-Za-z\s]+),\s*([A-Z]{2})/i;
+    const match = content.match(locationRegex);
+    if (match) {
+      if (missingFields.includes('city')) enrichedData.city = match[1].trim();
+      if (missingFields.includes('state')) enrichedData.state = match[2].trim();
+    }
+  }
+
+  // Extract rating
+  if (missingFields.includes('online_review_rating')) {
+    const ratingRegex = /(?:rating|review)[:\s]*([\d.]+)[\s\/]*(?:out of\s*)?5?/i;
+    const match = content.match(ratingRegex);
+    if (match) {
+      const rating = parseFloat(match[1]);
+      if (rating >= 0 && rating <= 5) enrichedData.online_review_rating = rating;
+    }
+  }
+
+  return enrichedData;
+}
 
 async function enrichWithLovableAI(company: any) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
