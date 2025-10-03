@@ -1435,6 +1435,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       get_company_hierarchy: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1472,9 +1476,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_approved_with_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_user_approved: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: { _event_details?: Json; _event_type: string }
+        Returns: undefined
       }
       user_approved_with_grace_period: {
         Args: { _hours?: number; _user_id: string }
