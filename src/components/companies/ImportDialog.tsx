@@ -243,80 +243,102 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
 
-    for (let i = 0; i < parsedData.length; i++) {
-      const row = parsedData[i];
+    // First, fetch all existing company names to check for duplicates in one query
+    const { data: existingCompanies } = await supabase
+      .from('companies')
+      .select('id, company_name');
+    
+    const existingNamesMap = new Map(
+      (existingCompanies || []).map(c => [c.company_name.toLowerCase(), c.id])
+    );
+
+    // Process in smaller batches to avoid UI freezing
+    const batchSize = 10;
+    for (let batchStart = 0; batchStart < parsedData.length; batchStart += batchSize) {
+      const batchEnd = Math.min(batchStart + batchSize, parsedData.length);
       
-      try {
-        // Map columns
-        const mappedData: any = {};
-        Object.entries(columnMapping).forEach(([fileCol, crmField]) => {
-          if (crmField && row[fileCol] !== undefined && row[fileCol] !== null && row[fileCol] !== '') {
-            // Handle industry_specialties as comma-separated array with value mapping
-            if (crmField === 'industry_specialties') {
-              const value = String(row[fileCol]).trim();
-              const valueMap: Record<string, string> = {
-                'HVAC_PROFESSIONAL': 'HVAC',
-                'Electrician': 'Electrical',
-                'Plumber': 'Plumbing',
-                'Both Garage Door and/or Smart Home': 'General Contracting'
-              };
-              mappedData[crmField] = value.split(',').map(s => {
-                const trimmed = s.trim();
-                return valueMap[trimmed] || trimmed;
-              }).filter(s => s);
-            } else {
-              mappedData[crmField] = row[fileCol];
-            }
-          }
-        });
-
-        // Validate required fields
-        if (!mappedData.company_name) {
-          throw new Error('Company name is required');
-        }
-        if (!mappedData.industry_type) {
-          throw new Error('Company type is required');
-        }
-
-        // Add created_by if user is authenticated
-        if (user) {
-          mappedData.created_by = user.id;
-        }
-
-        // Check if this row has a confirmed parent-subsidiary relationship
-        const relationship = potentialRelationships.find(r => r.rowIndex === i);
-        if (relationship && relationship.shouldBeSubsidiary) {
-          mappedData.company_type = 'subsidiary';
-          mappedData.parent_company_id = relationship.parentCompanyId;
-        }
-
-        // Check for duplicates
-        const { data: existing } = await supabase
-          .from('companies')
-          .select('id')
-          .ilike('company_name', mappedData.company_name)
-          .maybeSingle();
-
-        if (existing) {
-          results.duplicates++;
-          results.errors.push(`Row ${i + 2}: Duplicate company "${mappedData.company_name}"`);
-          continue;
-        }
-
-        // Insert company
-        const { error } = await supabase
-          .from('companies')
-          .insert(mappedData);
-
-        if (error) throw error;
+      for (let i = batchStart; i < batchEnd; i++) {
+        const row = parsedData[i];
         
-        results.success++;
-      } catch (error: any) {
-        results.failed++;
-        results.errors.push(`Row ${i + 2}: ${error.message}`);
+        try {
+          // Map columns
+          const mappedData: any = {};
+          Object.entries(columnMapping).forEach(([fileCol, crmField]) => {
+            if (crmField && row[fileCol] !== undefined && row[fileCol] !== null && row[fileCol] !== '') {
+              // Handle industry_specialties as comma-separated array with value mapping
+              if (crmField === 'industry_specialties') {
+                const value = String(row[fileCol]).trim();
+                const valueMap: Record<string, string> = {
+                  'HVAC_PROFESSIONAL': 'HVAC',
+                  'Electrician': 'Electrical',
+                  'Plumber': 'Plumbing',
+                  'Both Garage Door and/or Smart Home': 'General Contracting'
+                };
+                mappedData[crmField] = value.split(',').map(s => {
+                  const trimmed = s.trim();
+                  return valueMap[trimmed] || trimmed;
+                }).filter(s => s);
+              } else {
+                mappedData[crmField] = row[fileCol];
+              }
+            }
+          });
+
+          // Validate required fields
+          if (!mappedData.company_name) {
+            throw new Error('Company name is required');
+          }
+          if (!mappedData.industry_type) {
+            throw new Error('Company type is required');
+          }
+
+          // Add created_by if user is authenticated
+          if (user) {
+            mappedData.created_by = user.id;
+          }
+
+          // Check if this row has a confirmed parent-subsidiary relationship
+          const relationship = potentialRelationships.find(r => r.rowIndex === i);
+          if (relationship && relationship.shouldBeSubsidiary) {
+            mappedData.company_type = 'subsidiary';
+            mappedData.parent_company_id = relationship.parentCompanyId;
+          }
+
+          // Check for duplicates using the pre-loaded map
+          const companyNameLower = mappedData.company_name.toLowerCase();
+          if (existingNamesMap.has(companyNameLower)) {
+            results.duplicates++;
+            results.errors.push(`Row ${i + 2}: Duplicate company "${mappedData.company_name}"`);
+            continue;
+          }
+
+          // Insert company
+          const { data: newCompany, error } = await supabase
+            .from('companies')
+            .insert(mappedData)
+            .select('id, company_name')
+            .single();
+
+          if (error) throw error;
+          
+          // Add to our local map to catch duplicates within this import
+          if (newCompany) {
+            existingNamesMap.set(companyNameLower, newCompany.id);
+          }
+          
+          results.success++;
+        } catch (error: any) {
+          results.failed++;
+          results.errors.push(`Row ${i + 2}: ${error.message}`);
+        }
       }
 
-      setImportProgress(Math.round(((i + 1) / parsedData.length) * 100));
+      // Update progress after each batch with a small delay to allow UI to update
+      const progress = Math.round(((batchEnd) / parsedData.length) * 100);
+      setImportProgress(progress);
+      
+      // Small delay to prevent UI freezing
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
 
     setImportResults(results);
