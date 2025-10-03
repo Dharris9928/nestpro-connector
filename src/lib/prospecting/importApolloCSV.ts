@@ -49,21 +49,29 @@ export function getApolloFieldMapping(): Record<string, string> {
   return {
     // Company fields
     'Company': 'company_name',
+    'Company Name': 'company_name',
     'Organization Name': 'company_name',
     'Website': 'website_url',
     'Company Website': 'website_url',
     'Industry': 'industry',
     'Company LinkedIn Url': 'linkedin_company_url',
+    'Company Linkedin Url': 'linkedin_company_url',
     '# Employees': 'total_employees',
     'Company Size': 'employee_range',
     'Employee Count': 'total_employees',
     'Revenue Range': 'annual_revenue_range',
+    'Annual Revenue': 'annual_revenue_range',
     'Estimated Revenue': 'annual_revenue_range',
     'City': 'city',
+    'Company City': 'city',
     'State': 'state',
+    'Company State': 'state',
     'Country': 'country',
+    'Company Country': 'country',
     'Phone': 'primary_phone',
     'Company Phone': 'primary_phone',
+    'Facebook Url': 'facebook_url',
+    'Twitter Url': 'twitter_url',
     
     // Contact fields
     'First Name': 'first_name',
@@ -80,10 +88,13 @@ export function getApolloFieldMapping(): Record<string, string> {
 }
 
 /**
- * Parse employee range to format expected by CRM
+ * Parse employee count/range to format expected by CRM
  */
-function parseEmployeeRange(value: string): string | null {
+function parseEmployeeRange(value: string | number): string | null {
   if (!value) return null;
+  
+  // Convert to string if it's a number
+  const strValue = String(value).trim();
   
   const rangeMap: Record<string, string> = {
     '1-10': '1-10',
@@ -97,12 +108,11 @@ function parseEmployeeRange(value: string): string | null {
   };
 
   // Try exact match
-  if (rangeMap[value]) return rangeMap[value];
+  if (rangeMap[strValue]) return rangeMap[strValue];
 
-  // Try to extract numbers
-  const match = value.match(/(\d+)/g);
-  if (match && match.length > 0) {
-    const num = parseInt(match[0]);
+  // Parse as number (handles both "29" and 29)
+  const num = parseInt(strValue);
+  if (!isNaN(num)) {
     if (num <= 10) return '1-10';
     if (num <= 50) return '11-50';
     if (num <= 200) return '51-200';
@@ -119,16 +129,36 @@ function parseEmployeeRange(value: string): string | null {
 /**
  * Parse revenue range to format expected by CRM
  */
-function parseRevenueRange(value: string): string | null {
+function parseRevenueRange(value: string | number): string | null {
   if (!value) return null;
 
-  const normalized = value.toLowerCase().replace(/[,$]/g, '');
+  // Convert to string and normalize
+  const strValue = String(value).toLowerCase().replace(/[,$]/g, '').trim();
   
-  // Extract numbers
-  const match = normalized.match(/(\d+)([mk])?/);
+  // If it's already a formatted range, return it
+  const validRanges = ['<$1M', '$1M-$1.9M', '$2M-$4M', '$5M-$9M', '$10M-$24M', '$25M-$49M', '$50M-$99M', '$100M+'];
+  if (validRanges.includes(value as string)) return value as string;
+  
+  // Parse as raw number (e.g., "50000000" or "111000000")
+  const num = parseFloat(strValue);
+  if (!isNaN(num)) {
+    const millions = num / 1000000;
+    
+    if (millions < 1) return '<$1M';
+    if (millions < 2) return '$1M-$1.9M';
+    if (millions < 5) return '$2M-$4M';
+    if (millions < 10) return '$5M-$9M';
+    if (millions < 25) return '$10M-$24M';
+    if (millions < 50) return '$25M-$49M';
+    if (millions < 100) return '$50M-$99M';
+    return '$100M+';
+  }
+  
+  // Try to extract with unit suffixes (e.g., "50M", "111M", "500K")
+  const match = strValue.match(/(\d+(?:\.\d+)?)([mk])?/);
   if (!match) return null;
 
-  let amount = parseInt(match[1]);
+  let amount = parseFloat(match[1]);
   const unit = match[2];
 
   if (unit === 'k') amount = amount / 1000; // Convert to millions
@@ -231,36 +261,39 @@ export function groupByCompany(rows: ApolloImportRow[]): CompanyWithContacts[] {
 
   rows.forEach(row => {
     // Try multiple variations of company name fields
-    const companyName = row['Company'] || 
+    const companyName = row['Company Name'] ||
+                        row['Company'] || 
                         row['Organization Name'] || 
-                        row['Company Name'] ||
                         row['Organization'] ||
                         row['Account Name'] ||
                         row['name'] ||
                         row['company_name'];
     
-    if (!companyName || typeof companyName !== 'string') return;
+    if (!companyName || typeof companyName !== 'string' || companyName.trim() === '') return;
 
     const companyKey = companyName.toLowerCase().trim();
 
     if (!companiesMap.has(companyKey)) {
       // Create company entry
       const industryType = detectIndustryType(row);
-      const employeeRange = parseEmployeeRange(row['Company Size'] || row['# Employees'] || '');
-      const revenueRange = parseRevenueRange(row['Revenue Range'] || row['Estimated Revenue'] || '');
+      const employeeData = row['# Employees'] || row['Company Size'] || row['Employee Count'] || '';
+      const employeeRange = parseEmployeeRange(employeeData);
+      const revenueData = row['Annual Revenue'] || row['Revenue Range'] || row['Estimated Revenue'] || '';
+      const revenueRange = parseRevenueRange(revenueData);
       const location = parseLocation(row);
 
       companiesMap.set(companyKey, {
         companyData: {
-          company_name: companyName,
+          company_name: companyName.trim(),
           website_url: row['Website'] || row['Company Website'] || row['website'] || null,
           industry_type: industryType,
-          linkedin_company_url: row['Company LinkedIn Url'] || row['LinkedIn URL'] || null,
+          linkedin_company_url: row['Company Linkedin Url'] || row['Company LinkedIn Url'] || row['LinkedIn URL'] || null,
           total_employees_range: employeeRange,
           annual_revenue_range: revenueRange,
           city: location.city,
           state: location.state,
           primary_phone: row['Company Phone'] || row['Phone'] || row['phone'] || null,
+          facebook_url: row['Facebook Url'] || null,
           status: 'Lead'
         },
         contacts: []
