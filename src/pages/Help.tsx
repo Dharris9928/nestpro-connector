@@ -410,8 +410,19 @@ const Help = () => {
                         <li>Review preview of data before applying changes</li>
                         <li>System prevents overwriting existing accurate data</li>
                         <li>View enrichment history and confidence scores</li>
+                        <li>AI-generated rationale explains why a segment was assigned</li>
                         <li>Data quality indicators show field completeness</li>
                         <li>Automatic lead score recalculation after enrichment</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Smart Enrichment Recommendations</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>System identifies companies that would benefit from enrichment</li>
+                        <li>Prioritizes P1 and P2 tier companies with missing data</li>
+                        <li>Shows enrichment score based on priority and data gaps</li>
+                        <li>One-click enrichment for recommended companies</li>
+                        <li>Access via "Smart Recommendations" panel on Companies page</li>
                       </ul>
                     </div>
                   </AccordionContent>
@@ -1201,8 +1212,26 @@ const Help = () => {
                 <p className="text-sm text-muted-foreground">
                   Yes! Use the Import function on the Companies page to upload CSV files with your 
                   existing customer data. The system will map fields and validate data before importing. 
-                  It will also detect and prevent duplicate entries.
+                  It will also detect and prevent duplicate entries. After importing, check the Activity Logs 
+                  section to see detailed results including any errors for records that failed to import.
                 </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="faq-import-errors">
+              <AccordionTrigger>How do I view detailed import errors?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-muted-foreground mb-2">
+                  After importing data, detailed error information is available in the System Activity Logs 
+                  section at the bottom of this Help page. Here's how to access it:
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Scroll to the "System Activity Logs" section</li>
+                  <li>Find your recent import in the Import/Export Activity Log</li>
+                  <li>Click on the error summary to expand and see detailed errors</li>
+                  <li>Each failed record shows the specific reason for failure</li>
+                  <li>Use this information to fix data issues and re-import if needed</li>
+                </ol>
               </AccordionContent>
             </AccordionItem>
 
@@ -1239,14 +1268,35 @@ const Help = () => {
             System Activity Logs
           </h2>
           <p className="text-muted-foreground mt-1">
-            Track and monitor all import, export, and enrichment activities
+            Track and monitor all import, export, and enrichment activities with detailed error reporting
           </p>
         </div>
         
-        <div className="space-y-6">
-          <ImportExportActivityLog />
-          <EnrichmentErrorLog />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Import/Export Activity Log</CardTitle>
+            <CardDescription>
+              View all data import and export operations. Click on any activity to expand and see detailed error information 
+              for failed records, including the specific reason each record failed. This helps identify and resolve data quality issues.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ImportExportActivityLog />
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Enrichment Activity Log</CardTitle>
+            <CardDescription>
+              Monitor all enrichment operations. Track which companies were successfully enriched and investigate 
+              any failures to understand data source limitations or connectivity issues.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EnrichmentErrorLog />
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="bg-muted/50">

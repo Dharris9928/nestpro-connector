@@ -1,7 +1,30 @@
 # Google Nest Pro CRM - Technical Documentation
 
 ## Overview
-A comprehensive CRM system built for managing Google Nest Pro partnerships with builders and contractors. Features lead scoring, user management, contact tracking, and activity monitoring.
+A comprehensive CRM system built for managing Google Nest Pro partnerships with builders and contractors. Features intelligent lead scoring, user management with approval workflows, contact tracking, activity monitoring, AI-powered enrichment, and detailed import/export capabilities with error tracking.
+
+## Recent Features & Enhancements
+
+### Import/Export Error Tracking
+- **Detailed Error Logging**: All import and export operations now capture detailed error information in the `import_export_logs` table
+- **Error Details**: The `detailed_errors` column (jsonb) stores individual record failures with specific reasons
+- **UI Enhancements**: Import/Export Activity Log component allows users to expand and view detailed errors for failed records
+- **Available in**: Help page → System Activity Logs section
+
+### AI Enrichment Enhancements
+- **Segment Rationale**: The `company_ai_insights` table now includes a `segment_rationale` field that stores AI-generated explanations for why a particular segment was assigned
+- **Smart Recommendations**: System automatically identifies companies that would benefit from enrichment, prioritizing P1/P2 tier companies with missing data
+- **Multi-tier Enrichment**: Sequential enrichment flow using Apollo → Lovable AI (Gemini) → Claude → Perplexity
+- **Confidence Scores**: Each enrichment includes confidence levels and data quality indicators
+
+### Security & Data Management
+- **Contact Access Logging**: All contact views are logged in `contact_access_logs` with IP anonymization after 30 days
+- **Bulk Access Alerts**: Automatic detection of unusual bulk data access patterns in `bulk_access_alerts`
+- **Deletion Approval**: All deletions require admin approval via `deletion_requests` table
+- **Data Retention**: Automated cleanup of old records based on configurable retention policies
+- **Approval Audit**: Complete audit trail of user approval decisions in `approval_audit_log`
+
+
 
 ## Technology Stack
 
