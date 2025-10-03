@@ -64,8 +64,6 @@ serve(async (req) => {
 
     // Add country filter
     if (countries && countries.length > 0) {
-      searchPayload.organization_not_locations = countries.map((c: string) => c);
-      // For Apollo API, use person_locations for country-level filtering
       searchPayload.organization_locations = countries;
     }
 
