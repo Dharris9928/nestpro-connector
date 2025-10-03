@@ -145,6 +145,40 @@ function parseRevenueRange(value: string): string | null {
 }
 
 /**
+ * Map full state names to 2-letter codes
+ */
+function normalizeStateName(state: string | null): string | null {
+  if (!state) return null;
+  
+  const trimmed = state.trim();
+  
+  // If already 2-letter code, return uppercase
+  if (/^[A-Z]{2}$/i.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+  
+  // State name mapping
+  const stateMap: Record<string, string> = {
+    'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+    'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+    'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+    'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+    'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+    'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+    'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+    'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+    'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+    'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+    'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+    'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+    'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC'
+  };
+  
+  const normalized = trimmed.toLowerCase();
+  return stateMap[normalized] || null;
+}
+
+/**
  * Extract location data from various column formats
  */
 function parseLocation(row: ApolloImportRow): { city: string | null; state: string | null } {
@@ -182,6 +216,9 @@ function parseLocation(row: ApolloImportRow): { city: string | null; state: stri
       if (!state) state = addressMatch[2].trim();
     }
   }
+
+  // Normalize state to 2-letter code
+  state = normalizeStateName(state);
 
   return { city, state };
 }
