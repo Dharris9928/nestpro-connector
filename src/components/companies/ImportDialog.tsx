@@ -29,14 +29,24 @@ interface ImportResult {
   errors: string[];
 }
 
+interface PotentialRelationship {
+  rowIndex: number;
+  newCompanyName: string;
+  parentCompanyName: string;
+  parentCompanyId: string;
+  shouldBeSubsidiary: boolean | null;
+}
+
 export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogProps) {
-  const [step, setStep] = useState<'upload' | 'map' | 'preview' | 'importing' | 'complete'>('upload');
+  const [step, setStep] = useState<'upload' | 'map' | 'preview' | 'relationships' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState<ImportResult | null>(null);
+  const [potentialRelationships, setPotentialRelationships] = useState<PotentialRelationship[]>([]);
+  const [currentRelationshipIndex, setCurrentRelationshipIndex] = useState(0);
   const { toast } = useToast();
 
   const handleFileUpload = async (uploadedFile: File) => {
@@ -140,6 +150,85 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
     XLSX.writeFile(workbook, 'company_import_template.xlsx');
   };
 
+  const detectPotentialRelationships = async () => {
+    const relationships: PotentialRelationship[] = [];
+
+    for (let i = 0; i < parsedData.length; i++) {
+      const row = parsedData[i];
+      const mappedData: any = {};
+      
+      Object.entries(columnMapping).forEach(([fileCol, crmField]) => {
+        if (crmField && row[fileCol] !== undefined && row[fileCol] !== null && row[fileCol] !== '') {
+          mappedData[crmField] = row[fileCol];
+        }
+      });
+
+      if (!mappedData.company_name) continue;
+
+      const companyName = String(mappedData.company_name).trim();
+      
+      // Check for patterns like "Parent: Division" or "Parent - Division"
+      const separators = [':', '-', '|'];
+      for (const separator of separators) {
+        if (companyName.includes(separator)) {
+          const parts = companyName.split(separator);
+          const potentialParentName = parts[0].trim();
+          
+          // Search for similar parent company
+          const { data: existingCompanies } = await supabase
+            .from('companies')
+            .select('id, company_name, company_type')
+            .ilike('company_name', `%${potentialParentName}%`)
+            .limit(5);
+
+          if (existingCompanies && existingCompanies.length > 0) {
+            // Find exact or close match
+            const exactMatch = existingCompanies.find(c => 
+              c.company_name.toLowerCase() === potentialParentName.toLowerCase()
+            );
+            
+            if (exactMatch) {
+              relationships.push({
+                rowIndex: i,
+                newCompanyName: companyName,
+                parentCompanyName: exactMatch.company_name,
+                parentCompanyId: exactMatch.id,
+                shouldBeSubsidiary: null
+              });
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return relationships;
+  };
+
+  const handlePreviewToRelationships = async () => {
+    const relationships = await detectPotentialRelationships();
+    
+    if (relationships.length > 0) {
+      setPotentialRelationships(relationships);
+      setCurrentRelationshipIndex(0);
+      setStep('relationships');
+    } else {
+      handleImport();
+    }
+  };
+
+  const handleRelationshipDecision = (decision: boolean) => {
+    const updated = [...potentialRelationships];
+    updated[currentRelationshipIndex].shouldBeSubsidiary = decision;
+    setPotentialRelationships(updated);
+
+    if (currentRelationshipIndex < potentialRelationships.length - 1) {
+      setCurrentRelationshipIndex(currentRelationshipIndex + 1);
+    } else {
+      handleImport();
+    }
+  };
+
   const handleImport = async () => {
     setStep('importing');
     setImportProgress(0);
@@ -194,6 +283,13 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
           mappedData.created_by = user.id;
         }
 
+        // Check if this row has a confirmed parent-subsidiary relationship
+        const relationship = potentialRelationships.find(r => r.rowIndex === i);
+        if (relationship && relationship.shouldBeSubsidiary) {
+          mappedData.company_type = 'subsidiary';
+          mappedData.parent_company_id = relationship.parentCompanyId;
+        }
+
         // Check for duplicates
         const { data: existing } = await supabase
           .from('companies')
@@ -239,6 +335,8 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
     setColumnMapping({});
     setImportProgress(0);
     setImportResults(null);
+    setPotentialRelationships([]);
+    setCurrentRelationshipIndex(0);
   };
 
   const handleClose = () => {
@@ -406,8 +504,58 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
               <Button variant="outline" onClick={() => setStep('map')}>
                 Back
               </Button>
-              <Button onClick={handleImport}>
-                Import {parsedData.length} Companies
+              <Button onClick={handlePreviewToRelationships}>
+                Continue
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3.5: Confirm Parent-Subsidiary Relationships */}
+        {step === 'relationships' && potentialRelationships.length > 0 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium mb-2">Potential Parent-Subsidiary Relationship Detected</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Question {currentRelationshipIndex + 1} of {potentialRelationships.length}
+              </p>
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-3 mt-2">
+                  <div>
+                    <p className="font-medium mb-1">New Company:</p>
+                    <p className="text-sm bg-muted px-3 py-2 rounded">
+                      {potentialRelationships[currentRelationshipIndex].newCompanyName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium mb-1">Existing Parent Company Found:</p>
+                    <p className="text-sm bg-muted px-3 py-2 rounded">
+                      {potentialRelationships[currentRelationshipIndex].parentCompanyName}
+                    </p>
+                  </div>
+                  <p className="text-sm font-medium">
+                    Should "{potentialRelationships[currentRelationshipIndex].newCompanyName}" 
+                    be created as a Subsidiary/Division of "{potentialRelationships[currentRelationshipIndex].parentCompanyName}"?
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex justify-between pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => handleRelationshipDecision(false)}
+              >
+                No, Keep Standalone
+              </Button>
+              <Button 
+                onClick={() => handleRelationshipDecision(true)}
+              >
+                Yes, Make it a Subsidiary
               </Button>
             </div>
           </div>
