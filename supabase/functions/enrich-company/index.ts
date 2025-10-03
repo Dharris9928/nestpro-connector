@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { enrichWithDeepseek } from "./enrichWithDeepseek.ts";
+import { determineSegment } from "./segmentLogic.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -259,6 +260,13 @@ serve(async (req) => {
     };
 
     let updates = sanitize(enrichmentResult.companyUpdates);
+    
+    // Auto-assign segment based on enriched data
+    const autoSegment = determineSegment(company, updates);
+    if (autoSegment) {
+      updates.segment = autoSegment;
+      console.log(`Auto-assigned segment: ${autoSegment}`);
+    }
 
     // If nothing to update, still log and return success
     if (Object.keys(updates).length === 0) {
