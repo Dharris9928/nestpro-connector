@@ -54,6 +54,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   const handleClose = () => {
     if (hasUnsavedChanges && !showCloseWarning) {
@@ -74,7 +75,9 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   };
 
   // Track any field change
-  const markChanged = () => setHasUnsavedChanges(true);
+  const markChanged = () => {
+    if (!isInitialLoad) setHasUnsavedChanges(true);
+  };
   
   // Basic Info
   const [companyName, setCompanyName] = useState('');
@@ -169,6 +172,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
 
   const loadCompanyData = async () => {
     setLoading(true);
+    setIsInitialLoad(true);
     try {
       const { data: company, error } = await supabase
         .from('companies')
@@ -249,6 +253,8 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
       });
     } finally {
       setLoading(false);
+      // Small delay to ensure all state updates complete before allowing change tracking
+      setTimeout(() => setIsInitialLoad(false), 100);
     }
   };
 
@@ -412,7 +418,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   value={companyName}
                   onChange={(e) => {
                     setCompanyName(e.target.value);
-                    setHasUnsavedChanges(true);
+                    if (!isInitialLoad) setHasUnsavedChanges(true);
                   }}
                   placeholder="Premier Builders Inc."
                 />
@@ -424,7 +430,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                 </Label>
                 <Select value={industryType} onValueChange={(v: any) => {
                   setIndustryType(v);
-                  setHasUnsavedChanges(true);
+                  if (!isInitialLoad) setHasUnsavedChanges(true);
                 }}>
                   <SelectTrigger id="industry_type">
                     <SelectValue />
