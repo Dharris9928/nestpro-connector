@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SegmentCard } from '@/components/prospecting/SegmentCard';
-import { TrendingUp, Home, Wrench, Zap, Award, DollarSign, Building2 } from 'lucide-react';
+import { ApolloCSVImportDialog } from '@/components/prospecting/ApolloCSVImportDialog';
+import { TrendingUp, Home, Wrench, Zap, Award, DollarSign, Building2, FileUp } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const SEGMENT_CONFIGS = [
   {
@@ -97,14 +100,22 @@ const SEGMENT_CONFIGS = [
 ];
 
 export default function ProspectingDashboard() {
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Prospecting Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Find and import companies for each target segment using Apollo's database
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Prospecting Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
+              Find and import companies for each target segment using Apollo's database
+            </p>
+          </div>
+          <Button onClick={() => setImportDialogOpen(true)} size="lg">
+            <FileUp className="h-4 w-4 mr-2" />
+            Import CSV
+          </Button>
         </div>
 
         <Card className="bg-accent/50">
@@ -157,6 +168,14 @@ export default function ProspectingDashboard() {
           ))}
         </div>
       </div>
+
+      <ApolloCSVImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImportComplete={() => {
+          // Could add refresh logic here if needed
+        }}
+      />
     </AppLayout>
   );
 }
