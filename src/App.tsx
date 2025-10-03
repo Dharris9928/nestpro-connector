@@ -12,6 +12,7 @@ import Reports from "./pages/Reports";
 import AIFeatures from "./pages/AIFeatures";
 import ProspectingDashboard from "./pages/ProspectingDashboard";
 import Settings from "./pages/Settings";
+import Help from "./pages/Help";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -86,6 +87,14 @@ const App = () => (
             element={
               <AppLayout>
                 <Settings />
+              </AppLayout>
+            }
+          />
+          <Route
+            path="/help"
+            element={
+              <AppLayout>
+                <Help />
               </AppLayout>
             }
           />
