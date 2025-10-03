@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { BUILDER_SEGMENTS, CONTRACTOR_SEGMENTS, STATUSES } from './formOptions';
+import { BUILDER_SEGMENTS, CONTRACTOR_SEGMENTS, CI_SECURITY_SEGMENTS, STATUSES } from './formOptions';
 
 interface CompaniesFilterSidebarProps {
   isCollapsed: boolean;
@@ -159,7 +159,7 @@ export function CompaniesFilterSidebar({ isCollapsed, onToggle }: CompaniesFilte
           onToggle={() => toggleSection('industry')}
         >
           <div className="space-y-2">
-            {['Builder', 'Contractor'].map((type) => (
+            {['Builder', 'Contractor', 'CI/Security'].map((type) => (
               <div key={type} className="flex items-center space-x-2">
                 <Checkbox
                   id={`industry-${type}`}
@@ -221,6 +221,33 @@ export function CompaniesFilterSidebar({ isCollapsed, onToggle }: CompaniesFilte
                   />
                   <Label
                     htmlFor={`contractor-${segment.value}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {segment.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {/* CI/Security Segments - Only show if CI/Security industry selected */}
+        {industryType === 'CI/Security' && (
+          <FilterSection
+            title="CI/Security Segments"
+            isCollapsed={collapsedSections.has('ci-security-segments')}
+            onToggle={() => toggleSection('ci-security-segments')}
+          >
+            <div className="space-y-2">
+              {CI_SECURITY_SEGMENTS.map(segment => (
+                <div key={segment.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`ci-security-${segment.value}`}
+                    checked={isActiveFilter("segment", segment.value)}
+                    onCheckedChange={() => handleFilterClick("segment", segment.value)}
+                  />
+                  <Label
+                    htmlFor={`ci-security-${segment.value}`}
                     className="text-sm font-normal cursor-pointer"
                   >
                     {segment.label}

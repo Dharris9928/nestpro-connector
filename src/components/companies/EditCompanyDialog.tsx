@@ -29,7 +29,8 @@ import { ApolloContactRecommendations } from './ApolloContactRecommendations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BUILDER_SEGMENTS, 
-  CONTRACTOR_SEGMENTS, 
+  CONTRACTOR_SEGMENTS,
+  CI_SECURITY_SEGMENTS,
   STATUSES, 
   US_STATES,
   ANNUAL_REVENUE_RANGES,
@@ -81,7 +82,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
   
   // Basic Info
   const [companyName, setCompanyName] = useState('');
-  const [industryType, setIndustryType] = useState<'Builder' | 'Contractor'>('Builder');
+  const [industryType, setIndustryType] = useState<'Builder' | 'Contractor' | 'CI/Security'>('Builder');
   const [segment, setSegment] = useState('');
   const [status, setStatus] = useState('Lead');
   
@@ -438,6 +439,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                   <SelectContent>
                     <SelectItem value="Builder">Builder</SelectItem>
                     <SelectItem value="Contractor">Contractor</SelectItem>
+                    <SelectItem value="CI/Security">CI/Security</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -452,7 +454,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
                     <SelectValue placeholder="Auto-assigned or select..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {(industryType === 'Builder' ? BUILDER_SEGMENTS : CONTRACTOR_SEGMENTS).map(seg => (
+                    {(industryType === 'Builder' ? BUILDER_SEGMENTS : industryType === 'Contractor' ? CONTRACTOR_SEGMENTS : CI_SECURITY_SEGMENTS).map(seg => (
                       <SelectItem key={seg.value} value={seg.value}>
                         {seg.label}
                       </SelectItem>

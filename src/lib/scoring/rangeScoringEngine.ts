@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 export async function getScoreForRange(
   fieldName: string,
   rangeValue: string,
-  industryType: 'Builder' | 'Contractor'
+  industryType: 'Builder' | 'Contractor' | 'CI/Security'
 ): Promise<number> {
   if (!rangeValue) return 0;
 
@@ -41,7 +41,7 @@ export async function getScoreForRange(
  */
 export async function getFieldScoringOptions(
   fieldName: string,
-  industryType: 'Builder' | 'Contractor'
+  industryType: 'Builder' | 'Contractor' | 'CI/Security'
 ): Promise<Array<{ range: string; points: number; description: string }>> {
   const { data, error } = await supabase
     .from('scoring_configuration')
