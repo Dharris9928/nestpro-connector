@@ -333,16 +333,45 @@ const Help = () => {
                 </AccordionItem>
 
                 <AccordionItem value="enrichment">
-                  <AccordionTrigger>Data Enrichment</AccordionTrigger>
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                      Data Enrichment
+                      <Badge variant="outline" className="text-xs">Enhanced</Badge>
+                    </div>
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-3">
-                    <p className="text-sm">Enhance company records with external data sources</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                      <li>Click "Enrich" button on company records</li>
-                      <li>Automatically fetches company size, revenue, industry details</li>
-                      <li>Updates social media profiles and contact information</li>
-                      <li>View enrichment history and data sources</li>
-                      <li>Data quality indicators show completeness</li>
-                    </ul>
+                    <p className="text-sm">Enhance company records with multiple external data sources in a multi-tier enrichment flow</p>
+                    <div>
+                      <h4 className="font-medium mb-2">Enrichment Tiers (Sequential)</h4>
+                      <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                        <li><strong>Apollo:</strong> First attempts to fetch accurate business metrics (revenue, employees, location)</li>
+                        <li><strong>Lovable AI (Gemini):</strong> Comprehensive AI analysis of company website, LinkedIn, and online presence</li>
+                        <li><strong>Claude:</strong> Deep enrichment fallback if Gemini fails or for detailed analysis</li>
+                        <li><strong>Perplexity:</strong> Final fallback using real-time web search to fill remaining blank fields</li>
+                      </ol>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">What Gets Enriched</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Company size (employees, revenue ranges)</li>
+                        <li>Contact information (phone, website, social media URLs)</li>
+                        <li>Financial indicators (growth trends, profitability)</li>
+                        <li>Digital presence (website quality, LinkedIn activity, reviews)</li>
+                        <li>Technology adoption level and smart home readiness</li>
+                        <li>Market positioning and competitive advantages</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Using Enrichment</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Click "Enrich" button on any company record</li>
+                        <li>Review preview of data before applying changes</li>
+                        <li>System prevents overwriting existing accurate data</li>
+                        <li>View enrichment history and confidence scores</li>
+                        <li>Data quality indicators show field completeness</li>
+                        <li>Automatic lead score recalculation after enrichment</li>
+                      </ul>
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -471,6 +500,50 @@ const Help = () => {
                         <li>Select specific companies to add to CRM</li>
                         <li>System automatically enriches imported companies</li>
                         <li>Prevents duplicate entries</li>
+                      </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="apollo-csv-import">
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                      Apollo CSV Import
+                      <Badge variant="outline" className="text-xs">New</Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <p className="text-sm">Import companies and contacts directly from Apollo CSV exports</p>
+                    <div>
+                      <h4 className="font-medium mb-2">How to Use Apollo CSV Import</h4>
+                      <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>In Apollo.io, search for companies and select them</li>
+                        <li>Export your selection as CSV</li>
+                        <li>Click "Import CSV" button on Prospecting Dashboard</li>
+                        <li>Upload your Apollo CSV file</li>
+                        <li>Review the preview showing companies and contacts</li>
+                        <li>Click Import to add them to your CRM</li>
+                      </ol>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Smart Import Features</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Auto-detection:</strong> Automatically detects Builder vs Contractor industry type</li>
+                        <li><strong>Contact linking:</strong> Associates contacts with their companies automatically</li>
+                        <li><strong>Duplicate prevention:</strong> Skips companies and contacts that already exist</li>
+                        <li><strong>Data mapping:</strong> Maps Apollo fields to CRM fields automatically</li>
+                        <li><strong>Batch processing:</strong> Import hundreds of companies at once</li>
+                        <li><strong>Instant scoring:</strong> Lead scores calculated immediately after import</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">What Data Gets Imported</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Company names, websites, and LinkedIn URLs</li>
+                        <li>Location data (city, state)</li>
+                        <li>Employee counts and revenue ranges</li>
+                        <li>Contact names, titles, emails, and LinkedIn profiles</li>
+                        <li>Phone numbers for companies and contacts</li>
                       </ul>
                     </div>
                   </AccordionContent>
