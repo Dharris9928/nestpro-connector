@@ -27,6 +27,7 @@ import { EnrichmentHistory } from './EnrichmentHistory';
 import { AIInsightsPanel } from './AIInsightsPanel';
 import { DataQualityIndicator } from './DataQualityIndicator';
 import { ApolloContactRecommendations } from './ApolloContactRecommendations';
+import { CommunicationsTab } from './CommunicationsTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BUILDER_SEGMENTS, 
@@ -405,11 +406,12 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         </DialogHeader>
 
         <Tabs defaultValue="form" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="form">Company Details</TabsTrigger>
             <TabsTrigger value="quality">Data Quality</TabsTrigger>
             <TabsTrigger value="insights">AI Insights</TabsTrigger>
             <TabsTrigger value="contacts">Find Contacts</TabsTrigger>
+            <TabsTrigger value="communications">Communications</TabsTrigger>
             <TabsTrigger value="history">Enrichment Log</TabsTrigger>
           </TabsList>
           
@@ -1294,6 +1296,10 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
             });
           }}
         />
+      </TabsContent>
+      
+      <TabsContent value="communications" className="space-y-4">
+        <CommunicationsTab companyId={companyId} />
       </TabsContent>
       
       <TabsContent value="history" className="space-y-4">

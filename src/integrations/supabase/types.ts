@@ -534,6 +534,62 @@ export type Database = {
           },
         ]
       }
+      company_communications: {
+        Row: {
+          ai_model: string | null
+          communication_type: string
+          company_id: string
+          content: string
+          created_at: string | null
+          generated_at: string | null
+          id: string
+          notes: string | null
+          previous_context: string | null
+          sent_at: string | null
+          subject: string | null
+          used: boolean | null
+          user_id: string
+        }
+        Insert: {
+          ai_model?: string | null
+          communication_type: string
+          company_id: string
+          content: string
+          created_at?: string | null
+          generated_at?: string | null
+          id?: string
+          notes?: string | null
+          previous_context?: string | null
+          sent_at?: string | null
+          subject?: string | null
+          used?: boolean | null
+          user_id: string
+        }
+        Update: {
+          ai_model?: string | null
+          communication_type?: string
+          company_id?: string
+          content?: string
+          created_at?: string | null
+          generated_at?: string | null
+          id?: string
+          notes?: string | null
+          previous_context?: string | null
+          sent_at?: string | null
+          subject?: string | null
+          used?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_communications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_partner_matches: {
         Row: {
           company_id: string
