@@ -32,6 +32,49 @@ serve(async (req) => {
 
     const { companyId, communicationType, previousContext, aiModel, contactId, businessContext, outreachPrompt } = await req.json();
 
+    // Fetch permanent business context settings
+    const { data: businessContextSettings } = await supabase
+      .from('business_context_settings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    // Build comprehensive business context
+    let fullBusinessContext = '';
+    if (businessContextSettings) {
+      const contextParts = [];
+      if (businessContextSettings.business_description) {
+        contextParts.push(`Business: ${businessContextSettings.business_description}`);
+      }
+      if (businessContextSettings.team_mission) {
+        contextParts.push(`Mission: ${businessContextSettings.team_mission}`);
+      }
+      if (businessContextSettings.value_proposition) {
+        contextParts.push(`Value Proposition: ${businessContextSettings.value_proposition}`);
+      }
+      if (businessContextSettings.target_customer_profile) {
+        contextParts.push(`Target Customers: ${businessContextSettings.target_customer_profile}`);
+      }
+      if (businessContextSettings.key_products_services) {
+        contextParts.push(`Products/Services: ${businessContextSettings.key_products_services}`);
+      }
+      if (businessContextSettings.communication_guidelines) {
+        contextParts.push(`Communication Guidelines: ${businessContextSettings.communication_guidelines}`);
+      }
+      
+      if (contextParts.length > 0) {
+        fullBusinessContext = contextParts.join('\n\n');
+      }
+    }
+
+    // If user provided additional business context, append it
+    if (businessContext) {
+      fullBusinessContext = fullBusinessContext 
+        ? `${fullBusinessContext}\n\nAdditional Context: ${businessContext}`
+        : businessContext;
+    }
+
     // Fetch company data with contacts and AI insights
     const { data: company, error: companyError } = await supabase
       .from('companies')
@@ -112,14 +155,14 @@ serve(async (req) => {
     let userPrompt = '';
 
     if (communicationType === 'email') {
-      systemPrompt = `You are an expert B2B sales email writer${businessContext ? `. ${businessContext}` : ' for Google Nest Pro products'}. 
+      systemPrompt = `You are an expert B2B sales email writer${fullBusinessContext ? `. ${fullBusinessContext}` : ' for Google Nest Pro products'}. 
 Your goal is to write compelling, personalized emails that drive engagement and meetings.
 Focus on value proposition, pain points, and building relationships.
 Keep emails concise (under 200 words), professional, and action-oriented.`;
 
       userPrompt = `Generate a personalized sales email for ${company.company_name}${targetContact ? ` to ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
 
-${businessContext ? `YOUR BUSINESS CONTEXT:\n${businessContext}\n\n` : ''}
+${fullBusinessContext ? `YOUR BUSINESS CONTEXT:\n${fullBusinessContext}\n\n` : ''}
 
 ${outreachPrompt ? `OUTREACH PURPOSE:\n${outreachPrompt}\n\n` : ''}
 
@@ -147,13 +190,13 @@ Return in JSON format:
   "content": "email body here"
 }`;
     } else if (communicationType === 'call_script') {
-      systemPrompt = `You are an expert B2B sales call script writer${businessContext ? `. ${businessContext}` : ' for Google Nest Pro products'}.
+      systemPrompt = `You are an expert B2B sales call script writer${fullBusinessContext ? `. ${fullBusinessContext}` : ' for Google Nest Pro products'}.
 Your goal is to create effective call scripts that build rapport, uncover needs, and drive next steps.
 Include discovery questions, objection handling, and clear value propositions.`;
 
       userPrompt = `Generate a personalized call script for ${company.company_name}${targetContact ? ` when speaking with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
 
-${businessContext ? `YOUR BUSINESS CONTEXT:\n${businessContext}\n\n` : ''}
+${fullBusinessContext ? `YOUR BUSINESS CONTEXT:\n${fullBusinessContext}\n\n` : ''}
 
 ${outreachPrompt ? `OUTREACH PURPOSE:\n${outreachPrompt}\n\n` : ''}
 
@@ -181,13 +224,13 @@ Return in JSON format:
   "content": "full call script here with clear sections"
 }`;
     } else if (communicationType === 'linkedin_message') {
-      systemPrompt = `You are an expert at crafting LinkedIn connection requests and messages${businessContext ? `. ${businessContext}` : ''}.
+      systemPrompt = `You are an expert at crafting LinkedIn connection requests and messages${fullBusinessContext ? `. ${fullBusinessContext}` : ''}.
 Keep messages brief (under 300 characters for initial connection), professional, and focused on building relationships.
 Reference specific details about their company to show genuine interest.`;
 
       userPrompt = `Generate a personalized LinkedIn message for ${company.company_name}${targetContact ? ` to connect with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
 
-${businessContext ? `YOUR BUSINESS CONTEXT:\n${businessContext}\n\n` : ''}
+${fullBusinessContext ? `YOUR BUSINESS CONTEXT:\n${fullBusinessContext}\n\n` : ''}
 
 ${outreachPrompt ? `OUTREACH PURPOSE:\n${outreachPrompt}\n\n` : ''}
 

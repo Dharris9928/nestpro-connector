@@ -9,6 +9,7 @@ import { UserApprovalPanel } from "@/components/settings/UserApprovalPanel";
 import { DeletionApprovalPanel } from "@/components/settings/DeletionApprovalPanel";
 import { ApprovalAuditLog } from "@/components/settings/ApprovalAuditLog";
 import { SecurityDashboard } from "@/components/settings/SecurityDashboard";
+import { BusinessContextSettings } from "@/components/settings/BusinessContextSettings";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ImportExportActivityLog } from "@/components/help/ImportExportActivityLog";
@@ -61,6 +62,8 @@ const Settings = () => {
       </div>
 
       <div className="grid gap-6">
+        <BusinessContextSettings />
+        
         <SecurityDashboard />
 
         {/* System Activity Logs Section */}

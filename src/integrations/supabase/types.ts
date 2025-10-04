@@ -167,6 +167,45 @@ export type Database = {
         }
         Relationships: []
       }
+      business_context_settings: {
+        Row: {
+          business_description: string | null
+          communication_guidelines: string | null
+          created_at: string | null
+          id: string
+          key_products_services: string | null
+          target_customer_profile: string | null
+          team_mission: string | null
+          updated_at: string | null
+          updated_by: string | null
+          value_proposition: string | null
+        }
+        Insert: {
+          business_description?: string | null
+          communication_guidelines?: string | null
+          created_at?: string | null
+          id?: string
+          key_products_services?: string | null
+          target_customer_profile?: string | null
+          team_mission?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          value_proposition?: string | null
+        }
+        Update: {
+          business_description?: string | null
+          communication_guidelines?: string | null
+          created_at?: string | null
+          id?: string
+          key_products_services?: string | null
+          target_customer_profile?: string | null
+          team_mission?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          value_proposition?: string | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address_line1: string | null
