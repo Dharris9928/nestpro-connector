@@ -30,7 +30,7 @@ serve(async (req) => {
       });
     }
 
-    const { companyId, communicationType, previousContext, aiModel } = await req.json();
+    const { companyId, communicationType, previousContext, aiModel, contactId } = await req.json();
 
     // Fetch company data with contacts and AI insights
     const { data: company, error: companyError } = await supabase
@@ -48,6 +48,18 @@ serve(async (req) => {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Fetch specific contact if contactId provided
+    let targetContact = null;
+    if (contactId) {
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', contactId)
+        .single();
+      
+      targetContact = contact;
     }
 
     // Fetch recent communications for context
@@ -85,6 +97,14 @@ serve(async (req) => {
         title: c.title,
         decisionTier: c.decision_tier,
       })),
+      targetContact: targetContact ? {
+        name: `${targetContact.first_name} ${targetContact.last_name}`,
+        title: targetContact.title,
+        email: targetContact.email,
+        phone: targetContact.phone,
+        decisionTier: targetContact.decision_tier,
+        linkedinUrl: targetContact.linkedin_url,
+      } : null,
     };
 
     // Build system prompt based on communication type
@@ -97,7 +117,7 @@ Your goal is to write compelling, personalized emails that drive engagement and 
 Focus on value proposition, pain points, and building relationships.
 Keep emails concise (under 200 words), professional, and action-oriented.`;
 
-      userPrompt = `Generate a personalized sales email for ${company.company_name}.
+      userPrompt = `Generate a personalized sales email for ${company.company_name}${targetContact ? ` to ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
 
 Company Context:
 ${JSON.stringify(companyContext, null, 2)}
@@ -105,6 +125,8 @@ ${JSON.stringify(companyContext, null, 2)}
 ${previousContext ? `Previous Communication Context:\n${previousContext}\n\n` : ''}
 
 ${recentComms && recentComms.length > 0 ? `Recent Communication History:\n${recentComms.map(c => `- ${c.communication_type}: ${c.subject || 'No subject'}`).join('\n')}\n\n` : ''}
+
+${targetContact ? `Target Contact:\n- Name: ${targetContact.first_name} ${targetContact.last_name}\n- Title: ${targetContact.title || 'Not specified'}\n- Decision Tier: ${targetContact.decision_tier}\n- Email: ${targetContact.email || 'Not available'}\n${targetContact.linkedinUrl ? `- LinkedIn: ${targetContact.linkedinUrl}\n` : ''}\n` : ''}
 
 Generate an email with:
 1. A compelling subject line
@@ -123,7 +145,7 @@ Return in JSON format:
 Your goal is to create effective call scripts that build rapport, uncover needs, and drive next steps.
 Include discovery questions, objection handling, and clear value propositions.`;
 
-      userPrompt = `Generate a personalized call script for ${company.company_name}.
+      userPrompt = `Generate a personalized call script for ${company.company_name}${targetContact ? ` when speaking with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
 
 Company Context:
 ${JSON.stringify(companyContext, null, 2)}
@@ -131,6 +153,8 @@ ${JSON.stringify(companyContext, null, 2)}
 ${previousContext ? `Previous Communication Context:\n${previousContext}\n\n` : ''}
 
 ${recentComms && recentComms.length > 0 ? `Recent Communication History:\n${recentComms.map(c => `- ${c.communication_type}: ${c.subject || 'No subject'}`).join('\n')}\n\n` : ''}
+
+${targetContact ? `Target Contact:\n- Name: ${targetContact.first_name} ${targetContact.last_name}\n- Title: ${targetContact.title || 'Not specified'}\n- Decision Tier: ${targetContact.decision_tier}\n- Phone: ${targetContact.phone || 'Not available'}\n${targetContact.linkedinUrl ? `- LinkedIn: ${targetContact.linkedinUrl}\n` : ''}\n` : ''}
 
 Generate a call script with:
 1. Opening/Introduction
@@ -149,12 +173,14 @@ Return in JSON format:
 Keep messages brief (under 300 characters for initial connection), professional, and focused on building relationships.
 Reference specific details about their company to show genuine interest.`;
 
-      userPrompt = `Generate a personalized LinkedIn message for ${company.company_name}.
+      userPrompt = `Generate a personalized LinkedIn message for ${company.company_name}${targetContact ? ` to connect with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
 
 Company Context:
 ${JSON.stringify(companyContext, null, 2)}
 
 ${previousContext ? `Previous Context:\n${previousContext}\n\n` : ''}
+
+${targetContact ? `Target Contact:\n- Name: ${targetContact.first_name} ${targetContact.last_name}\n- Title: ${targetContact.title || 'Not specified'}\n- Decision Tier: ${targetContact.decision_tier}\n${targetContact.linkedinUrl ? `- LinkedIn: ${targetContact.linkedinUrl}\n` : ''}\n` : ''}
 
 Generate a LinkedIn message that is:
 1. Brief and professional
@@ -228,6 +254,7 @@ Return in JSON format:
         content: parsedResponse.content,
         previous_context: previousContext,
         ai_model: selectedModel,
+        contact_id: contactId || null,
       })
       .select()
       .single();

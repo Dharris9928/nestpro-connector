@@ -1,4 +1,4 @@
-import { Home, Building2, Users, Activity, BarChart3, Brain, Target, Settings, LogOut, HelpCircle } from "lucide-react";
+import { Home, Building2, Users, Activity, BarChart3, Brain, Target, Settings, LogOut, HelpCircle, MessageSquare } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -18,6 +18,7 @@ const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Companies", url: "/companies", icon: Building2 },
   { title: "Contacts", url: "/contacts", icon: Users },
+  { title: "Communications", url: "/communications", icon: MessageSquare },
   { title: "Activities", url: "/activities", icon: Activity },
   { title: "Reports", url: "/reports", icon: BarChart3 },
   { title: "AI Features", url: "/ai-features", icon: Brain },

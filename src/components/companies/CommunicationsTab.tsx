@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Phone, Linkedin, Loader2, Copy, Check, Trash2, ExternalLink } from 'lucide-react';
+import { Mail, Phone, Linkedin, Loader2, Copy, Check, Trash2, ExternalLink, User } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Communication {
@@ -21,7 +21,15 @@ interface Communication {
   generated_at: string;
   used: boolean;
   sent_at: string | null;
+  attempted_at: string | null;
   notes: string | null;
+  contact_id: string | null;
+  contacts?: {
+    first_name: string;
+    last_name: string;
+    title: string | null;
+    email: string | null;
+  };
 }
 
 interface CommunicationsTabProps {
@@ -37,19 +45,45 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
   const [previousContext, setPreviousContext] = useState('');
   const [aiModel, setAiModel] = useState('google/gemini-2.5-flash');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string>('');
+  const [contacts, setContacts] = useState<any[]>([]);
 
   useEffect(() => {
     if (companyId) {
       loadCommunications();
+      loadContacts();
     }
   }, [companyId]);
+
+  const loadContacts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('first_name');
+
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (error: any) {
+      console.error('Error loading contacts:', error);
+    }
+  };
 
   const loadCommunications = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('company_communications')
-        .select('*')
+        .select(`
+          *,
+          contacts(
+            first_name,
+            last_name,
+            title,
+            email
+          )
+        `)
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
@@ -82,6 +116,7 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
           communicationType: selectedType,
           previousContext: previousContext.trim() || null,
           aiModel,
+          contactId: selectedContactId || null,
         },
       });
 
@@ -94,6 +129,7 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
 
       await loadCommunications();
       setPreviousContext('');
+      setSelectedContactId('');
     } catch (error: any) {
       console.error('Error generating communication:', error);
       toast({
@@ -146,7 +182,11 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
     try {
       const { error } = await supabase
         .from('company_communications')
-        .update({ used: true, sent_at: new Date().toISOString() })
+        .update({ 
+          used: true, 
+          sent_at: new Date().toISOString(),
+          attempted_at: new Date().toISOString()
+        })
         .eq('id', id);
 
       if (error) throw error;
@@ -242,6 +282,28 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
           </div>
 
           <div>
+            <Label>Target Contact (Optional)</Label>
+            <Select value={selectedContactId} onValueChange={setSelectedContactId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a contact..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No specific contact</SelectItem>
+                {contacts.map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.first_name} {contact.last_name}
+                    {contact.title && ` - ${contact.title}`}
+                    {contact.decision_tier && ` (${contact.decision_tier})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Select a specific contact to personalize the communication
+            </p>
+          </div>
+
+          <div>
             <Label>Previous Communication Context (Optional)</Label>
             <Textarea
               placeholder="Add context from previous communications to help the AI generate more relevant content..."
@@ -301,10 +363,21 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
                   <Card key={comm.id} className={comm.used ? 'opacity-60' : ''}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {getTypeIcon(comm.communication_type)}
-                          <CardTitle className="text-base">{getTypeLabel(comm.communication_type)}</CardTitle>
-                          {comm.used && <Badge variant="secondary">Used</Badge>}
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2">
+                            {getTypeIcon(comm.communication_type)}
+                            <CardTitle className="text-base">{getTypeLabel(comm.communication_type)}</CardTitle>
+                            {comm.used && <Badge variant="secondary">Used</Badge>}
+                          </div>
+                          {comm.contacts && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <User className="h-4 w-4" />
+                              <span>
+                                To: {comm.contacts.first_name} {comm.contacts.last_name}
+                                {comm.contacts.title && ` - ${comm.contacts.title}`}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -341,10 +414,13 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
                           Subject: {comm.subject}
                         </CardDescription>
                       )}
-                      <CardDescription className="text-xs">
-                        Generated {format(new Date(comm.generated_at), 'MMM d, yyyy h:mm a')}
-                        {comm.ai_model && ` • ${comm.ai_model}`}
-                      </CardDescription>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Generated: {format(new Date(comm.generated_at), 'MMM d, yyyy h:mm a')}</span>
+                        {comm.attempted_at && (
+                          <span>Attempted: {format(new Date(comm.attempted_at), 'MMM d, yyyy h:mm a')}</span>
+                        )}
+                        {comm.ai_model && <span>Model: {comm.ai_model}</span>}
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md">
@@ -369,10 +445,21 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
                       <Card key={comm.id} className={comm.used ? 'opacity-60' : ''}>
                         <CardHeader>
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              {getTypeIcon(comm.communication_type)}
-                              <CardTitle className="text-base">{getTypeLabel(comm.communication_type)}</CardTitle>
-                              {comm.used && <Badge variant="secondary">Used</Badge>}
+                            <div className="space-y-2 flex-1">
+                              <div className="flex items-center gap-2">
+                                {getTypeIcon(comm.communication_type)}
+                                <CardTitle className="text-base">{getTypeLabel(comm.communication_type)}</CardTitle>
+                                {comm.used && <Badge variant="secondary">Used</Badge>}
+                              </div>
+                              {comm.contacts && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <User className="h-4 w-4" />
+                                  <span>
+                                    To: {comm.contacts.first_name} {comm.contacts.last_name}
+                                    {comm.contacts.title && ` - ${comm.contacts.title}`}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               <Button
@@ -409,10 +496,13 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
                               Subject: {comm.subject}
                             </CardDescription>
                           )}
-                          <CardDescription className="text-xs">
-                            Generated {format(new Date(comm.generated_at), 'MMM d, yyyy h:mm a')}
-                            {comm.ai_model && ` • ${comm.ai_model}`}
-                          </CardDescription>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>Generated: {format(new Date(comm.generated_at), 'MMM d, yyyy h:mm a')}</span>
+                            {comm.attempted_at && (
+                              <span>Attempted: {format(new Date(comm.attempted_at), 'MMM d, yyyy h:mm a')}</span>
+                            )}
+                            {comm.ai_model && <span>Model: {comm.ai_model}</span>}
+                          </div>
                         </CardHeader>
                         <CardContent>
                           <div className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md">

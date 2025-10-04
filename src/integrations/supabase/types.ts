@@ -537,8 +537,10 @@ export type Database = {
       company_communications: {
         Row: {
           ai_model: string | null
+          attempted_at: string | null
           communication_type: string
           company_id: string
+          contact_id: string | null
           content: string
           created_at: string | null
           generated_at: string | null
@@ -552,8 +554,10 @@ export type Database = {
         }
         Insert: {
           ai_model?: string | null
+          attempted_at?: string | null
           communication_type: string
           company_id: string
+          contact_id?: string | null
           content: string
           created_at?: string | null
           generated_at?: string | null
@@ -567,8 +571,10 @@ export type Database = {
         }
         Update: {
           ai_model?: string | null
+          attempted_at?: string | null
           communication_type?: string
           company_id?: string
+          contact_id?: string | null
           content?: string
           created_at?: string | null
           generated_at?: string | null
@@ -586,6 +592,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_communications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
