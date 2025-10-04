@@ -110,7 +110,7 @@ export function ApolloContactImportDialog({ onSuccess }: { onSuccess?: () => voi
     const companyName = row['Company Name']?.trim();
     if (!companyName) return null;
 
-    // Try to find existing company
+    // Try to find existing company by name
     const { data: existingCompany } = await supabase
       .from('companies')
       .select('id')
@@ -133,13 +133,17 @@ export function ApolloContactImportDialog({ onSuccess }: { onSuccess?: () => voi
       state: normalizeStateName(row['Company State']),
       website_url: row['Website']?.trim() || null,
       linkedin_company_url: row['Company Linkedin Url']?.trim() || null,
-      primary_phone: cleanPhoneNumber(row['Company Phone']),
+      primary_phone: cleanPhoneNumber(row['Company Phone']) || null,
+      address_line1: row['Company Address']?.trim() || null,
     };
 
-    // Parse employees
-    const employees = row['# Employees']?.trim();
-    if (employees && !isNaN(Number(employees))) {
-      companyData.total_employees = Number(employees);
+    // Parse employees - handle both numeric and string formats
+    const employees = row['# Employees']?.toString().trim();
+    if (employees) {
+      const employeeNum = parseInt(employees.replace(/,/g, ''), 10);
+      if (!isNaN(employeeNum) && employeeNum > 0) {
+        companyData.total_employees = employeeNum;
+      }
     }
 
     const { data: newCompany, error } = await supabase
