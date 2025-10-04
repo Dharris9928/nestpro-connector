@@ -52,6 +52,37 @@ export function ApolloContactImportDialog({ onSuccess }: { onSuccess?: () => voi
     return phone.replace(/^\+1\s*/, '').replace(/[^\d]/g, '').replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
   };
 
+  const normalizeStateName = (state: string | null): string | null => {
+    if (!state) return null;
+    
+    const trimmed = state.trim();
+    
+    // If already 2-letter code, return uppercase
+    if (/^[A-Z]{2}$/i.test(trimmed)) {
+      return trimmed.toUpperCase();
+    }
+    
+    // State name mapping
+    const stateMap: Record<string, string> = {
+      'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+      'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+      'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+      'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+      'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+      'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+      'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+      'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+      'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+      'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+      'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+      'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+      'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC'
+    };
+    
+    const normalized = trimmed.toLowerCase();
+    return stateMap[normalized] || null;
+  };
+
   const detectIndustryType = (industry: string, companyName: string): 'Builder' | 'Contractor' => {
     const industryLower = (industry || '').toLowerCase();
     const nameLower = (companyName || '').toLowerCase();
@@ -95,7 +126,7 @@ export function ApolloContactImportDialog({ onSuccess }: { onSuccess?: () => voi
       industry_type: industryType,
       status: 'Lead',
       city: row['Company City']?.trim() || null,
-      state: row['Company State']?.trim() || null,
+      state: normalizeStateName(row['Company State']),
       website_url: row['Website']?.trim() || null,
       linkedin_company_url: row['Company Linkedin Url']?.trim() || null,
       primary_phone: cleanPhoneNumber(row['Company Phone']),
