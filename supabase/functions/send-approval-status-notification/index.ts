@@ -58,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to user
     const emailResponse = await resend.emails.send({
-      from: "CRM Notifications <onboarding@resend.dev>",
+      from: "CRM Notifications <notifications@nestpro-connector.com>",
       to: [userEmail],
       subject,
       html: htmlContent,

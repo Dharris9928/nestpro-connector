@@ -47,7 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to assigned user
     const emailResponse = await resend.emails.send({
-      from: "CRM Notifications <onboarding@resend.dev>",
+      from: "CRM Notifications <notifications@nestpro-connector.com>",
       to: [userEmail],
       subject: `New Activity Assigned: ${activityType}`,
       html: `

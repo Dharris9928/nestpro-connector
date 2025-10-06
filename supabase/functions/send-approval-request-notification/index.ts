@@ -69,7 +69,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to all admins
     const emailResponse = await resend.emails.send({
-      from: "CRM Notifications <onboarding@resend.dev>",
+      from: "CRM Notifications <notifications@nestpro-connector.com>",
       to: adminEmails,
       subject: "New User Approval Request",
       html: `
