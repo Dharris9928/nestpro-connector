@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "npm:resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -55,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
     const adminEmails = adminUsers.users
       .filter(user => adminIds.includes(user.id))
       .map(user => user.email)
-      .filter(Boolean);
+      .filter((email): email is string => Boolean(email));
 
     if (adminEmails.length === 0) {
       console.log("No admin emails found");
