@@ -77,7 +77,7 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data: signupData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -89,6 +89,23 @@ const Auth = () => {
       });
 
       if (error) throw error;
+
+      // Send approval request notification to admins
+      if (signupData.user) {
+        try {
+          await supabase.functions.invoke('send-approval-request-notification', {
+            body: {
+              userId: signupData.user.id,
+              userEmail: email,
+              firstName,
+              lastName
+            }
+          });
+        } catch (notifError) {
+          console.error('Error sending approval notification:', notifError);
+          // Don't fail signup if notification fails
+        }
+      }
 
       toast.success("Account created! Awaiting admin approval before you can access the system.");
       // Don't navigate - users need approval first

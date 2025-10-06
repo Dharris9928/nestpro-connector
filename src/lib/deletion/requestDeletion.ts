@@ -29,7 +29,7 @@ export async function requestDeletion(
     }
 
     // Otherwise, create a deletion request
-    const { error } = await supabase
+    const { data: deletionData, error } = await supabase
       .from('deletion_requests')
       .insert({
         requested_by: user.id,
@@ -38,9 +38,32 @@ export async function requestDeletion(
         record_details: recordDetails || null,
         reason: reason || null,
         status: 'pending'
-      });
+      })
+      .select()
+      .single();
 
     if (error) throw error;
+
+    // Get user's email for notification
+    const { data: { user: userData } } = await supabase.auth.getUser();
+    
+    // Send deletion request notification to admins
+    if (deletionData && userData?.email) {
+      try {
+        await supabase.functions.invoke('send-deletion-request-notification', {
+          body: {
+            requestId: deletionData.id,
+            tableName,
+            requestedByEmail: userData.email,
+            reason
+          }
+        });
+      } catch (notifError) {
+        console.error('Error sending deletion notification:', notifError);
+        // Don't fail request if notification fails
+      }
+    }
+
     return { success: true, immediate: false };
   } catch (error) {
     console.error('Error requesting deletion:', error);

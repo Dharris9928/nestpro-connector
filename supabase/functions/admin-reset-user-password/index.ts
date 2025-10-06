@@ -85,6 +85,19 @@ serve(async (req) => {
 
     console.log('Password reset successful for user:', userId);
 
+    // Send password reset notification
+    try {
+      await supabase.functions.invoke('send-password-reset-notification', {
+        body: {
+          userId,
+          resetByAdmin: true
+        }
+      });
+    } catch (notifError) {
+      console.error('Error sending password reset notification:', notifError);
+      // Don't fail the reset if notification fails
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,

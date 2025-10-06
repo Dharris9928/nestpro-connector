@@ -38,3 +38,18 @@ verify_jwt = true
 
 [functions.admin-update-user]
 verify_jwt = true
+
+[functions.send-approval-request-notification]
+verify_jwt = true
+
+[functions.send-activity-assignment-notification]
+verify_jwt = true
+
+[functions.send-deletion-request-notification]
+verify_jwt = true
+
+[functions.send-approval-status-notification]
+verify_jwt = true
+
+[functions.send-password-reset-notification]
+verify_jwt = true

@@ -103,6 +103,19 @@ export function UserApprovalPanel() {
 
       if (error) throw error;
 
+      // Send notification email
+      try {
+        await supabase.functions.invoke('send-approval-status-notification', {
+          body: {
+            userId,
+            status: approve ? 'approved' : 'rejected'
+          }
+        });
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+        // Don't fail the approval if notification fails
+      }
+
       toast({
         title: approve ? 'User Approved' : 'User Rejected',
         description: `User has been ${approve ? 'approved' : 'rejected'} successfully`,
