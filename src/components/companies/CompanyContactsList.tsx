@@ -7,6 +7,7 @@ import { Users, Mail, Phone, Linkedin, Plus, Edit } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { AddContactDialog } from '@/components/contacts/AddContactDialog';
 import { EditContactDialog } from '@/components/contacts/EditContactDialog';
+import { useNavigate } from 'react-router-dom';
 
 interface CompanyContactsListProps {
   companyId: string;
@@ -31,6 +32,7 @@ interface Contact {
 }
 
 export function CompanyContactsList({ companyId, companyName }: CompanyContactsListProps) {
+  const navigate = useNavigate();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
@@ -98,11 +100,15 @@ export function CompanyContactsList({ companyId, companyName }: CompanyContactsL
                   className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-lg">
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto font-semibold text-lg text-foreground hover:text-primary"
+                          onClick={() => setEditingContact(contact)}
+                        >
                           {contact.first_name} {contact.last_name}
-                        </h4>
+                        </Button>
                         <Badge className={getDecisionTierColor(contact.decision_tier)}>
                           {contact.decision_tier}
                         </Badge>

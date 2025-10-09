@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useNavigate } from "react-router-dom";
 
 interface Contact {
   id: string;
@@ -31,6 +32,8 @@ interface ContactTableProps {
 }
 
 export function ContactTable({ contacts, isLoading, onEdit }: ContactTableProps) {
+  const navigate = useNavigate();
+  
   const getTierColor = (tier: string) => {
     const tierMap: Record<string, string> = {
       Primary: "bg-priority-p1 text-priority-p1-foreground",
@@ -73,11 +76,27 @@ export function ContactTable({ contacts, isLoading, onEdit }: ContactTableProps)
           {contacts.map((contact) => (
             <TableRow key={contact.id}>
               <TableCell className="font-medium">
-                {contact.first_name} {contact.last_name}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-medium text-foreground hover:text-primary"
+                  onClick={() => onEdit(contact)}
+                >
+                  {contact.first_name} {contact.last_name}
+                </Button>
               </TableCell>
               <TableCell className="text-sm">{contact.title || "—"}</TableCell>
               <TableCell className="text-sm">
-                {contact.companies?.company_name || "—"}
+                {contact.companies?.company_name ? (
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-sm text-foreground hover:text-primary"
+                    onClick={() => navigate('/companies', { state: { editCompanyId: contact.company_id } })}
+                  >
+                    {contact.companies.company_name}
+                  </Button>
+                ) : (
+                  "—"
+                )}
               </TableCell>
               <TableCell>
                 <Badge className={getTierColor(contact.decision_tier)}>
