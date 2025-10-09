@@ -1558,6 +1558,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_reps: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          notes: string | null
+          phone: string | null
+          territory: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          notes?: string | null
+          phone?: string | null
+          territory?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          notes?: string | null
+          phone?: string | null
+          territory?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       saved_views: {
         Row: {
           configuration: Json | null

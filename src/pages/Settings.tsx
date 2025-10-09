@@ -10,6 +10,7 @@ import { DeletionApprovalPanel } from "@/components/settings/DeletionApprovalPan
 import { ApprovalAuditLog } from "@/components/settings/ApprovalAuditLog";
 import { SecurityDashboard } from "@/components/settings/SecurityDashboard";
 import { BusinessContextSettings } from "@/components/settings/BusinessContextSettings";
+import { SalesRepManagement } from "@/components/settings/SalesRepManagement";
 import { MergeCompaniesDialog } from "@/components/settings/MergeCompaniesDialog";
 import { DuplicateDetectionDialog } from "@/components/settings/DuplicateDetectionDialog";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,19 @@ const Settings = () => {
         <BusinessContextSettings />
         
         <SecurityDashboard />
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              <CardTitle>Sales Rep Database</CardTitle>
+            </div>
+            <CardDescription>Manage external sales personnel</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SalesRepManagement />
+          </CardContent>
+        </Card>
 
         {/* Admin Tools Section */}
         {userData?.role === 'admin' && (
