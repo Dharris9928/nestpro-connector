@@ -51,6 +51,7 @@ interface AddContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  onAdded?: () => void;
   companyId?: string;
   companyName?: string;
 }
@@ -58,7 +59,7 @@ interface AddContactDialogProps {
 const decisionTiers = ["Primary", "Secondary", "Influencer"];
 const contactMethods = ["Email", "Phone", "LinkedIn", "Text"];
 
-export function AddContactDialog({ open, onOpenChange, onSuccess, companyId, companyName }: AddContactDialogProps) {
+export function AddContactDialog({ open, onOpenChange, onSuccess, onAdded, companyId, companyName }: AddContactDialogProps) {
   const [companies, setCompanies] = useState<{ id: string; company_name: string }[]>([]);
   const [companySearch, setCompanySearch] = useState("");
   const [openCombobox, setOpenCombobox] = useState(false);
@@ -142,8 +143,8 @@ export function AddContactDialog({ open, onOpenChange, onSuccess, companyId, com
         } else {
           setCompanySearch(currentCompanySearch);
         }
-        // Refresh the list but keep dialog open
-        onSuccess();
+        // Notify parent to refresh data but keep dialog open
+        onAdded?.();
       } else {
         // Only close dialog when not adding another
         onSuccess();

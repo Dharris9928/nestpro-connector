@@ -208,6 +208,9 @@ export function CompanyContactsList({ companyId, companyName }: CompanyContactsL
           refetch();
           setShowAddDialog(false);
         }}
+        onAdded={() => {
+          refetch();
+        }}
         companyId={companyId}
         companyName={companyName}
       />

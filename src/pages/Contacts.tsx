@@ -84,6 +84,9 @@ const Contacts = () => {
           refetch();
           setIsAddDialogOpen(false);
         }}
+        onAdded={() => {
+          refetch();
+        }}
       />
 
       {selectedContact && (
