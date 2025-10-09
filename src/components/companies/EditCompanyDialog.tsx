@@ -32,6 +32,7 @@ import { CompanyContactsList } from './CompanyContactsList';
 import { UserAssignmentSelect } from './UserAssignmentSelect';
 import { SalesRepSelect } from './SalesRepSelect';
 import { CompanyOpportunitiesTab } from '../opportunities/CompanyOpportunitiesTab';
+import { SimilarCompaniesTab } from './SimilarCompaniesTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   BUILDER_SEGMENTS, 
@@ -417,7 +418,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         </DialogHeader>
 
         <Tabs defaultValue="form" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="form">Company Details</TabsTrigger>
             <TabsTrigger value="quality">Data Quality</TabsTrigger>
             <TabsTrigger value="insights">AI Insights</TabsTrigger>
@@ -425,6 +426,7 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
             <TabsTrigger value="contacts">Find Contacts</TabsTrigger>
             <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
             <TabsTrigger value="communications">Communications</TabsTrigger>
+            <TabsTrigger value="similar">Similar Companies</TabsTrigger>
             <TabsTrigger value="history">Enrichment Log</TabsTrigger>
           </TabsList>
           
@@ -1361,6 +1363,18 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
       
       <TabsContent value="opportunities" className="space-y-4">
         <CompanyOpportunitiesTab companyId={companyId} />
+      </TabsContent>
+      
+      <TabsContent value="similar" className="space-y-4">
+        <SimilarCompaniesTab 
+          companyId={companyId}
+          currentCompany={{
+            industry_type: industryType,
+            segment: segment || null,
+            state: state || null,
+            lead_score: 0, // Will be fetched from the component
+          }}
+        />
       </TabsContent>
       
       <TabsContent value="history" className="space-y-4">
