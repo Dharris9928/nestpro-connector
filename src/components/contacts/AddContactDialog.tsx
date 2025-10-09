@@ -119,7 +119,6 @@ export function AddContactDialog({ open, onOpenChange, onSuccess, companyId, com
     try {
       await createContact(data);
       toast.success("Contact added successfully!");
-      onSuccess();
       
       if (shouldAddAnother) {
         // Reset form but keep company selection
@@ -143,8 +142,11 @@ export function AddContactDialog({ open, onOpenChange, onSuccess, companyId, com
         } else {
           setCompanySearch(currentCompanySearch);
         }
-        // Keep dialog open
+        // Refresh the list but keep dialog open
+        onSuccess();
       } else {
+        // Only close dialog when not adding another
+        onSuccess();
         form.reset();
         setCompanySearch("");
         onOpenChange(false);
