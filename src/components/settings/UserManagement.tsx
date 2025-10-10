@@ -107,7 +107,7 @@ export function UserManagement() {
       // Map profiles to UserProfile format
       const usersWithRoles = profiles.map((profile) => ({
         id: profile.id,
-        email: profile.user_email || 'Unknown',
+        email: profile.email || 'Unknown',
         first_name: profile.first_name,
         last_name: profile.last_name,
         created_at: profile.created_at,

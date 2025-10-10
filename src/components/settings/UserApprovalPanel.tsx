@@ -51,7 +51,7 @@ export function UserApprovalPanel() {
           last_name: profile.last_name,
           created_at: profile.created_at,
           approval_status: profile.approval_status,
-          email: profile.user_email || 'No email'
+          email: profile.email || 'No email'
         }));
 
         setPendingUsers(usersWithEmails);

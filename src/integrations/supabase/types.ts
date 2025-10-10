@@ -882,7 +882,7 @@ export type Database = {
           accessed_at: string | null
           action: string
           company_id: string | null
-          contact_id: string
+          contact_id: string | null
           id: string
           ip_address: unknown | null
           user_agent: string | null
@@ -892,7 +892,7 @@ export type Database = {
           accessed_at?: string | null
           action: string
           company_id?: string | null
-          contact_id: string
+          contact_id?: string | null
           id?: string
           ip_address?: unknown | null
           user_agent?: string | null
@@ -902,7 +902,7 @@ export type Database = {
           accessed_at?: string | null
           action?: string
           company_id?: string | null
-          contact_id?: string
+          contact_id?: string | null
           id?: string
           ip_address?: unknown | null
           user_agent?: string | null
@@ -2269,16 +2269,12 @@ export type Database = {
       admin_get_all_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
-          approval_status: Database["public"]["Enums"]["approval_status"]
-          approved_at: string
+          approval_status: string
           created_at: string
+          email: string
           first_name: string
           id: string
           last_name: string
-          role_frozen: boolean
-          role_frozen_at: string
-          role_frozen_reason: string
-          user_email: string
         }[]
       }
       admin_get_profile: {
