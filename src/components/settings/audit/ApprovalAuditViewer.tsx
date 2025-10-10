@@ -1,110 +1,83 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Search, UserCheck, UserX, UserMinus } from "lucide-react";
-import { toast } from "sonner";
-import * as XLSX from 'xlsx';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Download, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ApprovalAuditViewer() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "approved" | "pending" | "rejected">("all");
-  const [dateRange, setDateRange] = useState("30");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const { data: logs, isLoading, refetch } = useQuery({
-    queryKey: ['approval-audit-logs', statusFilter, dateRange],
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ['approval-audit-logs', statusFilter],
     queryFn: async () => {
       let query = supabase
         .from('approval_audit_log')
-        .select('*')
+        .select(`
+          *,
+          user:user_id(id),
+          user_profiles:user_id(first_name, last_name),
+          approver:approved_by(id),
+          approver_profiles:approved_by(first_name, last_name)
+        `)
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(100);
 
-      if (statusFilter !== 'all') {
+      if (statusFilter !== "all") {
         query = query.eq('new_status', statusFilter);
       }
 
-      if (dateRange !== 'all') {
-        const days = parseInt(dateRange);
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        query = query.gte('created_at', startDate.toISOString());
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+      const { data } = await query;
+      return data || [];
     }
   });
-
-  // Real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel('approval-audit-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'approval_audit_log'
-        },
-        () => {
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refetch]);
 
   const filteredLogs = logs?.filter(log => {
     if (!searchTerm) return true;
-    const userId = log.user_id?.toLowerCase() || '';
-    const notes = log.notes?.toLowerCase() || '';
-    return userId.includes(searchTerm.toLowerCase()) || 
-           notes.includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      log.user_profiles?.first_name?.toLowerCase().includes(searchLower) ||
+      log.user_profiles?.last_name?.toLowerCase().includes(searchLower) ||
+      log.approver_profiles?.first_name?.toLowerCase().includes(searchLower) ||
+      log.approver_profiles?.last_name?.toLowerCase().includes(searchLower)
+    );
   });
 
-  const handleExport = () => {
-    if (!filteredLogs || filteredLogs.length === 0) {
-      toast.error('No data to export');
-      return;
-    }
+  const exportToCSV = () => {
+    if (!filteredLogs) return;
 
-    const exportData = filteredLogs.map(log => ({
-      'Date/Time': new Date(log.created_at).toLocaleString(),
-      'User ID': log.user_id?.substring(0, 8),
-      'Previous Status': log.previous_status || 'N/A',
-      'New Status': log.new_status,
-      'Approved By': log.approved_by?.substring(0, 8) || 'System',
-      'Notes': log.notes || '',
-      'IP Address': log.ip_address || 'N/A'
-    }));
+    const headers = ['Date', 'User', 'Previous Status', 'New Status', 'Approved By', 'Notes', 'IP Address'];
+    const rows = filteredLogs.map(log => [
+      new Date(log.created_at).toLocaleString(),
+      `${log.user_profiles?.first_name} ${log.user_profiles?.last_name}`,
+      log.previous_status || 'N/A',
+      log.new_status,
+      log.approver_profiles ? `${log.approver_profiles.first_name} ${log.approver_profiles.last_name}` : 'System',
+      log.notes || 'N/A',
+      log.ip_address || 'N/A'
+    ]);
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Approval Audit Log');
-    XLSX.writeFile(wb, `approval-audit-${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success('Audit log exported successfully');
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `approval-audit-logs-${new Date().toISOString()}.csv`;
+    a.click();
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'approved':
-        return <Badge variant="default"><UserCheck className="h-3 w-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><UserX className="h-3 w-3 mr-1" />Rejected</Badge>;
-      case 'pending':
-        return <Badge variant="secondary"><UserMinus className="h-3 w-3 mr-1" />Pending</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
+      case 'approved': return 'default';
+      case 'rejected': return 'destructive';
+      case 'pending': return 'secondary';
+      case 'frozen': return 'outline';
+      default: return 'outline';
     }
   };
 
@@ -117,19 +90,18 @@ export function ApprovalAuditViewer() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by user ID or notes..."
+              placeholder="Search by user or approver..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
-            <SelectTrigger className="w-full md:w-[180px]">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -137,38 +109,23 @@ export function ApprovalAuditViewer() {
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="frozen">Frozen</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Date range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleExport} variant="outline" className="w-full md:w-auto">
+          <Button onClick={exportToCSV} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
         </div>
 
-        {/* Results summary */}
-        <div className="text-sm text-muted-foreground">
-          Showing {filteredLogs?.length || 0} of {logs?.length || 0} approval events
-        </div>
-
-        {/* Table */}
-        <div className="border rounded-lg overflow-auto max-h-[600px]">
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date/Time</TableHead>
-                <TableHead>User ID</TableHead>
-                <TableHead>Status Change</TableHead>
+                <TableHead>Date & Time</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Previous Status</TableHead>
+                <TableHead>New Status</TableHead>
                 <TableHead>Approved By</TableHead>
                 <TableHead>Notes</TableHead>
               </TableRow>
@@ -176,49 +133,54 @@ export function ApprovalAuditViewer() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    Loading audit trail...
-                  </TableCell>
+                  <TableCell colSpan={6} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : filteredLogs && filteredLogs.length > 0 ? (
                 filteredLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="font-mono text-xs">
                       {new Date(log.created_at).toLocaleString()}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {log.user_id?.substring(0, 8)}...
+                    <TableCell>
+                      {log.user_profiles?.first_name} {log.user_profiles?.last_name}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {log.previous_status && (
-                          <Badge variant="outline" className="text-xs">
-                            {log.previous_status}
-                          </Badge>
-                        )}
-                        <span className="text-muted-foreground">→</span>
-                        {getStatusBadge(log.new_status)}
-                      </div>
+                      {log.previous_status ? (
+                        <Badge variant="outline">{log.previous_status}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {log.approved_by ? 
-                        `${log.approved_by.substring(0, 8)}...` : 
-                        'System'}
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(log.new_status)}>
+                        {log.new_status}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="max-w-md truncate">
-                      {log.notes || '-'}
+                    <TableCell>
+                      {log.approver_profiles ? (
+                        `${log.approver_profiles.first_name} ${log.approver_profiles.last_name}`
+                      ) : (
+                        <span className="text-muted-foreground">System</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {log.notes || <span className="text-muted-foreground">—</span>}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No approval events found
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No approval logs found
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredLogs?.length || 0} of {logs?.length || 0} total logs
         </div>
       </CardContent>
     </Card>

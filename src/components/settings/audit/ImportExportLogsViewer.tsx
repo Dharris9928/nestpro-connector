@@ -1,241 +1,180 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Search, Upload, FileDown, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import * as XLSX from 'xlsx';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Download, Search, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function ImportExportLogsViewer() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [activityFilter, setActivityFilter] = useState("all");
-  const [dateRange, setDateRange] = useState("30");
+  const [activityFilter, setActivityFilter] = useState<string>("all");
 
-  const { data: logs, isLoading, refetch } = useQuery({
-    queryKey: ['import-export-logs', activityFilter, dateRange],
+  const { data: logs, isLoading } = useQuery({
+    queryKey: ['import-export-logs', activityFilter],
     queryFn: async () => {
       let query = supabase
         .from('import_export_logs')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id(first_name, last_name)
+        `)
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(100);
 
-      if (activityFilter !== 'all') {
+      if (activityFilter !== "all") {
         query = query.eq('activity_type', activityFilter);
       }
 
-      if (dateRange !== 'all') {
-        const days = parseInt(dateRange);
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        query = query.gte('created_at', startDate.toISOString());
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+      const { data } = await query;
+      return data || [];
     }
   });
-
-  // Real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel('import-export-logs-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'import_export_logs'
-        },
-        () => {
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refetch]);
 
   const filteredLogs = logs?.filter(log => {
     if (!searchTerm) return true;
-    const tableName = log.table_name?.toLowerCase() || '';
-    const fileFormat = log.file_format?.toLowerCase() || '';
-    return tableName.includes(searchTerm.toLowerCase()) || 
-           fileFormat.includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      log.profiles?.first_name?.toLowerCase().includes(searchLower) ||
+      log.profiles?.last_name?.toLowerCase().includes(searchLower) ||
+      log.table_name?.toLowerCase().includes(searchLower) ||
+      log.file_format?.toLowerCase().includes(searchLower)
+    );
   });
 
-  const handleExport = () => {
-    if (!filteredLogs || filteredLogs.length === 0) {
-      toast.error('No data to export');
-      return;
-    }
+  const exportToCSV = () => {
+    if (!filteredLogs) return;
 
-    const exportData = filteredLogs.map(log => ({
-      'Date/Time': new Date(log.created_at).toLocaleString(),
-      'Activity': log.activity_type,
-      'Table': log.table_name,
-      'Format': log.file_format || 'N/A',
-      'Records': log.record_count,
-      'Successful': log.successful_count,
-      'Failed': log.failed_count,
-      'Duplicates': log.duplicate_count,
-      'Has Errors': log.error_summary ? 'Yes' : 'No'
-    }));
+    const headers = ['Date', 'User', 'Activity', 'Table', 'Format', 'Records', 'Success', 'Failed', 'Duplicates'];
+    const rows = filteredLogs.map(log => [
+      new Date(log.created_at).toLocaleString(),
+      `${log.profiles?.first_name} ${log.profiles?.last_name}`,
+      log.activity_type,
+      log.table_name,
+      log.file_format || 'N/A',
+      log.record_count,
+      log.successful_count,
+      log.failed_count,
+      log.duplicate_count
+    ]);
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Import Export Logs');
-    XLSX.writeFile(wb, `import-export-logs-${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast.success('Logs exported successfully');
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `import-export-logs-${new Date().toISOString()}.csv`;
+    a.click();
   };
 
-  const getActivityBadge = (activity: string) => {
-    switch (activity) {
-      case 'IMPORT':
-        return <Badge variant="default"><Upload className="h-3 w-3 mr-1" />Import</Badge>;
-      case 'EXPORT':
-        return <Badge variant="secondary"><FileDown className="h-3 w-3 mr-1" />Export</Badge>;
-      default:
-        return <Badge>{activity}</Badge>;
-    }
+  const getActivityIcon = (activity: string) => {
+    return activity === 'IMPORT' ? <Upload className="h-4 w-4" /> : <Download className="h-4 w-4" />;
+  };
+
+  const getActivityBadgeVariant = (activity: string) => {
+    return activity === 'IMPORT' ? 'default' : 'secondary';
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Import/Export Activity Logs</CardTitle>
+        <CardTitle>Import/Export Activity Log</CardTitle>
         <CardDescription>
-          Track all data import and export operations
+          Track all data import and export operations for compliance
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by table or format..."
+              placeholder="Search by user, table, or format..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-9"
             />
           </div>
           <Select value={activityFilter} onValueChange={setActivityFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by activity" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Activities</SelectItem>
-              <SelectItem value="IMPORT">Import</SelectItem>
-              <SelectItem value="EXPORT">Export</SelectItem>
+              <SelectItem value="IMPORT">Imports Only</SelectItem>
+              <SelectItem value="EXPORT">Exports Only</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Date range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleExport} variant="outline" className="w-full md:w-auto">
+          <Button onClick={exportToCSV} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
         </div>
 
-        {/* Results summary */}
-        <div className="text-sm text-muted-foreground">
-          Showing {filteredLogs?.length || 0} of {logs?.length || 0} operations
-        </div>
-
-        {/* Table */}
-        <div className="border rounded-lg overflow-auto max-h-[600px]">
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date/Time</TableHead>
+                <TableHead>Date & Time</TableHead>
+                <TableHead>User</TableHead>
                 <TableHead>Activity</TableHead>
                 <TableHead>Table</TableHead>
-                <TableHead>Records</TableHead>
-                <TableHead>Success/Failed</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Format</TableHead>
+                <TableHead className="text-right">Records</TableHead>
+                <TableHead className="text-right">Success</TableHead>
+                <TableHead className="text-right">Failed</TableHead>
+                <TableHead className="text-right">Duplicates</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    Loading activity logs...
-                  </TableCell>
+                  <TableCell colSpan={9} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : filteredLogs && filteredLogs.length > 0 ? (
                 filteredLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="font-mono text-xs">
                       {new Date(log.created_at).toLocaleString()}
                     </TableCell>
-                    <TableCell>{getActivityBadge(log.activity_type)}</TableCell>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">{log.table_name}</p>
-                        {log.file_format && (
-                          <p className="text-xs text-muted-foreground">
-                            {log.file_format.toUpperCase()}
-                          </p>
-                        )}
-                      </div>
+                      {log.profiles?.first_name} {log.profiles?.last_name}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        <p>{log.record_count} total</p>
-                        {log.duplicate_count > 0 && (
-                          <p className="text-muted-foreground">
-                            {log.duplicate_count} duplicates
-                          </p>
-                        )}
-                      </div>
+                      <Badge variant={getActivityBadgeVariant(log.activity_type)} className="gap-1">
+                        {getActivityIcon(log.activity_type)}
+                        {log.activity_type}
+                      </Badge>
                     </TableCell>
+                    <TableCell className="font-mono text-sm">{log.table_name}</TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        <p className="text-green-600">{log.successful_count} succeeded</p>
-                        {log.failed_count > 0 && (
-                          <p className="text-destructive">{log.failed_count} failed</p>
-                        )}
-                      </div>
+                      <Badge variant="outline">{log.file_format || 'N/A'}</Badge>
                     </TableCell>
-                    <TableCell>
-                      {log.error_summary ? (
-                        <Badge variant="destructive" className="cursor-help" title={log.error_summary}>
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          Errors
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Complete</Badge>
-                      )}
+                    <TableCell className="text-right font-mono">{log.record_count}</TableCell>
+                    <TableCell className="text-right font-mono text-success">{log.successful_count}</TableCell>
+                    <TableCell className="text-right font-mono text-destructive">
+                      {log.failed_count > 0 ? log.failed_count : '—'}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-warning">
+                      {log.duplicate_count > 0 ? log.duplicate_count : '—'}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No import/export operations found
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                    No import/export logs found
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredLogs?.length || 0} of {logs?.length || 0} total logs
         </div>
       </CardContent>
     </Card>
