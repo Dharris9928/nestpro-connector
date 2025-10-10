@@ -2269,7 +2269,7 @@ export type Database = {
       admin_get_all_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
-          approval_status: Database["public"]["Enums"]["approval_status"]
+          approval_status: string
           created_at: string
           email: string
           first_name: string
