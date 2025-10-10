@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { checkRateLimit } from '../_shared/rateLimiting.ts';
 import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -25,6 +26,21 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Authenticate and check rate limit
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      );
+
+      if (!authError && user) {
+        const rateLimitResponse = await checkRateLimit(supabase, user.id, 'send-approval-request-notification');
+        if (rateLimitResponse) {
+          return rateLimitResponse;
+        }
+      }
+    }
 
     const { userId, userEmail, firstName, lastName }: NotificationRequest = await req.json();
 
