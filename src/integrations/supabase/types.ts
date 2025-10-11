@@ -82,6 +82,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ai_usage_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ai_usage_logs_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -93,6 +100,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -173,6 +187,81 @@ export type Database = {
             | null
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          operation: string
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          operation: string
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          operation?: string
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      auth_events_log: {
+        Row: {
+          created_at: string
+          email_attempted: string | null
+          event_type: string
+          failure_reason: string | null
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_attempted?: string | null
+          event_type: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_attempted?: string | null
+          event_type?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -285,6 +374,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "builder_scoring_details_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_financial_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -633,6 +729,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "companies_parent_company_id_fkey"
+            columns: ["parent_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
         ]
       }
       company_ai_insights: {
@@ -684,6 +787,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_ai_insights_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_financial_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -746,6 +856,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_branches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -814,6 +931,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "company_communications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "company_communications_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -825,6 +949,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_communications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -866,6 +997,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_partner_matches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
             referencedColumns: ["id"]
           },
           {
@@ -917,6 +1055,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contact_access_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contact_access_logs_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -928,6 +1073,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_access_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -1023,6 +1175,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contractor_scoring_details: {
@@ -1098,6 +1257,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_scoring_details_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_financial_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -1315,7 +1481,44 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "enrichment_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      field_permissions: {
+        Row: {
+          created_at: string
+          field_name: string
+          id: string
+          is_pii: boolean
+          masking_pattern: string | null
+          min_role_required: string
+          table_name: string
+        }
+        Insert: {
+          created_at?: string
+          field_name: string
+          id?: string
+          is_pii?: boolean
+          masking_pattern?: string | null
+          min_role_required: string
+          table_name: string
+        }
+        Update: {
+          created_at?: string
+          field_name?: string
+          id?: string
+          is_pii?: boolean
+          masking_pattern?: string | null
+          min_role_required?: string
+          table_name?: string
+        }
+        Relationships: []
       }
       import_export_logs: {
         Row: {
@@ -1415,6 +1618,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installation_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -1541,6 +1751,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "outreach_activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "outreach_activities_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -1552,6 +1769,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_masked"
             referencedColumns: ["id"]
           },
           {
@@ -1637,6 +1861,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_programs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -1944,7 +2175,41 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "segmentation_scores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      session_config: {
+        Row: {
+          absolute_timeout_hours: number
+          created_at: string | null
+          id: string
+          idle_timeout_minutes: number
+          max_concurrent_sessions: number
+          updated_at: string | null
+        }
+        Insert: {
+          absolute_timeout_hours?: number
+          created_at?: string | null
+          id?: string
+          idle_timeout_minutes?: number
+          max_concurrent_sessions?: number
+          updated_at?: string | null
+        }
+        Update: {
+          absolute_timeout_hours?: number
+          created_at?: string | null
+          id?: string
+          idle_timeout_minutes?: number
+          max_concurrent_sessions?: number
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       signup_rate_limit: {
         Row: {
@@ -2117,6 +2382,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "training_certifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "training_certifications_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -2128,6 +2400,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_certifications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -2158,6 +2437,39 @@ export type Database = {
           id?: string
           last_access_at?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: unknown | null
+          last_activity_at: string
+          session_token_hash: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          ip_address?: unknown | null
+          last_activity_at?: string
+          session_token_hash: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: unknown | null
+          last_activity_at?: string
+          session_token_hash?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2202,6 +2514,39 @@ export type Database = {
       }
     }
     Views: {
+      companies_financial_masked: {
+        Row: {
+          annual_revenue_range: string | null
+          company_name: string | null
+          created_at: string | null
+          financial_health_rating: string | null
+          id: string | null
+          industry_type: string | null
+          profitability_level: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          annual_revenue_range?: never
+          company_name?: string | null
+          created_at?: string | null
+          financial_health_rating?: never
+          id?: string | null
+          industry_type?: string | null
+          profitability_level?: never
+          updated_at?: string | null
+        }
+        Update: {
+          annual_revenue_range?: never
+          company_name?: string | null
+          created_at?: string | null
+          financial_health_rating?: never
+          id?: string | null
+          industry_type?: string | null
+          profitability_level?: never
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       company_hierarchy: {
         Row: {
           company_name: string | null
@@ -2295,6 +2640,101 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts_masked: {
+        Row: {
+          branch_id: string | null
+          company_id: string | null
+          created_at: string | null
+          decision_tier: Database["public"]["Enums"]["decision_tier"] | null
+          email: string | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          linkedin_activity_score: number | null
+          linkedin_connections: number | null
+          linkedin_url: string | null
+          mobile: string | null
+          notes: string | null
+          phone: string | null
+          preferred_contact_method:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          decision_tier?: Database["public"]["Enums"]["decision_tier"] | null
+          email?: never
+          first_name?: string | null
+          id?: string | null
+          last_name?: string | null
+          linkedin_activity_score?: number | null
+          linkedin_connections?: number | null
+          linkedin_url?: string | null
+          mobile?: never
+          notes?: string | null
+          phone?: never
+          preferred_contact_method?:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          decision_tier?: Database["public"]["Enums"]["decision_tier"] | null
+          email?: never
+          first_name?: string | null
+          id?: string | null
+          last_name?: string | null
+          linkedin_activity_score?: number | null
+          linkedin_connections?: number | null
+          linkedin_url?: string | null
+          mobile?: never
+          notes?: string | null
+          phone?: never
+          preferred_contact_method?:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "company_branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -2347,6 +2787,10 @@ export type Database = {
       }
       can_access_company: {
         Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_access_field: {
+        Args: { _field_name: string; _table_name: string; _user_id: string }
         Returns: boolean
       }
       check_email_domain_allowed: {
@@ -2458,6 +2902,18 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      log_auth_event: {
+        Args: {
+          _email_attempted?: string
+          _event_type: string
+          _failure_reason?: string
+          _ip_address?: unknown
+          _metadata?: Json
+          _user_agent?: string
+          _user_id: string
+        }
+        Returns: string
+      }
       log_blocked_signup: {
         Args: {
           _details?: Json
@@ -2471,6 +2927,10 @@ export type Database = {
       log_security_event: {
         Args: { _event_details?: Json; _event_type: string }
         Returns: undefined
+      }
+      mask_pii_field: {
+        Args: { _field_name: string; _field_value: string; _table_name: string }
+        Returns: string
       }
       migrate_contact_encryption: {
         Args: { contact_id: string }
@@ -2487,6 +2947,19 @@ export type Database = {
           revoked_role: Database["public"]["Enums"]["app_role"]
           revoked_user_id: string
         }[]
+      }
+      terminate_expired_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      track_user_session: {
+        Args: {
+          _ip_address?: unknown
+          _session_token_hash: string
+          _user_agent?: string
+          _user_id: string
+        }
+        Returns: string
       }
       user_approved_with_grace_period: {
         Args: { _hours?: number; _user_id: string }

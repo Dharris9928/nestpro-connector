@@ -4,6 +4,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { useSessionMonitor } from "@/hooks/useSessionMonitor";
+import { SessionTimeoutWarning } from "@/components/settings/SessionTimeoutWarning";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -15,6 +17,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
+  const { showWarning, timeRemaining, extendSession, handleTimeout } = useSessionMonitor();
 
   useEffect(() => {
     // Set up auth state listener
@@ -117,18 +120,26 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b border-border flex items-center px-4 bg-card">
-            <SidebarTrigger />
-          </header>
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
+    <>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-background">
+          <AppSidebar />
+          <div className="flex-1 flex flex-col">
+            <header className="h-14 border-b border-border flex items-center px-4 bg-card">
+              <SidebarTrigger />
+            </header>
+            <main className="flex-1 overflow-auto">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+      <SessionTimeoutWarning
+        open={showWarning}
+        timeRemaining={timeRemaining}
+        onExtend={extendSession}
+        onTimeout={handleTimeout}
+      />
+    </>
   );
 }

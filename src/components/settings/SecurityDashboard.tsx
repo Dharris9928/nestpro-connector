@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { ContactAccessLogsViewer } from "./audit/ContactAccessLogsViewer";
 import { ApprovalAuditViewer } from "./audit/ApprovalAuditViewer";
 import { ImportExportLogsViewer } from "./audit/ImportExportLogsViewer";
+import { ComprehensiveAuditViewer } from "./audit/ComprehensiveAuditViewer";
+import { AuthEventsLog } from "./audit/AuthEventsLog";
+import { ActiveSessionsManager } from "./ActiveSessionsManager";
 
 export function SecurityDashboard() {
   // Fetch security monitoring dashboard
@@ -80,10 +83,22 @@ export function SecurityDashboard() {
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-4">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="overview">
           <Shield className="h-4 w-4 mr-2" />
           Overview
+        </TabsTrigger>
+        <TabsTrigger value="sessions">
+          <Activity className="h-4 w-4 mr-2" />
+          Sessions
+        </TabsTrigger>
+        <TabsTrigger value="audit-trail">
+          <Database className="h-4 w-4 mr-2" />
+          Audit Trail
+        </TabsTrigger>
+        <TabsTrigger value="auth-events">
+          <Shield className="h-4 w-4 mr-2" />
+          Auth Events
         </TabsTrigger>
         <TabsTrigger value="contact-access">
           <Eye className="h-4 w-4 mr-2" />
@@ -92,10 +107,6 @@ export function SecurityDashboard() {
         <TabsTrigger value="approvals">
           <UserCheck className="h-4 w-4 mr-2" />
           Approvals
-        </TabsTrigger>
-        <TabsTrigger value="import-export">
-          <FileDown className="h-4 w-4 mr-2" />
-          Import/Export
         </TabsTrigger>
       </TabsList>
 
@@ -303,16 +314,24 @@ export function SecurityDashboard() {
       </Card>
       </TabsContent>
 
+      <TabsContent value="sessions">
+        <ActiveSessionsManager />
+      </TabsContent>
+
+      <TabsContent value="audit-trail">
+        <ComprehensiveAuditViewer />
+      </TabsContent>
+
+      <TabsContent value="auth-events">
+        <AuthEventsLog />
+      </TabsContent>
+
       <TabsContent value="contact-access">
         <ContactAccessLogsViewer />
       </TabsContent>
 
       <TabsContent value="approvals">
         <ApprovalAuditViewer />
-      </TabsContent>
-
-      <TabsContent value="import-export">
-        <ImportExportLogsViewer />
       </TabsContent>
     </Tabs>
   );

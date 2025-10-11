@@ -65,12 +65,38 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Log failed login attempt
+        try {
+          await supabase.rpc('log_auth_event', {
+            _user_id: null,
+            _event_type: 'LOGIN_FAILED',
+            _email_attempted: email,
+            _failure_reason: error.message
+          });
+        } catch (logError) {
+          console.error('Failed to log auth event:', logError);
+        }
+        throw error;
+      }
+
+      // Log successful login
+      if (data.user) {
+        try {
+          await supabase.rpc('log_auth_event', {
+            _user_id: data.user.id,
+            _event_type: 'LOGIN_SUCCESS',
+            _email_attempted: email
+          });
+        } catch (logError) {
+          console.error('Failed to log auth event:', logError);
+        }
+      }
 
       toast.success("Successfully logged in!");
       navigate("/");
