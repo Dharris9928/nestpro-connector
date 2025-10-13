@@ -30,6 +30,7 @@ import { ConsentManagement } from "@/components/settings/gdpr/ConsentManagement"
 import { DataExportRequest } from "@/components/settings/gdpr/DataExportRequest";
 import { PIIInventoryDashboard } from "@/components/settings/gdpr/PIIInventoryDashboard";
 import { RightToBeForgotten } from "@/components/settings/gdpr/RightToBeForgotten";
+import { SecurityGrowthTracker } from "@/components/settings/SecurityGrowthTracker";
 import { ComplianceDocumentsDashboard } from "@/components/settings/ComplianceDocumentsDashboard";
 import { DataWarehouseSync } from "@/components/settings/DataWarehouseSync";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,11 @@ const Settings = () => {
         <MFAManagement />
         
         <SecurityDashboard />
+
+        {/* Security Growth Tracker - Admin only */}
+        {userData?.role === 'admin' && (
+          <SecurityGrowthTracker />
+        )}
 
         {/* GDPR/CCPA Compliance */}
         <ConsentManagement />
