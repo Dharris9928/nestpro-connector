@@ -27,11 +27,18 @@ export function MFAVerificationDialog({ open, onOpenChange, onSuccess }: MFAVeri
       setIsLoading(true);
 
       // List factors to get the factor ID
-      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+      
+      if (factorsError) throw factorsError;
+
       const totpFactor = factors?.totp?.[0];
 
-      if (!totpFactor) {
-        throw new Error('MFA not set up');
+      if (!totpFactor || totpFactor.status !== 'verified') {
+        toast.error('MFA not properly set up', {
+          description: 'Please complete MFA enrollment in Settings first',
+        });
+        onOpenChange(false);
+        return;
       }
 
       // Create challenge
@@ -39,7 +46,14 @@ export function MFAVerificationDialog({ open, onOpenChange, onSuccess }: MFAVeri
         factorId: totpFactor.id,
       });
 
-      if (challengeError) throw challengeError;
+      if (challengeError) {
+        console.error('Challenge error:', challengeError);
+        throw new Error('Failed to create MFA challenge');
+      }
+
+      if (!challenge?.id) {
+        throw new Error('No challenge ID received');
+      }
 
       // Verify code
       const { error: verifyError } = await supabase.auth.mfa.verify({
@@ -48,13 +62,18 @@ export function MFAVerificationDialog({ open, onOpenChange, onSuccess }: MFAVeri
         code: verifyCode,
       });
 
-      if (verifyError) throw verifyError;
+      if (verifyError) {
+        console.error('Verify error:', verifyError);
+        throw new Error('Invalid verification code');
+      }
 
       toast.success('Verification successful');
+      setVerifyCode(''); // Clear the code
       onSuccess();
     } catch (error: any) {
+      console.error('MFA verification error:', error);
       toast.error('Verification failed', {
-        description: error.message,
+        description: error.message || 'Please try again',
       });
     } finally {
       setIsLoading(false);
