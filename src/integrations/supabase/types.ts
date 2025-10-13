@@ -1496,6 +1496,54 @@ export type Database = {
           },
         ]
       }
+      data_export_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          expires_at: string | null
+          export_url: string | null
+          file_size_bytes: number | null
+          id: string
+          record_count: Json | null
+          request_type: string
+          status: string
+          tables_requested: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          export_url?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          record_count?: Json | null
+          request_type?: string
+          status?: string
+          tables_requested?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          export_url?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          record_count?: Json | null
+          request_type?: string
+          status?: string
+          tables_requested?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       data_retention_policies: {
         Row: {
           created_at: string
@@ -2190,6 +2238,57 @@ export type Database = {
           },
         ]
       }
+      pii_inventory: {
+        Row: {
+          can_be_deleted: boolean
+          can_be_exported: boolean
+          column_name: string
+          created_at: string
+          data_type: string
+          encryption_method: string | null
+          id: string
+          is_encrypted: boolean
+          legal_basis: string | null
+          pii_category: string
+          purpose: string | null
+          retention_period_days: number | null
+          table_name: string
+          updated_at: string
+        }
+        Insert: {
+          can_be_deleted?: boolean
+          can_be_exported?: boolean
+          column_name: string
+          created_at?: string
+          data_type: string
+          encryption_method?: string | null
+          id?: string
+          is_encrypted?: boolean
+          legal_basis?: string | null
+          pii_category: string
+          purpose?: string | null
+          retention_period_days?: number | null
+          table_name: string
+          updated_at?: string
+        }
+        Update: {
+          can_be_deleted?: boolean
+          can_be_exported?: boolean
+          column_name?: string
+          created_at?: string
+          data_type?: string
+          encryption_method?: string | null
+          id?: string
+          is_encrypted?: boolean
+          legal_basis?: string | null
+          pii_category?: string
+          purpose?: string | null
+          retention_period_days?: number | null
+          table_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pilot_programs: {
         Row: {
           actual_end_date: string | null
@@ -2841,6 +2940,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_consents: {
+        Row: {
+          consent_type: string
+          created_at: string
+          granted: boolean
+          granted_at: string | null
+          id: string
+          ip_address: unknown | null
+          revoked_at: string | null
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+          version: string
+        }
+        Insert: {
+          consent_type: string
+          created_at?: string
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+          version?: string
+        }
+        Update: {
+          consent_type?: string
+          created_at?: string
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
       }
       user_mfa_status: {
         Row: {

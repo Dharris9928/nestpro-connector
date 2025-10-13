@@ -19,6 +19,10 @@ import { EncryptionManager } from "@/components/settings/encryption/EncryptionMa
 import { EncryptionSetupGuide } from "@/components/settings/encryption/EncryptionSetupGuide";
 import { EncryptionUsageGuide } from "@/components/settings/encryption/EncryptionUsageGuide";
 import { EncryptionDashboard } from "@/components/settings/encryption/EncryptionDashboard";
+import { ConsentManagement } from "@/components/settings/gdpr/ConsentManagement";
+import { DataExportRequest } from "@/components/settings/gdpr/DataExportRequest";
+import { PIIInventoryDashboard } from "@/components/settings/gdpr/PIIInventoryDashboard";
+import { RightToBeForgotten } from "@/components/settings/gdpr/RightToBeForgotten";
 import { DataWarehouseSync } from "@/components/settings/DataWarehouseSync";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -84,9 +88,15 @@ const Settings = () => {
         
         <SecurityDashboard />
 
+        {/* GDPR/CCPA Compliance */}
+        <ConsentManagement />
+        <DataExportRequest />
+        <RightToBeForgotten />
+
         {/* Domain Security & Encryption Section - Admin Only */}
         {userData?.role === 'admin' && (
           <>
+            <PIIInventoryDashboard />
             <AllowedDomainsManager />
             <BlockedSignupsViewer />
             <EncryptionDashboard />
