@@ -2660,6 +2660,93 @@ export type Database = {
         }
         Relationships: []
       }
+      security_patches: {
+        Row: {
+          affected_components: string[] | null
+          applied_at: string | null
+          applied_by: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          notes: string | null
+          patch_name: string
+          patch_type: string
+          patch_version: string | null
+          severity: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          affected_components?: string[] | null
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          patch_name: string
+          patch_type: string
+          patch_version?: string | null
+          severity: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          affected_components?: string[] | null
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          patch_name?: string
+          patch_type?: string
+          patch_version?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      security_tests: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          findings: string | null
+          id: string
+          remediation: string | null
+          result: string
+          test_date: string | null
+          test_name: string
+          test_type: string
+          tested_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          findings?: string | null
+          id?: string
+          remediation?: string | null
+          result: string
+          test_date?: string | null
+          test_name: string
+          test_type: string
+          tested_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          findings?: string | null
+          id?: string
+          remediation?: string | null
+          result?: string
+          test_date?: string | null
+          test_name?: string
+          test_type?: string
+          tested_by?: string | null
+        }
+        Relationships: []
+      }
       segmentation_scores: {
         Row: {
           builder_geographic_score: number | null
@@ -3173,6 +3260,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vulnerability_scans: {
+        Row: {
+          created_at: string | null
+          critical_count: number | null
+          findings_count: number | null
+          high_count: number | null
+          id: string
+          low_count: number | null
+          medium_count: number | null
+          notes: string | null
+          report_url: string | null
+          scan_date: string | null
+          scan_type: string
+          scanned_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          critical_count?: number | null
+          findings_count?: number | null
+          high_count?: number | null
+          id?: string
+          low_count?: number | null
+          medium_count?: number | null
+          notes?: string | null
+          report_url?: string | null
+          scan_date?: string | null
+          scan_type: string
+          scanned_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          critical_count?: number | null
+          findings_count?: number | null
+          high_count?: number | null
+          id?: string
+          low_count?: number | null
+          medium_count?: number | null
+          notes?: string | null
+          report_url?: string | null
+          scan_date?: string | null
+          scan_type?: string
+          scanned_by?: string | null
+          status?: string
+        }
+        Relationships: []
       }
     }
     Views: {

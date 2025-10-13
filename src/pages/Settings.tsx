@@ -16,6 +16,9 @@ import { DuplicateDetectionDialog } from "@/components/settings/DuplicateDetecti
 import { AccessReviewDashboard } from "@/components/settings/AccessReviewDashboard";
 import { InactiveUserDetection } from "@/components/settings/InactiveUserDetection";
 import { RoleExpirationManager } from "@/components/settings/RoleExpirationManager";
+import { VulnerabilityDashboard } from "@/components/settings/VulnerabilityDashboard";
+import { SecurityPatchManager } from "@/components/settings/SecurityPatchManager";
+import { SecurityTestingLog } from "@/components/settings/SecurityTestingLog";
 import { AllowedDomainsManager } from "@/components/settings/domain/AllowedDomainsManager";
 import { BlockedSignupsViewer } from "@/components/settings/domain/BlockedSignupsViewer";
 import { EncryptionManager } from "@/components/settings/encryption/EncryptionManager";
@@ -116,6 +119,15 @@ const Settings = () => {
             <AccessReviewDashboard />
             <RoleExpirationManager />
             <InactiveUserDetection />
+          </>
+        )}
+
+        {/* Vulnerability Management Section - Admin Only */}
+        {userData?.role === 'admin' && (
+          <>
+            <VulnerabilityDashboard />
+            <SecurityPatchManager />
+            <SecurityTestingLog />
           </>
         )}
 
