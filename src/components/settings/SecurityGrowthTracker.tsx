@@ -67,6 +67,10 @@ export function SecurityGrowthTracker() {
   const phase5Metrics = metrics?.filter(m => m.phase === 5) || [];
   const phase4Triggered = phase4Metrics.filter(m => m.current >= m.threshold).length;
   const phase5Triggered = phase5Metrics.filter(m => m.current >= m.threshold).length;
+  
+  const userCount = metrics?.find(m => m.name === "Active Users")?.current || 0;
+  const shouldRecommendPhase4 = phase4Triggered >= 3 && userCount >= 10;
+  const shouldRecommendPhase5 = phase5Triggered >= 3 && userCount >= 50;
 
   return (
     <Card>
@@ -75,8 +79,9 @@ export function SecurityGrowthTracker() {
         <CardDescription>Monitor growth triggers for advanced security phases</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {phase4Triggered >= 2 && <Alert className="border-orange-500"><AlertTriangle className="h-4 w-4" /><AlertDescription><strong>Phase 4 Recommended:</strong> {phase4Triggered} triggers met.</AlertDescription></Alert>}
-        {phase5Triggered >= 2 && <Alert className="border-red-500"><AlertTriangle className="h-4 w-4" /><AlertDescription><strong>Phase 5 Recommended:</strong> {phase5Triggered} triggers met.</AlertDescription></Alert>}
+        {shouldRecommendPhase4 && <Alert className="border-orange-500"><AlertTriangle className="h-4 w-4" /><AlertDescription><strong>Phase 4 Recommended:</strong> {phase4Triggered} triggers met with {userCount} active users.</AlertDescription></Alert>}
+        {shouldRecommendPhase5 && <Alert className="border-red-500"><AlertTriangle className="h-4 w-4" /><AlertDescription><strong>Phase 5 Recommended:</strong> {phase5Triggered} triggers met with {userCount} active users.</AlertDescription></Alert>}
+        {phase4Triggered >= 2 && !shouldRecommendPhase4 && userCount < 10 && <Alert><AlertDescription>Some metrics suggest growth, but we recommend Phase 4 once you have 10+ active users and 3+ triggers.</AlertDescription></Alert>}
         
         <div className="space-y-4">
           <div className="flex items-center justify-between"><h3 className="text-lg font-semibold">Phase 4: Advanced Security</h3><Badge variant={phase4Triggered >= 2 ? "destructive" : "secondary"}>{phase4Triggered}/{phase4Metrics.length} Triggers</Badge></div>
