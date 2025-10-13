@@ -14,9 +14,25 @@ export function useMFAStatus() {
         .from('user_mfa_status')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      // If no status exists, create one for existing users
+      if (!data) {
+        const { data: newStatus, error: insertError } = await supabase
+          .from('user_mfa_status')
+          .insert({
+            user_id: user.id,
+            mfa_enabled: false,
+          })
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        return newStatus;
+      }
+      
       return data;
     },
   });
