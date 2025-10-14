@@ -207,16 +207,17 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
+      const { data, error } = await supabase.functions.invoke('request-password-reset', {
+        body: { email }
       });
 
       if (error) throw error;
 
-      toast.success("Password reset email sent! Check your inbox.");
+      toast.success("A 6-digit reset code has been sent to your email. Please check your inbox.");
+      setIsResettingPassword(true);
       setShowForgotPassword(false);
     } catch (error: any) {
-      toast.error(error.message || "Failed to send reset email");
+      toast.error(error.message || "Failed to send reset code. Please try again.");
     } finally {
       setLoading(false);
     }
