@@ -6,11 +6,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordRequirements } from "@/components/ui/password-requirements";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Shield, ShieldAlert, ShieldCheck, Eye, Key, Pencil } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface UserProfile {
   id: string;
@@ -341,23 +349,41 @@ export function UserManagement() {
                               <SelectItem value="read_only">Read Only</SelectItem>
                             </SelectContent>
                           </Select>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditDialog(user)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUserId(user.id);
-                              setResetDialogOpen(true);
-                            }}
-                          >
-                            <Key className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditDialog(user)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit user details</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedUserId(user.id);
+                                    setResetDialogOpen(true);
+                                  }}
+                                >
+                                  <Key className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Reset password</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </>
                       )}
                     </div>
@@ -422,16 +448,13 @@ export function UserManagement() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-password">New Password (optional)</Label>
-              <Input
+              <PasswordInput
                 id="edit-password"
-                type="password"
                 value={editForm.password}
                 onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                 placeholder="Leave blank to keep current"
               />
-              <p className="text-xs text-muted-foreground">
-                8-15 characters with capital letter, number, and special character
-              </p>
+              {editForm.password && <PasswordRequirements password={editForm.password} />}
             </div>
           </div>
           <DialogFooter>
@@ -466,16 +489,13 @@ export function UserManagement() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>
-              <Input
+              <PasswordInput
                 id="new-password"
-                type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password"
               />
-              <p className="text-xs text-muted-foreground">
-                8-15 characters with capital letter, number, and special character
-              </p>
+              <PasswordRequirements password={newPassword} />
             </div>
           </div>
           <DialogFooter>

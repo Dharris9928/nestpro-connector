@@ -1,5 +1,11 @@
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -101,15 +107,24 @@ export function OpportunityProductsForm({ products, setProducts }: OpportunityPr
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => removeProduct(index)}
-              className="mt-6"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeProduct(index)}
+                    className="mt-6"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Remove product</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </Card>
       ))}
