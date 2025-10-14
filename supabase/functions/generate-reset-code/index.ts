@@ -98,8 +98,9 @@ const handler = async (req: Request): Promise<Response> => {
         const emailResponse = await resend.emails.send({
           from: fromEmail,
           to: [userEmail],
-          subject: "Your Password Reset Code",
+          subject: `Your Password Reset Code: ${code}`,
           html: htmlContent,
+          text: `Your password reset code is: ${code}\nThis code will expire in 15 minutes.\nReset here: ${resetUrl}`,
         });
 
         console.log("Email sent successfully:", emailResponse);
