@@ -8,9 +8,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { AddActivityDialog } from "@/components/activities/AddActivityDialog";
+import { ActivityDetailsDialog } from "@/components/activities/ActivityDetailsDialog";
 
 const Activities = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [dateRange, setDateRange] = useState<{
     from: Date;
     to: Date;
@@ -118,7 +121,14 @@ const Activities = () => {
       ) : (
         <div className="space-y-4">
           {activities.map((activity) => (
-            <Card key={activity.id}>
+            <Card 
+              key={activity.id}
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => {
+                setSelectedActivity(activity);
+                setIsDetailsDialogOpen(true);
+              }}
+            >
               <CardHeader>
                 <CardTitle className="text-lg">
                   {activity.activity_type} - {activity.companies?.company_name}
@@ -162,6 +172,12 @@ const Activities = () => {
           refetch();
           setIsAddDialogOpen(false);
         }}
+      />
+
+      <ActivityDetailsDialog
+        activity={selectedActivity}
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
       />
     </div>
   );
