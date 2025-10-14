@@ -33,6 +33,17 @@ const Auth = () => {
   const [domainsLoaded, setDomainsLoaded] = useState(false);
   const [showMFAVerification, setShowMFAVerification] = useState(false);
   const [pendingMFAFactorId, setPendingMFAFactorId] = useState<string | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    // Check if this is a password reset flow
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('reset') === 'true') {
+      setIsResettingPassword(true);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchAllowedDomains = async () => {
@@ -209,6 +220,91 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Validate passwords match
+      if (newPassword !== confirmPassword) {
+        toast.error("Passwords do not match");
+        setLoading(false);
+        return;
+      }
+
+      // Validate password requirements
+      const passwordValidation = passwordSchema.safeParse(newPassword);
+      if (!passwordValidation.success) {
+        toast.error(passwordValidation.error.errors[0].message);
+        setLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast.success("Password updated successfully! You can now login.");
+      setIsResettingPassword(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      navigate("/auth");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reset password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // If we're in password reset mode, show the reset form
+  if (isResettingPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-primary rounded-lg">
+                <Building2 className="h-8 w-8 text-primary-foreground" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+            <CardDescription>
+              Enter your new password below
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <PasswordInput
+                  id="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+                <PasswordRequirements password={newPassword} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <PasswordInput
+                  id="confirm-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Updating password..." : "Update Password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
