@@ -95,20 +95,20 @@ serve(async (req) => {
       );
     }
 
-    // Assign role
-    const { error: roleError } = await supabase
+    // Assign role (upsert to handle default role created by trigger)
+    const { error: roleUpsertError } = await supabase
       .from('user_roles')
-      .insert({
-        user_id: authData.user.id,
-        role: role
-      });
+      .upsert(
+        { user_id: authData.user.id, role },
+        { onConflict: 'user_id' }
+      );
 
-    if (roleError) {
-      console.error("Role error:", roleError);
-      // Try to clean up
+    if (roleUpsertError) {
+      console.error("Role upsert error:", roleUpsertError);
+      // Try to clean up the auth user if role assignment fails
       await supabase.auth.admin.deleteUser(authData.user.id);
       return new Response(
-        JSON.stringify({ error: `Failed to assign role: ${roleError.message}` }),
+        JSON.stringify({ error: `Failed to assign role: ${roleUpsertError.message}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
