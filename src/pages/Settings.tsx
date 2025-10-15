@@ -24,7 +24,6 @@ import { SecurityTestingLog } from "@/components/settings/SecurityTestingLog";
 import { SOC2ComplianceDashboard } from "@/components/settings/SOC2ComplianceDashboard";
 import { AllowedDomainsManager } from "@/components/settings/domain/AllowedDomainsManager";
 import { BlockedSignupsViewer } from "@/components/settings/domain/BlockedSignupsViewer";
-import { SignupAttemptsLog } from "@/components/settings/domain/SignupAttemptsLog";
 import { EncryptionManager } from "@/components/settings/encryption/EncryptionManager";
 import { EncryptionSetupGuide } from "@/components/settings/encryption/EncryptionSetupGuide";
 import { EncryptionUsageGuide } from "@/components/settings/encryption/EncryptionUsageGuide";
@@ -42,6 +41,11 @@ import { ImportExportActivityLog } from "@/components/help/ImportExportActivityL
 import { EnrichmentErrorLog } from "@/components/help/EnrichmentErrorLog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { MFAManagement } from "@/components/settings/MFAManagement";
+import { AuthEventsLog } from "@/components/settings/audit/AuthEventsLog";
+import { ComprehensiveAuditViewer } from "@/components/settings/audit/ComprehensiveAuditViewer";
+import { ImportExportLogsViewer } from "@/components/settings/audit/ImportExportLogsViewer";
+import { ApprovalAuditViewer } from "@/components/settings/audit/ApprovalAuditViewer";
+import { ContactAccessLogsViewer } from "@/components/settings/audit/ContactAccessLogsViewer";
 
 const Settings = () => {
   const { data: userData } = useUserRole();
@@ -229,8 +233,14 @@ const Settings = () => {
             <>
               <SecurityGrowthTracker />
               <AllowedDomainsManager />
-              <SignupAttemptsLog />
               <BlockedSignupsViewer />
+              
+              {/* Security Audit Logs */}
+              <AuthEventsLog />
+              <ComprehensiveAuditViewer />
+              <ContactAccessLogsViewer />
+              <ImportExportLogsViewer />
+              <ApprovalAuditViewer />
             </>
           )}
           
