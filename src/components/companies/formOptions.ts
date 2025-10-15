@@ -4,7 +4,8 @@ export const INDUSTRY_TYPES = [
   { value: 'Builder', label: 'Builder' },
   { value: 'Contractor', label: 'Contractor' },
   { value: 'Energy Implementer', label: 'Energy Implementer' },
-  { value: 'Engineer/Architect', label: 'Engineer/Architect' }
+  { value: 'Engineer/Architect', label: 'Engineer/Architect' },
+  { value: 'Partner/Other', label: 'Partner/Other' }
 ];
 
 export const BUILDER_SEGMENTS = [
@@ -46,6 +47,16 @@ export const ENGINEER_ARCHITECT_SEGMENTS = [
   { value: 'green_building_designers', label: 'Green Building Designers' },
   { value: 'smart_home_specialists', label: 'Smart Home Design Specialists' },
   { value: 'urban_planners', label: 'Urban Planners' }
+];
+
+export const PARTNER_OTHER_SEGMENTS = [
+  { value: 'technology_partner', label: 'Technology Partner' },
+  { value: 'service_provider', label: 'Service Provider' },
+  { value: 'vendor', label: 'Vendor' },
+  { value: 'consultant', label: 'Consultant' },
+  { value: 'industry_association', label: 'Industry Association' },
+  { value: 'research_organization', label: 'Research Organization' },
+  { value: 'other', label: 'Other' }
 ];
 
 export const INDUSTRY_SPECIALTIES = [
