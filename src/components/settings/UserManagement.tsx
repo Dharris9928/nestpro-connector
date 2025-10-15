@@ -11,7 +11,7 @@ import { PasswordRequirements } from "@/components/ui/password-requirements";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Shield, ShieldAlert, ShieldCheck, Eye, Key, Pencil, Plus } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, Eye, Key, Pencil, Plus, Mail } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Tooltip,
@@ -28,10 +28,17 @@ interface UserProfile {
   first_name: string | null;
   last_name: string | null;
   created_at: string;
+  temp_password?: string | null;
+  invitation_email_sent_at?: string | null;
+  invitation_email_opened_at?: string | null;
+  invitation_email_status?: string | null;
+  approval_status?: string;
 }
 
 export function UserManagement() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [approvedUsers, setApprovedUsers] = useState<UserProfile[]>([]);
+  const [invitedUsers, setInvitedUsers] = useState<UserProfile[]>([]);
+  const [pendingSignups, setPendingSignups] = useState<UserProfile[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -40,6 +47,7 @@ export function UserManagement() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reminding, setReminding] = useState(false);
   const [editForm, setEditForm] = useState({
     email: "",
     firstName: "",
@@ -81,21 +89,31 @@ export function UserManagement() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // Use admin function to get all profiles (includes audit logging)
-      const { data: profiles, error } = await supabase.rpc('admin_get_all_profiles');
+      // Get all profiles with invitation tracking fields
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, approval_status, created_at, temp_password, invitation_email_sent_at, invitation_email_opened_at, invitation_email_status');
 
-      if (error) {
-        if (error.code === 'PGRST301' || error.message?.includes('Admin access required')) {
-          toast.error('Admin access required to view users');
-          return;
-        }
-        throw error;
-      }
+      if (profilesError) throw profilesError;
 
       if (!profiles) {
-        setUsers([]);
+        setApprovedUsers([]);
+        setInvitedUsers([]);
+        setPendingSignups([]);
         return;
       }
+
+      // Get emails from auth.users via admin function
+      const { data: adminProfiles, error: adminError } = await supabase.rpc('admin_get_all_profiles');
+      
+      if (adminError) {
+        console.error('Error fetching admin profiles:', adminError);
+      }
+
+      const emailsMap = (adminProfiles || []).reduce((acc, profile) => {
+        acc[profile.id] = profile.email;
+        return acc;
+      }, {} as Record<string, string>);
 
       // Get roles from user_roles table
       const userIds = profiles.map(p => p.id);
@@ -114,16 +132,28 @@ export function UserManagement() {
       }, {} as Record<string, string>);
 
       // Map profiles to UserProfile format
-      const usersWithRoles = profiles.map((profile) => ({
+      const allUsers = profiles.map((profile) => ({
         id: profile.id,
-        email: profile.email || 'Unknown',
+        email: emailsMap[profile.id] || 'Unknown',
         first_name: profile.first_name,
         last_name: profile.last_name,
         created_at: profile.created_at,
         role: rolesMap[profile.id] || 'sales_rep',
+        temp_password: profile.temp_password,
+        invitation_email_sent_at: profile.invitation_email_sent_at,
+        invitation_email_opened_at: profile.invitation_email_opened_at,
+        invitation_email_status: profile.invitation_email_status,
+        approval_status: profile.approval_status,
       } as UserProfile));
 
-      setUsers(usersWithRoles);
+      // Separate users into categories
+      const approved = allUsers.filter(u => u.approval_status === 'approved');
+      const invited = allUsers.filter(u => u.temp_password && u.approval_status === 'pending');
+      const signups = allUsers.filter(u => !u.temp_password && u.approval_status === 'pending');
+
+      setApprovedUsers(approved);
+      setInvitedUsers(invited);
+      setPendingSignups(signups);
     } catch (error) {
       console.error('Error loading users:', error);
       toast.error('Failed to load users');
@@ -223,7 +253,7 @@ export function UserManagement() {
       } = { userId: selectedUserId };
 
       // Only include fields that have changed
-      const originalUser = users.find(u => u.id === selectedUserId);
+      const originalUser = approvedUsers.find(u => u.id === selectedUserId);
       if (editForm.email !== originalUser?.email) updates.email = editForm.email;
       if (editForm.firstName !== (originalUser?.first_name || "")) updates.firstName = editForm.firstName;
       if (editForm.lastName !== (originalUser?.last_name || "")) updates.lastName = editForm.lastName;
@@ -249,6 +279,79 @@ export function UserManagement() {
       toast.error(error instanceof Error ? error.message : 'Failed to update user');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResendInvitation = async (userId: string) => {
+    setReminding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resend-invitation', {
+        body: { userId }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success('Invitation reminder sent successfully!');
+      loadUsers();
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to resend invitation');
+    } finally {
+      setReminding(false);
+    }
+  };
+
+  const handleApproveUser = async (userId: string, role: 'admin' | 'sales_manager' | 'sales_rep' | 'read_only') => {
+    try {
+      // Update approval status
+      const { error: approvalError } = await supabase
+        .from('profiles')
+        .update({
+          approval_status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: currentUser?.id
+        })
+        .eq('id', userId);
+
+      if (approvalError) throw approvalError;
+
+      // Update role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: userId,
+          role
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (roleError) throw roleError;
+
+      toast.success('User approved successfully!');
+      loadUsers();
+    } catch (error) {
+      console.error('Error approving user:', error);
+      toast.error('Failed to approve user');
+    }
+  };
+
+  const handleRejectUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          approval_status: 'rejected'
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast.success('User rejected');
+      loadUsers();
+    } catch (error) {
+      console.error('Error rejecting user:', error);
+      toast.error('Failed to reject user');
     }
   };
 
@@ -301,121 +404,260 @@ export function UserManagement() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle>User Management</CardTitle>
+    <div className="space-y-6">
+      {/* Pending User Invites */}
+      {invitedUsers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending User Invites</CardTitle>
             <CardDescription>
-              Manage user roles and security clearances. Only administrators can modify user permissions.
+              Users who have been invited but haven't logged in yet
             </CardDescription>
-          </div>
-          <Button onClick={() => setAddUserDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading users...</div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No users found</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    {user.first_name && user.last_name 
-                      ? `${user.first_name} ${user.last_name}`
-                      : 'N/A'}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">{user.email}</TableCell>
-                  <TableCell>{getRoleBadge(user.role)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {user.id === currentUser?.id ? (
-                        <span className="text-sm text-muted-foreground">You</span>
-                      ) : (
-                        <>
-                          <Select
-                            value={user.role}
-                            onValueChange={(value) => updateUserRole(user.id, value as 'admin' | 'sales_manager' | 'sales_rep' | 'read_only')}
-                          >
-                            <SelectTrigger className="w-40">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="sales_manager">Sales Manager</SelectItem>
-                              <SelectItem value="sales_rep">Sales Rep</SelectItem>
-                              <SelectItem value="read_only">Read Only</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openEditDialog(user)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Edit user details</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedUserId(user.id);
-                                    setResetDialogOpen(true);
-                                  }}
-                                >
-                                  <Key className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Reset password</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Temp Password</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+              </TableHeader>
+              <TableBody>
+                {invitedUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      {user.first_name && user.last_name 
+                        ? `${user.first_name} ${user.last_name}`
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{user.email}</TableCell>
+                    <TableCell>
+                      <code className="px-2 py-1 bg-muted rounded text-xs">
+                        {user.temp_password || 'N/A'}
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      {user.invitation_email_opened_at ? (
+                        <Badge variant="default">Email Opened</Badge>
+                      ) : user.invitation_email_sent_at ? (
+                        <Badge variant="secondary">Email Sent</Badge>
+                      ) : (
+                        <Badge variant="outline">Pending</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResendInvitation(user.id)}
+                        disabled={reminding}
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        {reminding ? 'Sending...' : 'Remind'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="mt-6 space-y-2 text-sm text-muted-foreground">
-          <p><strong>Role Permissions:</strong></p>
-          <ul className="list-disc list-inside space-y-1 ml-2">
-            <li><strong>Admin:</strong> Full access to all features and data, can manage users</li>
-            <li><strong>Sales Manager:</strong> Can view and edit all companies</li>
-            <li><strong>Sales Rep:</strong> Can only view and edit their own companies</li>
-            <li><strong>Read Only:</strong> Can only view their own companies, cannot edit</li>
-          </ul>
-        </div>
-      </CardContent>
+      {/* Pending Sign-Up Requests */}
+      {pendingSignups.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Sign-Up Requests</CardTitle>
+            <CardDescription>
+              Users who signed up and are waiting for approval
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Assign Role</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingSignups.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      {user.first_name && user.last_name 
+                        ? `${user.first_name} ${user.last_name}`
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{user.email}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={user.role}
+                        onValueChange={(value) => {
+                          setPendingSignups(prev => 
+                            prev.map(u => u.id === user.id ? { ...u, role: value as any } : u)
+                          );
+                        }}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="sales_manager">Sales Manager</SelectItem>
+                          <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                          <SelectItem value="read_only">Read Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleApproveUser(user.id, user.role)}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRejectUser(user.id)}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Approved Users */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle>Active Users</CardTitle>
+              <CardDescription>
+                Manage roles and security clearances for approved users
+              </CardDescription>
+            </div>
+            <Button onClick={() => setAddUserDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add User
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading users...</div>
+          ) : approvedUsers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">No active users found</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {approvedUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      {user.first_name && user.last_name 
+                        ? `${user.first_name} ${user.last_name}`
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{user.email}</TableCell>
+                    <TableCell>{getRoleBadge(user.role)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {user.id === currentUser?.id ? (
+                          <span className="text-sm text-muted-foreground">You</span>
+                        ) : (
+                          <>
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) => updateUserRole(user.id, value as 'admin' | 'sales_manager' | 'sales_rep' | 'read_only')}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="sales_manager">Sales Manager</SelectItem>
+                                <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                                <SelectItem value="read_only">Read Only</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openEditDialog(user)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Edit user details</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedUserId(user.id);
+                                      setResetDialogOpen(true);
+                                    }}
+                                  >
+                                    <Key className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Reset password</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          <div className="mt-6 space-y-2 text-sm text-muted-foreground">
+            <p><strong>Role Permissions:</strong></p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li><strong>Admin:</strong> Full access to all features and data, can manage users</li>
+              <li><strong>Sales Manager:</strong> Can view and edit all companies</li>
+              <li><strong>Sales Rep:</strong> Can only view and edit their own companies</li>
+              <li><strong>Read Only:</strong> Can only view their own companies, cannot edit</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
@@ -529,6 +771,6 @@ export function UserManagement() {
         onOpenChange={setAddUserDialogOpen}
         onUserAdded={loadUsers}
       />
-    </Card>
+    </div>
   );
 }
