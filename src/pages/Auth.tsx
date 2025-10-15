@@ -52,7 +52,8 @@ const Auth = () => {
         const { data, error } = await supabase
           .from('allowed_email_domains')
           .select('domain')
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .eq('verification_status', 'verified');
 
         if (error) throw error;
 
