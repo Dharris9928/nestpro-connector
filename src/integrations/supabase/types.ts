@@ -2887,6 +2887,36 @@ export type Database = {
         }
         Relationships: []
       }
+      perspective_usage_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          page_name: string
+          perspective_type: string
+          record_count: number | null
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          page_name: string
+          perspective_type: string
+          record_count?: number | null
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          page_name?: string
+          perspective_type?: string
+          record_count?: number | null
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       pii_inventory: {
         Row: {
           can_be_deleted: boolean
@@ -3702,6 +3732,36 @@ export type Database = {
           status?: string
           system_name?: string
           uptime_percentage?: number | null
+        }
+        Relationships: []
+      }
+      team_memberships: {
+        Row: {
+          added_at: string | null
+          added_by: string | null
+          id: string
+          is_active: boolean | null
+          manager_id: string
+          notes: string | null
+          team_member_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          added_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id: string
+          notes?: string | null
+          team_member_id: string
+        }
+        Update: {
+          added_at?: string | null
+          added_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id?: string
+          notes?: string | null
+          team_member_id?: string
         }
         Relationships: []
       }
@@ -4742,6 +4802,10 @@ export type Database = {
           total_records: number
         }[]
       }
+      get_team_member_ids: {
+        Args: { _manager_id: string }
+        Returns: string[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -4773,6 +4837,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { _manager_id: string; _user_id: string }
         Returns: boolean
       }
       is_user_approved: {

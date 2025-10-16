@@ -156,15 +156,24 @@ const Companies = () => {
           query = query.eq('assigned_to', user.id);
           break;
         case 'my_team':
-          // For team view, get records from users with same role
           if (userRoleData?.role === 'sales_manager') {
-            // This would require a join or subquery to get team members
-            // For now, show all records accessible to the manager
-            // You could enhance this with a team_members table
+            // Get team member IDs
+            const { data: teamMembers } = await supabase
+              .from('team_memberships')
+              .select('team_member_id')
+              .eq('manager_id', user.id)
+              .eq('is_active', true);
+            
+            const teamIds = teamMembers?.map(m => m.team_member_id) || [];
+            if (teamIds.length > 0) {
+              query = query.in('created_by', teamIds);
+            } else {
+              // No team members, show nothing
+              query = query.eq('created_by', '00000000-0000-0000-0000-000000000000');
+            }
           }
           break;
         case 'all_records':
-          // No additional filter for elevated users
           if (!hasElevatedAccess) {
             query = query.eq('created_by', user.id);
           }

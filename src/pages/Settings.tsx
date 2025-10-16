@@ -45,6 +45,7 @@ import { MFAManagement } from "@/components/settings/MFAManagement";
 import { AuthEventsLog } from "@/components/settings/audit/AuthEventsLog";
 import { ComprehensiveAuditViewer } from "@/components/settings/audit/ComprehensiveAuditViewer";
 import { ImportExportLogsViewer } from "@/components/settings/audit/ImportExportLogsViewer";
+import { TeamManagement } from "@/components/settings/TeamManagement";
 import { ApprovalAuditViewer } from "@/components/settings/audit/ApprovalAuditViewer";
 import { ContactAccessLogsViewer } from "@/components/settings/audit/ContactAccessLogsViewer";
 
@@ -301,6 +302,7 @@ const Settings = () => {
         <TabsContent value="users" className="space-y-6 mt-6">
           {/* Consolidated user management: Pending Invites + Pending Sign-Ups with role assignment */}
           <UserManagement />
+          <TeamManagement />
           <DeletionApprovalPanel />
           <ApprovalAuditLog />
           

@@ -7,7 +7,7 @@ import { Plus } from "lucide-react";
 import { ContactTable } from "@/components/contacts/ContactTable";
 import { AddContactDialog } from "@/components/contacts/AddContactDialog";
 import { EditContactDialog } from "@/components/contacts/EditContactDialog";
-import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
+import { ImportContactsDialogEnhanced } from "@/components/contacts/ImportContactsDialogEnhanced";
 import { ApolloContactImportDialog } from "@/components/contacts/ApolloContactImportDialog";
 import { logBulkContactView } from "@/lib/contacts/logContactAccess";
 import { PerspectiveSelector } from "@/components/common/PerspectiveSelector";
@@ -37,11 +37,24 @@ const Contacts = () => {
         query = query.eq('companies.created_by', user.id);
       } else if (perspective === 'assigned_to_me') {
         query = query.eq('companies.assigned_to', user.id);
+      } else if (perspective === 'my_team') {
+        if (userRoleData?.role === 'sales_manager') {
+          const { data: teamMembers } = await supabase
+            .from('team_memberships')
+            .select('team_member_id')
+            .eq('manager_id', user.id)
+            .eq('is_active', true);
+          
+          const teamIds = teamMembers?.map(m => m.team_member_id) || [];
+          if (teamIds.length > 0) {
+            query = query.in('companies.created_by', teamIds);
+          } else {
+            query = query.eq('companies.created_by', '00000000-0000-0000-0000-000000000000');
+          }
+        }
       } else if (perspective === 'all_records' && !userRoleData?.hasElevatedAccess) {
-        // Non-elevated users default to their records
         query = query.eq('companies.created_by', user.id);
       }
-      // 'my_team' and 'all_records' for elevated users show all accessible records
 
       const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
@@ -81,7 +94,7 @@ const Contacts = () => {
         <div className="flex gap-2">
           <PerspectiveSelector value={perspective} onChange={setPerspective} />
           <ApolloContactImportDialog onSuccess={refetch} />
-          <ImportContactsDialog onSuccess={refetch} />
+          <ImportContactsDialogEnhanced onSuccess={refetch} />
           <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Contact
