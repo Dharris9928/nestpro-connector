@@ -37,16 +37,20 @@ const Help = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('getting-started');
 
+  // Version information
+  const documentVersion = "3.0";
+  const lastUpdated = "2025-10-16";
+
   const sections = [
     { value: 'getting-started', label: 'Getting Started', keywords: 'welcome quick start guide roles overview' },
-    { value: 'companies', label: 'Companies', keywords: 'companies management lead scoring filters bulk actions enrichment segments recommendations apollo' },
+    { value: 'companies', label: 'Companies', keywords: 'companies management lead scoring filters bulk actions enrichment segments recommendations apollo perspective limited view' },
     { value: 'contacts', label: 'Contacts', keywords: 'contacts management decision makers influencers contact scoring import csv apollo' },
     { value: 'communications', label: 'Communications', keywords: 'communications ai generated emails call scripts linkedin messages outreach' },
     { value: 'prospecting', label: 'Prospecting', keywords: 'prospecting apollo search csv import segments recommendations' },
     { value: 'activities', label: 'Activities', keywords: 'activities outreach types outcomes sequences calendar' },
     { value: 'ai-features', label: 'AI Features', keywords: 'ai features scoring prioritization outreach strategy batch usage logs' },
     { value: 'reports', label: 'Reports', keywords: 'reports analytics scoring breakdown distribution segment performance enrichment' },
-    { value: 'settings', label: 'Settings', keywords: 'settings user management security dashboard deletion approval integrations business context access controls audit logs encryption data warehouse sync bigquery' },
+    { value: 'settings', label: 'Settings', keywords: 'settings user management security dashboard deletion approval integrations business context access controls audit logs encryption data warehouse sync bigquery suspension deactivation database management field permissions' },
     { value: 'activity-logs', label: 'Activity Logs', keywords: 'logs import export enrichment ai usage monitoring tracking' },
     { value: 'diagnostics', label: 'System Diagnostics', keywords: 'diagnostics system test debug troubleshooting edge functions database webhook authentication' },
   ];
@@ -61,7 +65,13 @@ const Help = () => {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Help & User Guide</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-foreground">Help & User Guide</h1>
+            <div className="text-right">
+              <Badge variant="outline">v{documentVersion}</Badge>
+              <p className="text-xs text-muted-foreground mt-1">Updated: {lastUpdated}</p>
+            </div>
+          </div>
           <p className="text-muted-foreground mt-2">
             Complete guide to using the Nest Connector System
           </p>
@@ -1367,6 +1377,87 @@ const Help = () => {
                         <li>Monitor data freshness</li>
                         <li>Automatic log cleanup (90-day retention)</li>
                       </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="field-permissions">
+                  <AccordionTrigger>Field-Level Permissions & Access Requests</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <p className="text-sm">
+                      Control access to sensitive data with field-level security and approval workflows
+                    </p>
+                    <div>
+                      <h4 className="font-medium mb-2">How It Works</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Sensitive fields (emails, phones, addresses) are protected by role requirements</li>
+                        <li>Users see masked data unless they have sufficient permissions</li>
+                        <li>Protected fields show with an eye icon and "Request Access" button</li>
+                        <li>Sales reps can request access to specific records they need</li>
+                        <li>Managers/admins review and approve/reject access requests</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Limited "All Records" View</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Sales reps and read-only users can now see all companies in the system with limited details:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>View company names, status, and basic info across all records</li>
+                        <li>Sensitive fields are masked until access is granted</li>
+                        <li>Request access to view full company profiles</li>
+                        <li>Switch perspectives: My Records, Assigned to Me, My Team, All Records</li>
+                        <li>Helps collaboration while maintaining data security</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Access Request Workflow</h4>
+                      <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>User finds a company/contact they need access to</li>
+                        <li>Clicks "Request Access" button on protected field</li>
+                        <li>Provides justification for access request</li>
+                        <li>Manager/admin receives notification</li>
+                        <li>Manager reviews request and approves/rejects with notes</li>
+                        <li>Upon approval, user gains temporary or permanent access</li>
+                      </ol>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="database-management">
+                  <AccordionTrigger>Database Management (Admin Only)</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <p className="text-sm">
+                      Admins can manage database tables directly from the UI without backend code changes
+                    </p>
+                    <div>
+                      <h4 className="font-medium mb-2">Available Operations</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Create Tables:</strong> Define new tables with custom columns and types</li>
+                        <li><strong>View Structure:</strong> Inspect existing table schemas and column definitions</li>
+                        <li><strong>Modify Tables:</strong> Execute SQL to alter table structures</li>
+                        <li><strong>Delete Tables:</strong> Remove tables (with confirmation prompt)</li>
+                        <li><strong>SQL Editor:</strong> Run custom SQL queries directly</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Security Features</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Admin-only access enforced at API level</li>
+                        <li>All operations logged in audit trail</li>
+                        <li>Automatic RLS policies created for new tables</li>
+                        <li>Confirmation required for destructive operations</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Creating Tables</h4>
+                      <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Navigate to Settings → Data → Database Management</li>
+                        <li>Click "Create Table" and enter table name</li>
+                        <li>Add columns with name, type, and nullable settings</li>
+                        <li>Default columns (id, created_at) included automatically</li>
+                        <li>RLS policy created to restrict access to admins</li>
+                      </ol>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
