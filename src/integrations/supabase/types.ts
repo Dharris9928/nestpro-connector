@@ -1339,7 +1339,6 @@ export type Database = {
           introduction_date: string | null
           match_reason: string | null
           match_score: number | null
-          partner_id: string
           relationship_status: Database["public"]["Enums"]["relationship_status"]
         }
         Insert: {
@@ -1349,7 +1348,6 @@ export type Database = {
           introduction_date?: string | null
           match_reason?: string | null
           match_score?: number | null
-          partner_id: string
           relationship_status?: Database["public"]["Enums"]["relationship_status"]
         }
         Update: {
@@ -1359,7 +1357,6 @@ export type Database = {
           introduction_date?: string | null
           match_reason?: string | null
           match_score?: number | null
-          partner_id?: string
           relationship_status?: Database["public"]["Enums"]["relationship_status"]
         }
         Relationships: [
@@ -1382,13 +1379,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_financial_masked"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_partner_matches_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "nest_pro_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -2449,45 +2439,6 @@ export type Database = {
           is_required?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
-        }
-        Relationships: []
-      }
-      nest_pro_partners: {
-        Row: {
-          builder_capacity: boolean | null
-          contact_email: string | null
-          contact_name: string | null
-          contact_phone: string | null
-          contractor_capacity: boolean | null
-          created_at: string
-          id: string
-          partner_name: string
-          service_areas: string[] | null
-          specializations: string[] | null
-        }
-        Insert: {
-          builder_capacity?: boolean | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          contractor_capacity?: boolean | null
-          created_at?: string
-          id?: string
-          partner_name: string
-          service_areas?: string[] | null
-          specializations?: string[] | null
-        }
-        Update: {
-          builder_capacity?: boolean | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          contractor_capacity?: boolean | null
-          created_at?: string
-          id?: string
-          partner_name?: string
-          service_areas?: string[] | null
-          specializations?: string[] | null
         }
         Relationships: []
       }
