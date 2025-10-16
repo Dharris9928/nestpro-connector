@@ -4882,6 +4882,10 @@ export type Database = {
         Args: { plain_text: string }
         Returns: string
       }
+      execute_admin_sql: {
+        Args: { sql_query: string }
+        Returns: string
+      }
       find_duplicate_companies: {
         Args: { max_results?: number; similarity_threshold?: number }
         Returns: {
@@ -4930,6 +4934,21 @@ export type Database = {
           pending_records: number
           table_name: string
           total_records: number
+        }[]
+      }
+      get_table_columns: {
+        Args: { table_name_param: string }
+        Returns: {
+          column_default: string
+          column_name: string
+          data_type: string
+          is_nullable: string
+        }[]
+      }
+      get_table_list: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          table_name: string
         }[]
       }
       get_team_member_ids: {

@@ -51,6 +51,7 @@ import { ContactAccessLogsViewer } from "@/components/settings/audit/ContactAcce
 import { AccessRequestsPanel } from '@/components/settings/AccessRequestsPanel';
 import { FieldPermissionsManager } from '@/components/settings/FieldPermissionsManager';
 import { FieldAccessAuditLog } from '@/components/settings/FieldAccessAuditLog';
+import { DatabaseManagement } from '@/components/settings/DatabaseManagement';
 
 const Settings = () => {
   const { data: userData } = useUserRole();
@@ -330,6 +331,8 @@ const Settings = () => {
         <TabsContent value="data" className="space-y-6 mt-6">
           {userData?.role === 'admin' && (
             <>
+              <DatabaseManagement />
+              
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
