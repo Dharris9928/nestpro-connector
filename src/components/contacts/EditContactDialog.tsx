@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { logSingleContactView } from "@/lib/contacts/logContactAccess";
 import { Button } from "@/components/ui/button";
+import { NewCommunicationDialog } from "@/components/companies/NewCommunicationDialog";
+import { AddActivityDialog } from "@/components/activities/AddActivityDialog";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +34,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Mail, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -67,6 +69,9 @@ export function EditContactDialog({ open, onOpenChange, onSuccess, contact }: Ed
   const [companySearch, setCompanySearch] = useState("");
   const [openCombobox, setOpenCombobox] = useState(false);
   const debouncedSearch = useDebounce(companySearch, 300);
+  const [openCommunicationDialog, setOpenCommunicationDialog] = useState(false);
+  const [openActivityDialog, setOpenActivityDialog] = useState(false);
+  const [companyName, setCompanyName] = useState<string>("");
   const [formData, setFormData] = useState({
     first_name: contact.first_name,
     last_name: contact.last_name,
@@ -103,6 +108,7 @@ export function EditContactDialog({ open, onOpenChange, onSuccess, contact }: Ed
       .single();
     if (data) {
       setCompanySearch(data.company_name);
+      setCompanyName(data.company_name);
     }
   };
 
@@ -158,10 +164,34 @@ export function EditContactDialog({ open, onOpenChange, onSuccess, contact }: Ed
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Contact</DialogTitle>
-          <DialogDescription>
-            Update contact details and company association.
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Edit Contact</DialogTitle>
+              <DialogDescription>
+                Update contact details and company association.
+              </DialogDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setOpenCommunicationDialog(true)}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Send Communication
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setOpenActivityDialog(true)}
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                Log Activity
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -333,6 +363,28 @@ export function EditContactDialog({ open, onOpenChange, onSuccess, contact }: Ed
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <NewCommunicationDialog
+        open={openCommunicationDialog}
+        onOpenChange={setOpenCommunicationDialog}
+        prefilledCompanyId={contact.company_id}
+        prefilledContactId={contact.id}
+        onSuccess={() => {
+          toast.success("Communication generated successfully!");
+          setOpenCommunicationDialog(false);
+        }}
+      />
+
+      <AddActivityDialog
+        open={openActivityDialog}
+        onOpenChange={setOpenActivityDialog}
+        companyId={contact.company_id}
+        companyName={companyName}
+        onSuccess={() => {
+          toast.success("Activity logged successfully!");
+          setOpenActivityDialog(false);
+        }}
+      />
     </Dialog>
   );
 }
