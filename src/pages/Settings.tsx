@@ -52,6 +52,10 @@ import { AccessRequestsPanel } from '@/components/settings/AccessRequestsPanel';
 import { FieldPermissionsManager } from '@/components/settings/FieldPermissionsManager';
 import { FieldAccessAuditLog } from '@/components/settings/FieldAccessAuditLog';
 import { DatabaseManagement } from '@/components/settings/DatabaseManagement';
+import { SecurityPolicyDocument } from "@/components/settings/SecurityPolicyDocument";
+import { AccessPatternMonitor } from "@/components/settings/AccessPatternMonitor";
+import { AccessExpirationManager } from "@/components/settings/AccessExpirationManager";
+import { DatabaseManagementImproved } from "@/components/settings/DatabaseManagementImproved";
 
 const Settings = () => {
   const { data: userData } = useUserRole();
@@ -248,6 +252,8 @@ const Settings = () => {
 
         {/* Security Settings */}
         <TabsContent value="security" className="space-y-6 mt-6">
+          <AccessPatternMonitor />
+          <AccessExpirationManager />
           <AccessRequestsPanel />
           <MFAManagement />
           <SecurityDashboard />
@@ -305,6 +311,11 @@ const Settings = () => {
           )}
         </TabsContent>
 
+        {/* Compliance Tab */}
+        <TabsContent value="compliance" className="space-y-6 mt-6">
+          <SecurityPolicyDocument />
+        </TabsContent>
+
         {/* User Management Settings */}
         <TabsContent value="users" className="space-y-6 mt-6">
           {/* Consolidated user management: Pending Invites + Pending Sign-Ups with role assignment */}
@@ -331,7 +342,7 @@ const Settings = () => {
         <TabsContent value="data" className="space-y-6 mt-6">
           {userData?.role === 'admin' && (
             <>
-              <DatabaseManagement />
+              <DatabaseManagementImproved />
               
               <Card>
                 <CardHeader>

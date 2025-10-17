@@ -2299,6 +2299,39 @@ export type Database = {
         }
         Relationships: []
       }
+      field_access_audit_log: {
+        Row: {
+          access_granted: boolean
+          accessed_at: string
+          created_at: string | null
+          field_name: string
+          id: string
+          record_id: string
+          table_name: string
+          user_id: string
+        }
+        Insert: {
+          access_granted: boolean
+          accessed_at?: string
+          created_at?: string | null
+          field_name: string
+          id?: string
+          record_id: string
+          table_name: string
+          user_id: string
+        }
+        Update: {
+          access_granted?: boolean
+          accessed_at?: string
+          created_at?: string | null
+          field_name?: string
+          id?: string
+          record_id?: string
+          table_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       field_access_log: {
         Row: {
           access_granted: boolean
@@ -3418,6 +3451,38 @@ export type Database = {
           score_points?: number
         }
         Relationships: []
+      }
+      security_alert_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          acknowledged_by: string | null
+          alert_id: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          acknowledged_at?: string
+          acknowledged_by?: string | null
+          alert_id: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          acknowledged_at?: string
+          acknowledged_by?: string | null
+          alert_id?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_alert_acknowledgments_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_access_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       security_incidents: {
         Row: {
@@ -4752,6 +4817,10 @@ export type Database = {
         Args: { _access_level?: string; _request_id: string }
         Returns: boolean
       }
+      auto_revoke_expired_access: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       batch_migrate_companies_encryption: {
         Args: { _batch_size?: number }
         Returns: {
@@ -4877,6 +4946,10 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }[]
+      }
+      detect_repeated_access_denials: {
+        Args: { _field_name: string; _table_name: string; _user_id: string }
+        Returns: undefined
       }
       encrypt_text: {
         Args: { plain_text: string }
@@ -5068,6 +5141,16 @@ export type Database = {
         Args: { _event_details?: Json; _event_type: string }
         Returns: undefined
       }
+      log_sensitive_field_access: {
+        Args: {
+          _access_granted: boolean
+          _field_name: string
+          _record_id: string
+          _table_name: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       mask_pii_field: {
         Args: { _field_name: string; _field_value: string; _table_name: string }
         Returns: string
@@ -5079,6 +5162,16 @@ export type Database = {
       migrate_contact_encryption: {
         Args: { contact_id: string }
         Returns: boolean
+      }
+      notify_expiring_access: {
+        Args: { _days_before: number }
+        Returns: {
+          days_remaining: number
+          expires_at: string
+          record_id: string
+          table_name: string
+          user_id: string
+        }[]
       }
       reverify_all_active_domains: {
         Args: Record<PropertyKey, never>
