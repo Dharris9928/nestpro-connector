@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Edit, Star, Building2, Users } from "lucide-react";
+import { ExternalLink, Edit, Star, Building2, Users, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { QuickActionsMenu } from "./QuickActionsMenu";
 import { EnrichmentStatusBadge } from "./EnrichmentStatusBadge";
@@ -64,6 +64,9 @@ interface CompanyTableProps {
   onSelectionChange: (selectedIds: string[]) => void;
   onCompanyUpdate: () => void;
   columnVisibility: ColumnVisibility;
+  sortField: string | null;
+  sortDirection: 'asc' | 'desc' | null;
+  onSort: (field: string) => void;
 }
 
 export function CompanyTable({ 
@@ -73,7 +76,10 @@ export function CompanyTable({
   selectedRows, 
   onSelectionChange,
   onCompanyUpdate,
-  columnVisibility 
+  columnVisibility,
+  sortField,
+  sortDirection,
+  onSort
 }: CompanyTableProps) {
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const { toast } = useToast();
@@ -146,6 +152,30 @@ export function CompanyTable({
       });
     }
   };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="ml-2 h-4 w-4" />
+      : <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
+  const SortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
+    <TableHead className={className}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-3 h-8 hover:bg-transparent"
+        onClick={() => onSort(field)}
+      >
+        {children}
+        {renderSortIcon(field)}
+      </Button>
+    </TableHead>
+  );
+
   const getPriorityColor = (tier: string | null) => {
     if (!tier) return "bg-muted";
     if (tier.includes("P1")) return "bg-priority-p1 text-priority-p1-foreground";
@@ -196,22 +226,22 @@ export function CompanyTable({
                 />
               </TableHead>
               <TableHead className="w-12"></TableHead>
-              {columnVisibility.companyName && <TableHead>Company Name</TableHead>}
-              <TableHead>AI Status</TableHead>
-              {columnVisibility.type && <TableHead>Type</TableHead>}
-              {columnVisibility.segment && <TableHead>Segment</TableHead>}
-              {columnVisibility.structure && <TableHead>Structure</TableHead>}
-              {columnVisibility.parentCompany && <TableHead>Parent Company</TableHead>}
-              {columnVisibility.contractorSpecialty && <TableHead>Specialty</TableHead>}
-              {columnVisibility.contractorSpecialty && <TableHead>Nest Pro ID</TableHead>}
-              {columnVisibility.status && <TableHead>Status</TableHead>}
-              {columnVisibility.score && <TableHead>Score</TableHead>}
-              {columnVisibility.priority && <TableHead>Priority</TableHead>}
-              {columnVisibility.annualVolume && <TableHead>Annual Volume</TableHead>}
-              {columnVisibility.revenue && <TableHead>Price/Revenue</TableHead>}
-              {columnVisibility.phone && <TableHead>Phone</TableHead>}
-              {columnVisibility.website && <TableHead>Website</TableHead>}
-              {columnVisibility.franchise && <TableHead>Franchise</TableHead>}
+              {columnVisibility.companyName && <SortableHeader field="company_name">Company Name</SortableHeader>}
+              <SortableHeader field="ai_status">AI Status</SortableHeader>
+              {columnVisibility.type && <SortableHeader field="industry_type">Type</SortableHeader>}
+              {columnVisibility.segment && <SortableHeader field="segment">Segment</SortableHeader>}
+              {columnVisibility.structure && <SortableHeader field="company_type">Structure</SortableHeader>}
+              {columnVisibility.parentCompany && <SortableHeader field="parent_company">Parent Company</SortableHeader>}
+              {columnVisibility.contractorSpecialty && <SortableHeader field="contractor_specialty">Specialty</SortableHeader>}
+              {columnVisibility.contractorSpecialty && <SortableHeader field="nest_pro_partner_id">Nest Pro ID</SortableHeader>}
+              {columnVisibility.status && <SortableHeader field="status">Status</SortableHeader>}
+              {columnVisibility.score && <SortableHeader field="lead_score">Score</SortableHeader>}
+              {columnVisibility.priority && <SortableHeader field="priority_tier">Priority</SortableHeader>}
+              {columnVisibility.annualVolume && <SortableHeader field="annual_volume">Annual Volume</SortableHeader>}
+              {columnVisibility.revenue && <SortableHeader field="annual_revenue_range">Price/Revenue</SortableHeader>}
+              {columnVisibility.phone && <SortableHeader field="primary_phone">Phone</SortableHeader>}
+              {columnVisibility.website && <SortableHeader field="website_url">Website</SortableHeader>}
+              {columnVisibility.franchise && <SortableHeader field="is_franchise">Franchise</SortableHeader>}
               <TableHead className="w-12">Actions</TableHead>
             </TableRow>
           </TableHeader>

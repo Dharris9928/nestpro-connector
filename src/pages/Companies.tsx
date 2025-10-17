@@ -49,8 +49,12 @@ const Companies = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [currentView, setCurrentView] = useState<ViewType>('grid');
-  const [sortBy, setSortBy] = useState(() => {
-    return localStorage.getItem("companies-sort") || "lead_score_desc";
+  const [sortField, setSortField] = useState<string | null>(() => {
+    return localStorage.getItem("companies-sort-field") || "lead_score";
+  });
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(() => {
+    const saved = localStorage.getItem("companies-sort-direction");
+    return (saved as 'asc' | 'desc' | null) || "desc";
   });
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(() => {
     const saved = localStorage.getItem("companies-column-visibility");
@@ -94,8 +98,29 @@ const Companies = () => {
 
   // Persist sort selection
   useEffect(() => {
-    localStorage.setItem("companies-sort", sortBy);
-  }, [sortBy]);
+    if (sortField) {
+      localStorage.setItem("companies-sort-field", sortField);
+    }
+    if (sortDirection) {
+      localStorage.setItem("companies-sort-direction", sortDirection);
+    }
+  }, [sortField, sortDirection]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Cycle through: asc -> desc -> null
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      // New field, start with ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Real-time subscription for companies
   useEffect(() => {
@@ -315,27 +340,36 @@ const Companies = () => {
     }
     
     // Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "lead_score_desc":
-          return (b.lead_score || 0) - (a.lead_score || 0);
-        case "lead_score_asc":
-          return (a.lead_score || 0) - (b.lead_score || 0);
-        case "name_asc":
-          return a.company_name.localeCompare(b.company_name);
-        case "name_desc":
-          return b.company_name.localeCompare(a.company_name);
-        case "created_desc":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "created_asc":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        default:
-          return 0;
-      }
-    });
+    if (sortField && sortDirection) {
+      filtered.sort((a, b) => {
+        let aVal: any = a[sortField as keyof typeof a];
+        let bVal: any = b[sortField as keyof typeof b];
+        
+        // Handle null/undefined values
+        if (aVal == null) aVal = '';
+        if (bVal == null) bVal = '';
+        
+        // Handle different data types
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return sortDirection === 'asc' 
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+        } else if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDirection === 'asc' 
+            ? aVal - bVal
+            : bVal - aVal;
+        } else if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+          return sortDirection === 'asc'
+            ? (aVal === bVal ? 0 : aVal ? 1 : -1)
+            : (aVal === bVal ? 0 : bVal ? 1 : -1);
+        }
+        
+        return 0;
+      });
+    }
     
     return filtered;
-  }, [companies, debouncedSearch, statusFilter, priorityFilter, segmentFilter, industryTypeFilter, hasWebsiteFilter, hasLinkedinFilter, hasPartnerFilter, sortBy]);
+  }, [companies, debouncedSearch, statusFilter, priorityFilter, segmentFilter, industryTypeFilter, hasWebsiteFilter, hasLinkedinFilter, hasPartnerFilter, sortField, sortDirection]);
 
   // Paginated companies
   const paginatedCompanies = useMemo(() => {
@@ -478,24 +512,6 @@ const Companies = () => {
             )}
           </div>
 
-          {/* Sort Dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Sort by:</span>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lead_score_desc">Lead Score (High to Low)</SelectItem>
-                <SelectItem value="lead_score_asc">Lead Score (Low to High)</SelectItem>
-                <SelectItem value="name_asc">Company Name (A-Z)</SelectItem>
-                <SelectItem value="name_desc">Company Name (Z-A)</SelectItem>
-                <SelectItem value="created_desc">Created Date (Newest)</SelectItem>
-                <SelectItem value="created_asc">Created Date (Oldest)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* View Selector */}
           <ViewSelector 
             currentView={currentView} 
@@ -615,6 +631,9 @@ const Companies = () => {
                 onSelectionChange={setSelectedRows}
                 onCompanyUpdate={refetch}
                 columnVisibility={columnVisibility}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
               />
             )}
 
