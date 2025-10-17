@@ -96,6 +96,7 @@ serve(async (req) => {
     let enrichmentResult;
     let provider = 'none';
     let fallbackUsed = false;
+    const providerErrors: Record<string, string> = {}; // Track errors from each provider
 
     // First, try Apollo for accurate business data (if enabled)
     let apolloData = null;
@@ -120,10 +121,24 @@ serve(async (req) => {
         if (apolloResult.found) {
           apolloData = apolloResult;
           console.log(`Apollo found data: ${apolloResult.fieldsEnriched?.length || 0} fields`);
+        } else {
+          const errorMsg = 'No data found for company';
+          console.log(`Apollo: ${errorMsg}`);
+          providerErrors.apollo = errorMsg;
         }
+      } else {
+        const errorText = await apolloResponse.text();
+        const errorMsg = `HTTP ${apolloResponse.status}: ${errorText}`;
+        console.error(`Apollo error: ${errorMsg}`);
+        providerErrors.apollo = errorMsg;
       }
       } catch (error) {
-        console.log('Apollo enrichment skipped:', error instanceof Error ? error.message : 'Unknown error');
+        const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown error';
+        console.error('Apollo enrichment failed:', errorMsg);
+        if (error instanceof Error && error.stack) {
+          console.error('Stack trace:', error.stack);
+        }
+        providerErrors.apollo = errorMsg;
       }
     }
 
@@ -175,18 +190,30 @@ serve(async (req) => {
           break;
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`${providerName} enrichment failed:`, errorMessage);
+        const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown error';
+        console.error(`${providerName} enrichment failed:`, errorMsg);
+        if (error instanceof Error && error.stack) {
+          console.error(`${providerName} stack trace:`, error.stack);
+        }
+        providerErrors[providerName] = errorMsg;
       }
     }
 
     if (!enrichmentResult) {
+      // Build detailed error message
+      const errorDetails = Object.entries(providerErrors)
+        .map(([provider, error]) => `${provider}: ${error}`)
+        .join('; ');
+      
+      const errorMessage = `All enrichment providers failed. Details: ${errorDetails}`;
+      console.error('ENRICHMENT FAILED:', errorMessage);
+      
       const { error: logError } = await supabase.from('enrichment_logs').insert({
         company_id: companyId,
         provider: provider || 'none',
         enrichment_type: deepEnrich ? 'deep' : 'standard',
         status: 'failed',
-        error_message: 'All selected enrichment providers failed',
+        error_message: errorMessage,
         fields_enriched: {},
         created_by: user.id
       });
@@ -196,7 +223,11 @@ serve(async (req) => {
       }
       
       return new Response(
-        JSON.stringify({ error: 'All selected enrichment providers failed. Please try selecting different providers.' }),
+        JSON.stringify({ 
+          error: 'All enrichment providers failed',
+          details: providerErrors,
+          message: 'Check the error details for each provider. Common issues: missing API keys, invalid API keys, or rate limits.'
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

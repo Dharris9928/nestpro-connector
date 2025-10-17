@@ -182,11 +182,20 @@ export function BulkActionBar({
       setEnrichProgress({ current: i + 1, total: selectedIds.length });
 
       try {
-        const { error } = await supabase.functions.invoke('enrich-company', {
+        const { data, error } = await supabase.functions.invoke('enrich-company', {
           body: { companyId, deepEnrich: false, previewOnly: false }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error(`Enrichment error for ${companyId}:`, error);
+          throw error;
+        }
+        
+        if (data?.error) {
+          console.error(`Enrichment failed for ${companyId}:`, data.details || data.error);
+          throw new Error(data.error);
+        }
+        
         successCount++;
       } catch (error) {
         console.error(`Error enriching company ${companyId}:`, error);

@@ -113,7 +113,24 @@ export function SmartEnrichmentRecommendations({ onEnrichCompany }: SmartEnrichm
         body: { companyId, deepEnrich: false, previewOnly: false }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Enrichment error:', error);
+        throw error;
+      }
+
+      if (data?.error) {
+        const errorMsg = data.details 
+          ? `Enrichment failed:\n${Object.entries(data.details).map(([provider, error]) => `• ${provider}: ${error}`).join('\n')}`
+          : data.error;
+        
+        toast({
+          title: 'Enrichment Failed',
+          description: errorMsg,
+          variant: 'destructive'
+        });
+        setEnriching(null);
+        return;
+      }
 
       toast({
         title: 'Enrichment Complete',

@@ -100,7 +100,25 @@ export function EnrichCompanyButton({ companyId, onComplete }: EnrichCompanyButt
         body: { companyId, deepEnrich, previewOnly: false, providers: enabledProviders }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Enrichment error:', error);
+        throw error;
+      }
+
+      if (data.error) {
+        // Handle detailed error response
+        const errorMsg = data.details 
+          ? `Enrichment failed:\n${Object.entries(data.details).map(([provider, error]) => `• ${provider}: ${error}`).join('\n')}`
+          : data.error;
+        
+        toast({
+          title: 'Enrichment Failed',
+          description: errorMsg,
+          variant: 'destructive'
+        });
+        setEnriching(false);
+        return;
+      }
 
       const providerName = data.provider === 'lovable_ai' ? 'Gemini AI' : 
                           data.provider === 'claude' ? 'Claude AI' :
