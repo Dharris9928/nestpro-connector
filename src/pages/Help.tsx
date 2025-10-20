@@ -9,6 +9,7 @@ import { EnrichmentErrorLog } from '@/components/help/EnrichmentErrorLog';
 import { ImportExportActivityLog } from '@/components/help/ImportExportActivityLog';
 import { AIUsageLog } from '@/components/help/AIUsageLog';
 import { SystemDiagnostics } from '@/components/help/SystemDiagnostics';
+import { EmailNotificationsLog } from '@/components/help/EmailNotificationsLog';
 import {
   Search, 
   Building2, 
@@ -1571,6 +1572,8 @@ const Help = () => {
               <EnrichmentErrorLog />
             </CardContent>
           </Card>
+          
+          <EmailNotificationsLog />
         </TabsContent>
 
         {/* System Diagnostics Tab */}
