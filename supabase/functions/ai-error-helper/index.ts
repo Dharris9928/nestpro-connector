@@ -11,10 +11,10 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory = [] } = await req.json();
+    const { message, conversationHistory = [], images = [] } = await req.json();
     
-    if (!message) {
-      throw new Error("Message is required");
+    if (!message && images.length === 0) {
+      throw new Error("Message or image is required");
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -30,6 +30,7 @@ serve(async (req) => {
         role: "system",
         content: `You are a helpful technical support assistant for a CRM application. Your role is to:
 - Explain error messages in simple, clear language
+- Analyze error screenshots and identify issues
 - Provide step-by-step troubleshooting guidance
 - Suggest common solutions for database, authentication, and UI issues
 - Help users understand what went wrong and how to fix it
@@ -47,7 +48,15 @@ Keep responses focused and actionable. If you're unsure, be honest and suggest w
       ...conversationHistory,
       {
         role: "user",
-        content: message
+        content: images.length > 0 
+          ? [
+              ...(message ? [{ type: "text", text: message }] : []),
+              ...images.map((img: string) => ({
+                type: "image_url",
+                image_url: { url: img }
+              }))
+            ]
+          : message
       }
     ];
 
