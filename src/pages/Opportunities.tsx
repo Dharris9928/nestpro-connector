@@ -27,7 +27,7 @@ export default function Opportunities() {
   const { data: userRoleData } = useUserRole();
 
   const { data: opportunities, isLoading, refetch } = useQuery({
-    queryKey: ['opportunities', perspective],
+    queryKey: ['opportunities', perspective, userRoleData?.hasElevatedAccess ?? 'unknown'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -61,7 +61,7 @@ export default function Opportunities() {
             query = query.eq('created_by', '00000000-0000-0000-0000-000000000000');
           }
         }
-      } else if (perspective === 'all_records' && !userRoleData?.hasElevatedAccess) {
+      } else if (perspective === 'all_records' && userRoleData?.hasElevatedAccess === false) {
         query = query.eq('created_by', user.id);
       }
 
