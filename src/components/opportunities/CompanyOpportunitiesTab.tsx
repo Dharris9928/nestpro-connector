@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { AddOpportunityDialog } from "./AddOpportunityDialog";
 import {
   Table,
   TableBody,
@@ -27,7 +28,9 @@ const statusColors: Record<string, string> = {
 };
 
 export function CompanyOpportunitiesTab({ companyId }: CompanyOpportunitiesTabProps) {
-  const { data: opportunities, isLoading } = useQuery({
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  
+  const { data: opportunities, isLoading, refetch } = useQuery({
     queryKey: ['company-opportunities', companyId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -49,18 +52,24 @@ export function CompanyOpportunitiesTab({ companyId }: CompanyOpportunitiesTabPr
     return <div className="p-4">Loading opportunities...</div>;
   }
 
-  if (!opportunities || opportunities.length === 0) {
-    return (
-      <div className="p-4 text-center text-muted-foreground">
-        <p>No opportunities found for this company</p>
-        <p className="text-sm mt-1">Create an opportunity to get started</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4">
-      <div className="border rounded-lg">
+    <>
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Opportunities</h3>
+          <Button onClick={() => setIsAddDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Opportunity
+          </Button>
+        </div>
+
+        {!opportunities || opportunities.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground border rounded-lg">
+            <p>No opportunities found for this company</p>
+            <p className="text-sm mt-1">Click "Add Opportunity" to create one</p>
+          </div>
+        ) : (
+          <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
@@ -127,6 +136,17 @@ export function CompanyOpportunitiesTab({ companyId }: CompanyOpportunitiesTabPr
           </TableBody>
         </Table>
       </div>
-    </div>
+        )}
+      </div>
+
+      <AddOpportunityDialog
+        open={isAddDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (!open) refetch();
+        }}
+        prefilledCompanyId={companyId}
+      />
+    </>
   );
 }

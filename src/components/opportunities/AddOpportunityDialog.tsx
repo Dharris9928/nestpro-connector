@@ -5,6 +5,7 @@ import * as z from "zod";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -55,9 +56,10 @@ type OpportunityProduct = {
 interface AddOpportunityDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  prefilledCompanyId?: string;
 }
 
-export function AddOpportunityDialog({ open, onOpenChange }: AddOpportunityDialogProps) {
+export function AddOpportunityDialog({ open, onOpenChange, prefilledCompanyId }: AddOpportunityDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [products, setProducts] = useState<OpportunityProduct[]>([]);
@@ -66,6 +68,7 @@ export function AddOpportunityDialog({ open, onOpenChange }: AddOpportunityDialo
     resolver: zodResolver(opportunitySchema),
     defaultValues: {
       status: "Open",
+      company_id: prefilledCompanyId || "",
     },
   });
 
@@ -76,6 +79,13 @@ export function AddOpportunityDialog({ open, onOpenChange }: AddOpportunityDialo
       return user;
     },
   });
+
+  // Update form when prefilledCompanyId changes
+  useEffect(() => {
+    if (prefilledCompanyId && open) {
+      form.setValue('company_id', prefilledCompanyId);
+    }
+  }, [prefilledCompanyId, open, form]);
 
   const createOpportunity = useMutation({
     mutationFn: async (values: z.infer<typeof opportunitySchema>) => {

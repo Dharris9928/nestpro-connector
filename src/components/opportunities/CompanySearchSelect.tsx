@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Command,
   CommandEmpty,
@@ -26,6 +27,7 @@ interface CompanySearchSelectProps {
 export function CompanySearchSelect({ value, onValueChange }: CompanySearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   // Fetch the selected company by ID
   const { data: selectedCompanyData } = useQuery({
@@ -44,18 +46,21 @@ export function CompanySearchSelect({ value, onValueChange }: CompanySearchSelec
   });
 
   const { data: companies, isLoading } = useQuery({
-    queryKey: ['companies-search', search],
+    queryKey: ['companies-search', debouncedSearch],
     queryFn: async () => {
       let query = supabase
         .from('companies')
         .select('id, company_name, city, state')
         .order('company_name');
 
-      if (search) {
-        query = query.ilike('company_name', `%${search}%`);
+      if (debouncedSearch) {
+        query = query.ilike('company_name', `%${debouncedSearch}%`);
+      } else {
+        // If no search, just return first 50 companies
+        query = query.limit(50);
       }
 
-      const { data, error } = await query.limit(50);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
