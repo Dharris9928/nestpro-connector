@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Mail, Phone, Linkedin, Loader2, Plus } from 'lucide-react';
+import { Mail, Phone, Linkedin, Loader2, Plus, Calendar, Video, GraduationCap, MessageSquare } from 'lucide-react';
+import { CompanySearchSelect } from '../opportunities/CompanySearchSelect';
 
 interface Company {
   id: string;
@@ -22,6 +23,8 @@ interface Contact {
   company_id: string;
 }
 
+type CommunicationType = 'email' | 'call_script' | 'linkedin_message' | 'phone' | 'meeting' | 'demo' | 'training';
+
 interface NewCommunicationDialogProps {
   onSuccess?: () => void;
   open?: boolean;
@@ -29,7 +32,7 @@ interface NewCommunicationDialogProps {
   prefilledCompanyId?: string;
   prefilledContactId?: string;
   prefilledPreviousContext?: string;
-  prefilledCommunicationType?: 'email' | 'call_script' | 'linkedin_message';
+  prefilledCommunicationType?: CommunicationType;
 }
 
 export function NewCommunicationDialog({ 
@@ -56,7 +59,7 @@ export function NewCommunicationDialog({
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [selectedContactId, setSelectedContactId] = useState<string>('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string>('none');
-  const [communicationType, setCommunicationType] = useState<'email' | 'call_script' | 'linkedin_message'>('email');
+  const [communicationType, setCommunicationType] = useState<CommunicationType>('email');
   const [businessContext, setBusinessContext] = useState('');
   const [outreachPrompt, setOutreachPrompt] = useState('');
   const [previousContext, setPreviousContext] = useState('');
@@ -217,7 +220,11 @@ export function NewCommunicationDialog({
       case 'email': return <Mail className="h-4 w-4" />;
       case 'call_script': return <Phone className="h-4 w-4" />;
       case 'linkedin_message': return <Linkedin className="h-4 w-4" />;
-      default: return null;
+      case 'phone': return <Phone className="h-4 w-4" />;
+      case 'meeting': return <Calendar className="h-4 w-4" />;
+      case 'demo': return <Video className="h-4 w-4" />;
+      case 'training': return <GraduationCap className="h-4 w-4" />;
+      default: return <MessageSquare className="h-4 w-4" />;
     }
   };
 
@@ -226,6 +233,10 @@ export function NewCommunicationDialog({
       case 'email': return 'Email';
       case 'call_script': return 'Call Script';
       case 'linkedin_message': return 'LinkedIn Message';
+      case 'phone': return 'Phone Call';
+      case 'meeting': return 'Meeting';
+      case 'demo': return 'Demo';
+      case 'training': return 'Training';
       default: return type;
     }
   };
@@ -250,18 +261,10 @@ export function NewCommunicationDialog({
           {/* Company Selection */}
           <div className="space-y-2">
             <Label htmlFor="company">Company *</Label>
-            <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId} disabled={loadingCompanies}>
-              <SelectTrigger id="company">
-                <SelectValue placeholder={loadingCompanies ? "Loading companies..." : "Select a company"} />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.company_name} ({company.industry_type})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CompanySearchSelect
+              value={selectedCompanyId}
+              onValueChange={setSelectedCompanyId}
+            />
           </div>
 
           {/* Contact Selection */}
@@ -345,6 +348,30 @@ export function NewCommunicationDialog({
                   <div className="flex items-center gap-2">
                     <Linkedin className="h-4 w-4" />
                     <span>LinkedIn Message</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="phone">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    <span>Phone Call</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="meeting">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Meeting</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="demo">
+                  <div className="flex items-center gap-2">
+                    <Video className="h-4 w-4" />
+                    <span>Demo</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="training">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Training</span>
                   </div>
                 </SelectItem>
               </SelectContent>

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, Phone, Linkedin, Loader2, Copy, Check, Trash2, ExternalLink, User, Reply } from 'lucide-react';
+import { Mail, Phone, Linkedin, Loader2, Copy, Check, Trash2, ExternalLink, User, Reply, Calendar, Video, GraduationCap, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Communication {
@@ -46,7 +46,7 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
   const [generating, setGenerating] = useState(false);
   const [communications, setCommunications] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedType, setSelectedType] = useState<'email' | 'call_script' | 'linkedin_message'>('email');
+  const [selectedType, setSelectedType] = useState<'email' | 'call_script' | 'linkedin_message' | 'phone' | 'meeting' | 'demo' | 'training'>('email');
   const [previousContext, setPreviousContext] = useState('');
   const [aiModel, setAiModel] = useState('google/gemini-2.5-flash');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -267,7 +267,11 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
       case 'email': return <Mail className="h-4 w-4" />;
       case 'call_script': return <Phone className="h-4 w-4" />;
       case 'linkedin_message': return <Linkedin className="h-4 w-4" />;
-      default: return null;
+      case 'phone': return <Phone className="h-4 w-4" />;
+      case 'meeting': return <Calendar className="h-4 w-4" />;
+      case 'demo': return <Video className="h-4 w-4" />;
+      case 'training': return <GraduationCap className="h-4 w-4" />;
+      default: return <MessageSquare className="h-4 w-4" />;
     }
   };
 
@@ -276,6 +280,10 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
       case 'email': return 'Email';
       case 'call_script': return 'Call Script';
       case 'linkedin_message': return 'LinkedIn Message';
+      case 'phone': return 'Phone Call';
+      case 'meeting': return 'Meeting';
+      case 'demo': return 'Demo';
+      case 'training': return 'Training';
       default: return type;
     }
   };
@@ -285,7 +293,7 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
     const contextText = `Previous ${getTypeLabel(comm.communication_type)}${comm.subject ? ` - "${comm.subject}"` : ''}:\n${comm.content}${comm.notes ? `\n\nNotes: ${comm.notes}` : ''}`;
     
     setPreviousContext(contextText);
-    setSelectedType(comm.communication_type as 'email' | 'call_script' | 'linkedin_message');
+    setSelectedType(comm.communication_type as 'email' | 'call_script' | 'linkedin_message' | 'phone' | 'meeting' | 'demo' | 'training');
     if (comm.contact_id) {
       setSelectedContactId(comm.contact_id);
     }
@@ -333,6 +341,30 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
                     <div className="flex items-center gap-2">
                       <Linkedin className="h-4 w-4" />
                       LinkedIn Message
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="phone">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Phone Call
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="meeting">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Meeting
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="demo">
+                    <div className="flex items-center gap-2">
+                      <Video className="h-4 w-4" />
+                      Demo
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="training">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4" />
+                      Training
                     </div>
                   </SelectItem>
                 </SelectContent>

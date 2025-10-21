@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, Phone, Linkedin, Reply, Trash2, ExternalLink, Search, X, User } from 'lucide-react';
+import { Mail, Phone, Linkedin, Reply, Trash2, ExternalLink, Search, X, User, Calendar, Video, GraduationCap, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -197,7 +197,11 @@ export default function Communications() {
       case 'email': return <Mail className="h-4 w-4" />;
       case 'call_script': return <Phone className="h-4 w-4" />;
       case 'linkedin_message': return <Linkedin className="h-4 w-4" />;
-      default: return null;
+      case 'phone': return <Phone className="h-4 w-4" />;
+      case 'meeting': return <Calendar className="h-4 w-4" />;
+      case 'demo': return <Video className="h-4 w-4" />;
+      case 'training': return <GraduationCap className="h-4 w-4" />;
+      default: return <MessageSquare className="h-4 w-4" />;
     }
   };
 
@@ -206,6 +210,10 @@ export default function Communications() {
       case 'email': return 'Email';
       case 'call_script': return 'Call Script';
       case 'linkedin_message': return 'LinkedIn Message';
+      case 'phone': return 'Phone Call';
+      case 'meeting': return 'Meeting';
+      case 'demo': return 'Demo';
+      case 'training': return 'Training';
       default: return type;
     }
   };

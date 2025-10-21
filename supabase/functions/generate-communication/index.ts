@@ -320,6 +320,112 @@ Return in JSON format:
 {
   "content": "linkedin message here"
 }`;
+    } else if (communicationType === 'phone') {
+      systemPrompt = `You are an expert at crafting phone conversation guides${fullBusinessContext ? `. ${fullBusinessContext}` : ''}.
+Create natural, conversational guides that help sales reps have authentic conversations.
+Focus on building rapport, active listening, and value-based discussions.`;
+
+      userPrompt = `Generate a phone conversation guide for ${company.company_name}${targetContact ? ` when speaking with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
+
+${fullBusinessContext ? `YOUR BUSINESS CONTEXT:\n${fullBusinessContext}\n\n` : ''}
+
+${outreachPrompt ? `OUTREACH PURPOSE:\n${outreachPrompt}\n\n` : ''}
+
+Company Context:
+${JSON.stringify(companyContext, null, 2)}
+
+${previousContext ? `Previous Context:\n${previousContext}\n\n` : ''}
+
+Generate a conversation guide with:
+1. Ice breaker and rapport building
+2. Key questions to ask
+3. Value points to mention
+4. Next steps to propose
+
+Return in JSON format:
+{
+  "content": "conversation guide here"
+}`;
+    } else if (communicationType === 'meeting') {
+      systemPrompt = `You are an expert at crafting meeting agendas and discussion guides${fullBusinessContext ? `. ${fullBusinessContext}` : ''}.
+Create structured agendas that maximize meeting value and drive decisions.`;
+
+      userPrompt = `Generate a meeting agenda and discussion guide for ${company.company_name}${targetContact ? ` with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
+
+${fullBusinessContext ? `YOUR BUSINESS CONTEXT:\n${fullBusinessContext}\n\n` : ''}
+
+${outreachPrompt ? `MEETING PURPOSE:\n${outreachPrompt}\n\n` : ''}
+
+Company Context:
+${JSON.stringify(companyContext, null, 2)}
+
+${previousContext ? `Previous Context:\n${previousContext}\n\n` : ''}
+
+Generate a meeting guide with:
+1. Meeting objectives
+2. Agenda items with time allocations
+3. Discussion topics and questions
+4. Desired outcomes and next steps
+
+Return in JSON format:
+{
+  "subject": "meeting title",
+  "content": "meeting agenda and discussion guide"
+}`;
+    } else if (communicationType === 'demo') {
+      systemPrompt = `You are an expert at crafting product demo scripts and guides${fullBusinessContext ? `. ${fullBusinessContext}` : ''}.
+Create engaging demo flows that highlight value and address specific customer needs.`;
+
+      userPrompt = `Generate a product demo script for ${company.company_name}${targetContact ? ` with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
+
+${fullBusinessContext ? `YOUR BUSINESS CONTEXT:\n${fullBusinessContext}\n\n` : ''}
+
+${outreachPrompt ? `DEMO FOCUS:\n${outreachPrompt}\n\n` : ''}
+
+Company Context:
+${JSON.stringify(companyContext, null, 2)}
+
+${previousContext ? `Previous Context:\n${previousContext}\n\n` : ''}
+
+Generate a demo script with:
+1. Demo opening and context setting
+2. Feature showcase tailored to their needs
+3. Use cases relevant to their business
+4. Q&A preparation
+5. Next steps and closing
+
+Return in JSON format:
+{
+  "subject": "demo title",
+  "content": "demo script and guide"
+}`;
+    } else if (communicationType === 'training') {
+      systemPrompt = `You are an expert at creating training materials and session guides${fullBusinessContext ? `. ${fullBusinessContext}` : ''}.
+Create comprehensive training guides that educate and empower.`;
+
+      userPrompt = `Generate a training session guide for ${company.company_name}${targetContact ? ` with ${targetContact.first_name} ${targetContact.last_name} (${targetContact.title || 'Contact'})` : ''}.
+
+${fullBusinessContext ? `YOUR BUSINESS CONTEXT:\n${fullBusinessContext}\n\n` : ''}
+
+${outreachPrompt ? `TRAINING FOCUS:\n${outreachPrompt}\n\n` : ''}
+
+Company Context:
+${JSON.stringify(companyContext, null, 2)}
+
+${previousContext ? `Previous Context:\n${previousContext}\n\n` : ''}
+
+Generate a training guide with:
+1. Training objectives and outcomes
+2. Session outline with modules
+3. Key concepts to cover
+4. Hands-on exercises or examples
+5. Q&A topics and resources
+
+Return in JSON format:
+{
+  "subject": "training title",
+  "content": "training session guide"
+}`;
     }
 
     // Call Claude AI for superior writing quality
