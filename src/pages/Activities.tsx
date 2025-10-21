@@ -253,6 +253,7 @@ const Activities = () => {
         }}
         companyId={followUpActivity?.company_id}
         companyName={followUpActivity?.companies?.company_name}
+        contactId={followUpActivity?.contact_id}
         followUpContext={buildFollowUpContext()}
       />
 

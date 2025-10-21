@@ -45,6 +45,7 @@ export function EditActivityDialog({
     completed_date: new Date().toISOString().split("T")[0],
     notes: "",
     opportunity_id: "none" as string,
+    contact_id: "none" as string,
   });
 
   // Fetch opportunities for the company
@@ -63,6 +64,22 @@ export function EditActivityDialog({
     enabled: !!activity?.company_id && open,
   });
 
+  // Fetch contacts for the company
+  const { data: contacts = [] } = useQuery({
+    queryKey: ['contacts', activity?.company_id],
+    queryFn: async () => {
+      if (!activity?.company_id) return [];
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name')
+        .eq('company_id', activity.company_id)
+        .order('first_name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!activity?.company_id && open,
+  });
+
   useEffect(() => {
     if (activity && open) {
       setFormData({
@@ -73,6 +90,7 @@ export function EditActivityDialog({
         completed_date: activity.completed_date || new Date().toISOString().split("T")[0],
         notes: activity.notes || "",
         opportunity_id: activity.opportunity_id || "none",
+        contact_id: activity.contact_id || "none",
       });
     }
   }, [activity, open]);
@@ -94,6 +112,7 @@ export function EditActivityDialog({
           completed_date: formData.completed_date,
           notes: formData.notes,
           opportunity_id: formData.opportunity_id === "none" ? null : formData.opportunity_id,
+          contact_id: formData.contact_id === "none" ? null : formData.contact_id,
         })
         .eq("id", activity.id);
 
@@ -145,6 +164,29 @@ export function EditActivityDialog({
                 <SelectItem value="Meeting">Meeting</SelectItem>
                 <SelectItem value="Demo">Demo</SelectItem>
                 <SelectItem value="Training">Training</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <Label htmlFor="contact">Contact (Optional)</Label>
+            <Select
+              value={formData.contact_id}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, contact_id: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select contact (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {contacts.map((contact: any) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.first_name} {contact.last_name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
