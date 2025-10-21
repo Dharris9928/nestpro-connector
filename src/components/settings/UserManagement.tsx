@@ -35,6 +35,7 @@ interface UserProfile {
   invitation_email_status?: string | null;
   approval_status?: string;
   account_status?: 'active' | 'suspended' | 'deactivated';
+  last_sign_in_at?: string | null;
 }
 
 export function UserManagement() {
@@ -128,7 +129,7 @@ export function UserManagement() {
         return;
       }
 
-      // Get emails from auth.users via edge function
+      // Get emails and login status from auth.users via edge function
       const { data: emailsData, error: emailsError } = await supabase.functions.invoke('get-user-emails', {
         body: { userIds: profiles.map(p => p.id) }
       });
@@ -139,6 +140,7 @@ export function UserManagement() {
       }
 
       const emailsMap = emailsData?.emails || {};
+      const loginStatusMap = emailsData?.loginStatus || {};
 
       // Get roles from user_roles table
       const userIds = profiles.map(p => p.id);
@@ -170,17 +172,29 @@ export function UserManagement() {
         invitation_email_status: profile.invitation_email_status,
         approval_status: profile.approval_status,
         account_status: profile.account_status || 'active',
+        last_sign_in_at: loginStatusMap[profile.id] || null,
       } as UserProfile));
 
       console.log('All users loaded:', allUsers);
 
-      // Separate users into categories
-      // Invited users: have temp_password AND approved (they were invited by admin)
-      const invited = allUsers.filter(u => u.temp_password && u.approval_status === 'approved');
-      // Sign-up requests: no temp_password AND pending approval (sign-ups only)
-      const signups = allUsers.filter(u => !u.temp_password && u.approval_status === 'pending');
-      // Active users: approved AND no temp_password (have logged in and changed password)
-      const approved = allUsers.filter(u => u.approval_status === 'approved' && !u.temp_password);
+      // Separate users into categories based on approval status AND login status
+      // Active users: approved AND have logged in (regardless of temp_password)
+      const approved = allUsers.filter(u => 
+        u.approval_status === 'approved' && u.last_sign_in_at !== null
+      );
+      
+      // Invited users (pending login): approved with temp_password but haven't logged in yet
+      const invited = allUsers.filter(u => 
+        u.temp_password && 
+        u.approval_status === 'approved' && 
+        u.last_sign_in_at === null
+      );
+      
+      // Sign-up requests: no temp_password AND pending approval (organic sign-ups)
+      const signups = allUsers.filter(u => 
+        !u.temp_password && 
+        u.approval_status === 'pending'
+      );
 
       console.log('Invited users:', invited);
       console.log('Pending signups:', signups);

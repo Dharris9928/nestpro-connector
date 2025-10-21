@@ -81,17 +81,22 @@ Deno.serve(async (req) => {
 
     // Fetch user data from auth.users using admin client
     const emails: Record<string, string> = {}
+    const loginStatus: Record<string, string | null> = {}
     
     for (const userId of userIds) {
       const { data: { user }, error } = await supabaseAdmin.auth.admin.getUserById(userId)
       
-      if (!error && user?.email) {
-        emails[userId] = user.email
+      if (!error && user) {
+        if (user.email) {
+          emails[userId] = user.email
+        }
+        // Store last sign in time to determine if user has actually logged in
+        loginStatus[userId] = user.last_sign_in_at || null
       }
     }
 
     return new Response(
-      JSON.stringify({ emails }),
+      JSON.stringify({ emails, loginStatus }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
