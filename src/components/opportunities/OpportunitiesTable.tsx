@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Opportunity {
   id: string;
@@ -21,6 +22,7 @@ interface Opportunity {
   expected_close_date: string | null;
   notes: string | null;
   created_at: string;
+  company_id: string;
   companies?: { company_name: string } | null;
   profiles?: { first_name: string; last_name: string } | null;
   opportunity_products?: any[];
@@ -42,6 +44,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function OpportunitiesTable({ opportunities, isLoading, onSelectOpportunity }: OpportunitiesTableProps) {
+  const navigate = useNavigate();
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -167,7 +170,22 @@ export function OpportunitiesTable({ opportunities, isLoading, onSelectOpportuni
               <TableCell className="font-medium">
                 {opportunity.opportunity_name}
               </TableCell>
-              <TableCell>{opportunity.companies?.company_name || "N/A"}</TableCell>
+              <TableCell>
+                {opportunity.companies?.company_name ? (
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/companies', { state: { editCompanyId: opportunity.company_id } });
+                    }}
+                  >
+                    {opportunity.companies.company_name}
+                  </Button>
+                ) : (
+                  "N/A"
+                )}
+              </TableCell>
               <TableCell>
                 <Badge className={statusColors[opportunity.stage] || "bg-muted"}>
                   {opportunity.stage}

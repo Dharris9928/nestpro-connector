@@ -152,13 +152,7 @@ export function ContactTable({ contacts, isLoading, onEdit, onDelete }: ContactT
           {sortedContacts.map((contact) => (
             <TableRow key={contact.id}>
               <TableCell className="font-medium">
-                <Button
-                  variant="link"
-                  className="p-0 h-auto font-medium text-foreground hover:text-primary"
-                  onClick={() => onEdit(contact)}
-                >
-                  {contact.first_name} {contact.last_name}
-                </Button>
+                {contact.first_name} {contact.last_name}
               </TableCell>
               <TableCell className="text-sm">{contact.title || "—"}</TableCell>
               <TableCell className="text-sm">

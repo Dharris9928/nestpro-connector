@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -15,6 +16,7 @@ import { usePerspective } from "@/hooks/usePerspective";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const Activities = () => {
+  const navigate = useNavigate();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -206,14 +208,34 @@ const Activities = () => {
             >
               <CardHeader>
                 <CardTitle className="text-lg">
-                  {activity.activity_type} - {activity.companies?.company_name}
+                  {activity.activity_type} - {" "}
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-lg font-semibold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/companies', { state: { editCompanyId: activity.company_id } });
+                    }}
+                  >
+                    {activity.companies?.company_name}
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {activity.contacts && (
                     <p className="text-sm text-muted-foreground">
-                      Contact: {activity.contacts.first_name} {activity.contacts.last_name}
+                      Contact: {" "}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/contacts', { state: { editContactId: activity.contact_id } });
+                        }}
+                      >
+                        {activity.contacts.first_name} {activity.contacts.last_name}
+                      </Button>
                     </p>
                   )}
                   {activity.subject_line && (
