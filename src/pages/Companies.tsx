@@ -160,7 +160,7 @@ const Companies = () => {
   }, [debouncedSearch, statusFilter, priorityFilter, segmentFilter, industryTypeFilter, stateFilter, cityFilter, regionFilter, statesFilter, enrichmentStatusFilter, assignedToFilter, perspective]);
 
   const { data: companies, isLoading, refetch } = useQuery({
-    queryKey: ["companies", debouncedSearch, statusFilter, priorityFilter, segmentFilter, industryTypeFilter, stateFilter, cityFilter, regionFilter, statesFilter, enrichmentStatusFilter, assignedToFilter, perspective],
+    queryKey: ["companies", debouncedSearch, String(statusFilter || ''), String(priorityFilter || ''), String(segmentFilter || ''), String(industryTypeFilter || ''), String(stateFilter || ''), String(cityFilter || ''), String(regionFilter || ''), String(statesFilter || ''), String(enrichmentStatusFilter || ''), String(assignedToFilter || ''), perspective],
     queryFn: async () => {
       // Check for impersonation
       const impersonationData = sessionStorage.getItem('admin-impersonation');
@@ -230,11 +230,11 @@ const Companies = () => {
       if (priorityFilter) query = query.eq('priority_tier', priorityFilter);
       if (segmentFilter) query = query.eq('segment', segmentFilter);
       
-      // Regional filters
-      if (regionFilter) {
-        const regions = regionFilter.split(',');
-        query = query.in('region', regions);
-      }
+      // Regional filters - TODO: Enable after database migration adds 'region' column
+      // if (regionFilter) {
+      //   const regions = regionFilter.split(',');
+      //   query = query.in('region', regions);
+      // }
       if (statesFilter) {
         const states = statesFilter.split(',');
         query = query.in('state', states);

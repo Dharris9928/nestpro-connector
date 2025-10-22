@@ -430,6 +430,69 @@ export function CompaniesFilterSidebar({ isCollapsed, onToggle }: CompaniesFilte
           </div>
         </FilterSection>
 
+        {/* Geographic Filters */}
+        <FilterSection
+          title="Geographic"
+          isCollapsed={collapsedSections.has('geographic')}
+          onToggle={() => toggleSection('geographic')}
+        >
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => setIsRegionalDialogOpen(true)}
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Regional Search
+            </Button>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">State</Label>
+              <Select value={stateFilter} onValueChange={(value) => {
+                setStateFilter(value);
+                const newParams = new URLSearchParams(searchParams);
+                if (value) {
+                  newParams.set("state", value);
+                } else {
+                  newParams.delete("state");
+                }
+                setSearchParams(newParams);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All states" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATES.map(state => (
+                    <SelectItem key={state.code} value={state.code}>
+                      {state.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">City</Label>
+              <Input
+                placeholder="Search cities..."
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                onBlur={() => {
+                  if (cityFilter) {
+                    const newParams = new URLSearchParams(searchParams);
+                    newParams.set("city", cityFilter);
+                    setSearchParams(newParams);
+                  } else {
+                    const newParams = new URLSearchParams(searchParams);
+                    newParams.delete("city");
+                    setSearchParams(newParams);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </FilterSection>
+
         {/* Score Range Filters */}
         <FilterSection
           title="Score Ranges"
@@ -628,6 +691,25 @@ export function CompaniesFilterSidebar({ isCollapsed, onToggle }: CompaniesFilte
           </div>
         </FilterSection>
       </div>
+
+      <RegionalFilterDialog
+        open={isRegionalDialogOpen}
+        onOpenChange={setIsRegionalDialogOpen}
+        onApplyFilters={(filters: RegionalFilters) => {
+          const newParams = new URLSearchParams(searchParams);
+          if (filters.regions?.length) {
+            newParams.set('region', filters.regions.join(','));
+          } else {
+            newParams.delete('region');
+          }
+          if (filters.states?.length) {
+            newParams.set('states', filters.states.join(','));
+          } else {
+            newParams.delete('states');
+          }
+          setSearchParams(newParams);
+        }}
+      />
     </div>
   );
 }
