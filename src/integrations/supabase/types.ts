@@ -666,6 +666,133 @@ export type Database = {
           },
         ]
       }
+      building_permits: {
+        Row: {
+          address_line1: string | null
+          applicant_email: string | null
+          applicant_name: string | null
+          applicant_phone: string | null
+          builder_company_id: string | null
+          builder_name: string | null
+          city: string
+          county: string | null
+          created_at: string
+          created_by: string
+          data_source: string | null
+          estimated_value: number | null
+          filed_date: string | null
+          id: string
+          is_high_value: boolean | null
+          is_matched_to_company: boolean | null
+          issued_date: string | null
+          match_confidence: number | null
+          metro_area: string | null
+          notes: string | null
+          num_units: number | null
+          permit_number: string | null
+          project_description: string | null
+          project_name: string
+          project_type: string | null
+          region: string | null
+          scraped_at: string | null
+          search_vector: unknown | null
+          state: string
+          status: string | null
+          updated_at: string
+          zip: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          applicant_email?: string | null
+          applicant_name?: string | null
+          applicant_phone?: string | null
+          builder_company_id?: string | null
+          builder_name?: string | null
+          city: string
+          county?: string | null
+          created_at?: string
+          created_by: string
+          data_source?: string | null
+          estimated_value?: number | null
+          filed_date?: string | null
+          id?: string
+          is_high_value?: boolean | null
+          is_matched_to_company?: boolean | null
+          issued_date?: string | null
+          match_confidence?: number | null
+          metro_area?: string | null
+          notes?: string | null
+          num_units?: number | null
+          permit_number?: string | null
+          project_description?: string | null
+          project_name: string
+          project_type?: string | null
+          region?: string | null
+          scraped_at?: string | null
+          search_vector?: unknown | null
+          state: string
+          status?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          applicant_email?: string | null
+          applicant_name?: string | null
+          applicant_phone?: string | null
+          builder_company_id?: string | null
+          builder_name?: string | null
+          city?: string
+          county?: string | null
+          created_at?: string
+          created_by?: string
+          data_source?: string | null
+          estimated_value?: number | null
+          filed_date?: string | null
+          id?: string
+          is_high_value?: boolean | null
+          is_matched_to_company?: boolean | null
+          issued_date?: string | null
+          match_confidence?: number | null
+          metro_area?: string | null
+          notes?: string | null
+          num_units?: number | null
+          permit_number?: string | null
+          project_description?: string | null
+          project_name?: string
+          project_type?: string | null
+          region?: string | null
+          scraped_at?: string | null
+          search_vector?: unknown | null
+          state?: string
+          status?: string | null
+          updated_at?: string
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_permits_builder_company_id_fkey"
+            columns: ["builder_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_permits_builder_company_id_fkey"
+            columns: ["builder_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_permits_builder_company_id_fkey"
+            columns: ["builder_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulk_access_alerts: {
         Row: {
           alert_details: Json | null
@@ -2679,6 +2806,36 @@ export type Database = {
           },
         ]
       }
+      metro_areas: {
+        Row: {
+          created_at: string
+          id: string
+          included_cities: string[] | null
+          is_active: boolean | null
+          metro_name: string
+          primary_city: string
+          state: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          included_cities?: string[] | null
+          is_active?: boolean | null
+          metro_name: string
+          primary_city: string
+          state: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          included_cities?: string[] | null
+          is_active?: boolean | null
+          metro_name?: string
+          primary_city?: string
+          state?: string
+        }
+        Relationships: []
+      }
       mfa_requirements: {
         Row: {
           created_at: string
@@ -3166,6 +3323,164 @@ export type Database = {
           id?: string
           used_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      permit_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string
+          id: string
+          is_acknowledged: boolean | null
+          message: string | null
+          permit_id: string
+          priority: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_acknowledged?: boolean | null
+          message?: string | null
+          permit_id: string
+          priority?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_acknowledged?: boolean | null
+          message?: string | null
+          permit_id?: string
+          priority?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_alerts_permit_id_fkey"
+            columns: ["permit_id"]
+            isOneToOne: false
+            referencedRelation: "building_permits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_regions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          region_name: string
+          states: string[]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          region_name: string
+          states: string[]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          region_name?: string
+          states?: string[]
+        }
+        Relationships: []
+      }
+      permit_scraping_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          data_source: string
+          error_message: string | null
+          id: string
+          new_companies_created: number | null
+          permits_found: number | null
+          permits_imported: number | null
+          permits_matched: number | null
+          search_params: Json | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          data_source: string
+          error_message?: string | null
+          id?: string
+          new_companies_created?: number | null
+          permits_found?: number | null
+          permits_imported?: number | null
+          permits_matched?: number | null
+          search_params?: Json | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          data_source?: string
+          error_message?: string | null
+          id?: string
+          new_companies_created?: number | null
+          permits_found?: number | null
+          permits_imported?: number | null
+          permits_matched?: number | null
+          search_params?: Json | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      permit_search_schedules: {
+        Row: {
+          created_at: string
+          created_by: string
+          frequency: string
+          id: string
+          is_active: boolean | null
+          last_run: string | null
+          next_run: string | null
+          schedule_name: string
+          search_params: Json
+          search_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          frequency: string
+          id?: string
+          is_active?: boolean | null
+          last_run?: string | null
+          next_run?: string | null
+          schedule_name: string
+          search_params: Json
+          search_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          last_run?: string | null
+          next_run?: string | null
+          schedule_name?: string
+          search_params?: Json
+          search_type?: string
+          updated_at?: string
         }
         Relationships: []
       }

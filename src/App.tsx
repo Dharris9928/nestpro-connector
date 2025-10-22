@@ -14,6 +14,7 @@ import Reports from "./pages/Reports";
 import AIFeatures from "./pages/AIFeatures";
 import ProspectingDashboard from "./pages/ProspectingDashboard";
 import Communications from "./pages/Communications";
+import BuildingPermits from "./pages/BuildingPermits";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import Notifications from "./pages/Notifications";
@@ -100,6 +101,14 @@ const App = () => (
             element={
               <AppLayout>
                 <ProspectingDashboard />
+              </AppLayout>
+            }
+          />
+          <Route
+            path="/permits"
+            element={
+              <AppLayout>
+                <BuildingPermits />
               </AppLayout>
             }
           />
