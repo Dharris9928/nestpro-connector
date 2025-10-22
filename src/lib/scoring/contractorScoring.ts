@@ -27,6 +27,9 @@ export interface ContractorScoringBreakdown {
   linkedinProfessionalScore: number; // 0-10 points
   contactTotal: number;
   
+  // Buying Intent Boost (0-15 points)
+  buyingIntentBoost: number;
+  
   totalScore: number;
   priorityTier: 'P1' | 'P2' | 'P3' | 'Unscored';
   confidence: 'High' | 'Medium' | 'Low';
@@ -66,6 +69,7 @@ export async function calculateContractorScore(companyId: string): Promise<Contr
     decisionAuthorityScore: 0,
     linkedinProfessionalScore: 0,
     contactTotal: 0,
+    buyingIntentBoost: 0,
     totalScore: 0,
     priorityTier: 'Unscored',
     confidence: 'Low'
@@ -289,6 +293,19 @@ export async function calculateContractorScore(companyId: string): Promise<Contr
     scoring.contactTotal
   );
 
+  // ============================================
+  // BUYING INTENT BOOST (0-15 points)
+  // ============================================
+  if (company.buying_intent_strength === 'high') {
+    scoring.buyingIntentBoost = 15;
+  } else if (company.buying_intent_strength === 'medium') {
+    scoring.buyingIntentBoost = 10;
+  } else if (company.buying_intent_strength === 'low') {
+    scoring.buyingIntentBoost = 5;
+  }
+  
+  scoring.totalScore = Math.min(scoring.totalScore + scoring.buyingIntentBoost, 100);
+
   scoring.priorityTier = assignPriorityTier(scoring.totalScore);
   scoring.confidence = calculateConfidence(company);
 
@@ -326,6 +343,7 @@ async function saveContractorScore(companyId: string, scoring: ContractorScoring
         decision_authority_score: Math.round(scoring.decisionAuthorityScore),
         linkedin_professional_score: Math.round(scoring.linkedinProfessionalScore),
         contact_total: Math.round(scoring.contactTotal),
+        buying_intent_boost: Math.round(scoring.buyingIntentBoost),
         total_score: Math.round(scoring.totalScore),
         priority_tier: scoring.priorityTier,
         confidence: mapConfidenceToDbFormat(scoring.confidence),

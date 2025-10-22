@@ -46,6 +46,8 @@ serve(async (req) => {
       states,
       countries,
       technologies,
+      buyingIntentStrength,
+      buyingIntentTopics,
       page = 1
     } = await req.json();
 
@@ -105,6 +107,14 @@ serve(async (req) => {
     // Add technology filter
     if (technologies && technologies.length > 0) {
       searchPayload.currently_using_any_of_technology_uids = technologies;
+    }
+
+    // Add buying intent filters
+    if (buyingIntentStrength && buyingIntentStrength !== 'all') {
+      searchPayload.intent_strength = [buyingIntentStrength];
+    }
+    if (buyingIntentTopics && buyingIntentTopics.length > 0) {
+      searchPayload.intent_topics = buyingIntentTopics;
     }
 
     console.log('Apollo search payload:', JSON.stringify(searchPayload, null, 2));
@@ -190,6 +200,8 @@ serve(async (req) => {
         description: org.short_description || null,
         logoUrl: org.logo_url || null,
         technologies: org.technologies || [],
+        buyingIntentStrength: org.intent_strength || 'none',
+        buyingIntentTopics: org.intent_topics || [],
         socialMediaUrls: {
           facebook: org.facebook_url || null,
           twitter: org.twitter_url || null,

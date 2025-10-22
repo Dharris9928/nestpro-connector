@@ -108,7 +108,11 @@ serve(async (req) => {
         city: org.city,
         state: org.state,
         country: org.country,
-        foundedYear: org.founded_year
+        foundedYear: org.founded_year,
+        buyingIntentSignals: org.intent_signals || [],
+        buyingIntentStrength: org.intent_strength || 'none',
+        buyingIntentTopics: org.intent_topics || [],
+        technologies: org.currently_using_any_of_technology_names || []
       }
     };
 
@@ -190,6 +194,18 @@ serve(async (req) => {
       } else if (/electric/i.test(combined)) {
         companyUpdates.contractor_specialty = 'Electrical';
       }
+    }
+
+    // Buying intent data
+    if (org.intent_strength && org.intent_strength !== 'none') {
+      companyUpdates.buying_intent_strength = org.intent_strength;
+      companyUpdates.buying_intent_last_detected = new Date().toISOString();
+    }
+    if (org.intent_topics && org.intent_topics.length > 0) {
+      companyUpdates.buying_intent_topics = org.intent_topics;
+    }
+    if (org.currently_using_any_of_technology_names && org.currently_using_any_of_technology_names.length > 0) {
+      companyUpdates.currently_using_technologies = org.currently_using_any_of_technology_names;
     }
 
     enrichmentData.companyUpdates = companyUpdates;

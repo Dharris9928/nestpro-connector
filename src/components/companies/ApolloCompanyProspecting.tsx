@@ -31,6 +31,8 @@ interface ProspectCompany {
   description: string | null;
   logoUrl: string | null;
   technologies: string[];
+  buyingIntentStrength: string;
+  buyingIntentTopics: string[];
   socialMediaUrls: {
     facebook: string | null;
     twitter: string | null;
@@ -52,6 +54,7 @@ export function ApolloCompanyProspecting() {
   const [revenueRange, setRevenueRange] = useState('all');
   const [states, setStates] = useState<string[]>([]);
   const [stateInput, setStateInput] = useState('');
+  const [buyingIntentStrength, setBuyingIntentStrength] = useState('all');
 
   const addKeyword = () => {
     if (keywordInput && !keywords.includes(keywordInput)) {
@@ -84,6 +87,7 @@ export function ApolloCompanyProspecting() {
           employeeRange: employeeRange && employeeRange !== 'all' ? employeeRange : undefined,
           revenueRange: revenueRange && revenueRange !== 'all' ? revenueRange : undefined,
           states: states.length > 0 ? states : undefined,
+          buyingIntentStrength: buyingIntentStrength && buyingIntentStrength !== 'all' ? buyingIntentStrength : undefined,
           page: 1
         }
       });
@@ -140,6 +144,9 @@ export function ApolloCompanyProspecting() {
         status: 'Lead',
         notes: company.description,
         facebook_url: company.socialMediaUrls.facebook,
+        buying_intent_strength: company.buyingIntentStrength !== 'none' ? company.buyingIntentStrength : null,
+        buying_intent_topics: company.buyingIntentTopics.length > 0 ? company.buyingIntentTopics : null,
+        buying_intent_last_detected: company.buyingIntentStrength !== 'none' ? new Date().toISOString() : null,
         created_by: user.user?.id
       });
 
@@ -188,6 +195,9 @@ export function ApolloCompanyProspecting() {
         status: 'Lead',
         notes: company.description,
         facebook_url: company.socialMediaUrls.facebook,
+        buying_intent_strength: company.buyingIntentStrength !== 'none' ? company.buyingIntentStrength : null,
+        buying_intent_topics: company.buyingIntentTopics.length > 0 ? company.buyingIntentTopics : null,
+        buying_intent_last_detected: company.buyingIntentStrength !== 'none' ? new Date().toISOString() : null,
         created_by: user.user?.id
       }));
 
@@ -229,11 +239,12 @@ export function ApolloCompanyProspecting() {
         </CardHeader>
         <CardContent className="space-y-6">
           <Tabs defaultValue="keywords" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="keywords">Keywords</TabsTrigger>
               <TabsTrigger value="size">Company Size</TabsTrigger>
               <TabsTrigger value="location">Location</TabsTrigger>
               <TabsTrigger value="revenue">Revenue</TabsTrigger>
+              <TabsTrigger value="intent">🎯 Buying Intent</TabsTrigger>
             </TabsList>
 
             <TabsContent value="keywords" className="space-y-4">
@@ -318,6 +329,26 @@ export function ApolloCompanyProspecting() {
                 </Select>
               </div>
             </TabsContent>
+
+            <TabsContent value="intent" className="space-y-4">
+              <div>
+                <Label>Buying Intent Strength</Label>
+                <Select value={buyingIntentStrength} onValueChange={setBuyingIntentStrength}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any intent level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any intent level</SelectItem>
+                    <SelectItem value="high">🔥 High - Actively researching</SelectItem>
+                    <SelectItem value="medium">⚡ Medium - Showing interest</SelectItem>
+                    <SelectItem value="low">💡 Low - Early signals</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Filter companies by their buying intent signals from Apollo
+                </p>
+              </div>
+            </TabsContent>
           </Tabs>
 
           <Button onClick={searchCompanies} disabled={searching || keywords.length === 0} size="lg" className="w-full">
@@ -355,6 +386,13 @@ export function ApolloCompanyProspecting() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-medium">{company.companyName}</h3>
+                      {company.buyingIntentStrength !== 'none' && (
+                        <Badge variant="default" className="text-xs">
+                          {company.buyingIntentStrength === 'high' && '🔥 High Intent'}
+                          {company.buyingIntentStrength === 'medium' && '⚡ Medium Intent'}
+                          {company.buyingIntentStrength === 'low' && '💡 Low Intent'}
+                        </Badge>
+                      )}
                       {company.websiteUrl && (
                         <a href={company.websiteUrl} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-3 w-3 text-muted-foreground hover:text-primary" />
