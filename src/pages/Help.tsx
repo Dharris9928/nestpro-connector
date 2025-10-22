@@ -39,14 +39,15 @@ const Help = () => {
   const [activeTab, setActiveTab] = useState('getting-started');
 
   // Version information
-  const documentVersion = "4.0";
-  const lastUpdated = "2025-10-21";
+  const documentVersion = "4.1";
+  const lastUpdated = "2025-10-22";
 
   const sections = [
     { value: 'getting-started', label: 'Getting Started', keywords: 'welcome quick start guide roles overview' },
     { value: 'companies', label: 'Companies', keywords: 'companies management lead scoring filters bulk actions enrichment segments recommendations apollo perspective limited view' },
     { value: 'contacts', label: 'Contacts', keywords: 'contacts management decision makers influencers contact scoring import csv apollo' },
     { value: 'communications', label: 'Communications', keywords: 'communications ai generated emails call scripts linkedin messages outreach' },
+    { value: 'permits', label: 'Building Permits', keywords: 'building permits discovery search geographic region state metro city filed approved issued high value developments residential construction' },
     { value: 'prospecting', label: 'Prospecting', keywords: 'prospecting apollo search csv import segments recommendations' },
     { value: 'activities', label: 'Activities', keywords: 'activities outreach types outcomes sequences calendar' },
     { value: 'ai-features', label: 'AI Features', keywords: 'ai features scoring prioritization outreach strategy batch usage logs' },
@@ -120,6 +121,7 @@ const Help = () => {
           <TabsTrigger value="companies">Companies</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="communications">Communications</TabsTrigger>
+          <TabsTrigger value="permits">Building Permits</TabsTrigger>
           <TabsTrigger value="prospecting">Prospecting</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="ai-features">AI Features</TabsTrigger>
@@ -690,6 +692,263 @@ const Help = () => {
                       <p className="text-sm">
                         <strong>Admin Only:</strong> Only administrators can edit business context settings. These settings help the AI understand your business and generate consistent, on-brand communications.
                       </p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Building Permits Tab */}
+        <TabsContent value="permits" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                Building Permits Discovery
+              </CardTitle>
+              <CardDescription>
+                Find large-scale residential development opportunities from recent permit filings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="permits-overview">
+                  <AccordionTrigger>What is Building Permits Discovery?</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <p className="text-sm">
+                      Building Permits Discovery uses AI to search public permit databases and find recent 
+                      filings for large-scale residential developments. This helps you identify new opportunities 
+                      before your competitors.
+                    </p>
+                    <div>
+                      <h4 className="font-medium mb-2">Key Benefits</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Early Discovery:</strong> Find projects as soon as permits are filed</li>
+                        <li><strong>Auto-Matching:</strong> Automatically matches permits to existing companies in your CRM</li>
+                        <li><strong>Lead Generation:</strong> Creates new leads for unmatched builders</li>
+                        <li><strong>High-Value Alerts:</strong> Get notified about large projects (200+ units or $50M+)</li>
+                        <li><strong>Geographic Coverage:</strong> Search across regions, states, metros, or specific cities</li>
+                      </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="geographic-search">
+                  <AccordionTrigger>Multi-Level Geographic Search</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <p className="text-sm">
+                      Search for building permits at different geographic levels based on your market strategy
+                    </p>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge>Region</Badge>
+                          <h4 className="font-medium">Regional Search</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Search across multi-state regions for broad market coverage
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
+                          <li>Southwest (AZ, NM, NV, UT)</li>
+                          <li>Southeast (FL, GA, AL, SC, NC, TN, MS, LA)</li>
+                          <li>Pacific Northwest (WA, OR, ID)</li>
+                          <li>Texas, California, Northeast, Midwest, Mountain West</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge>State</Badge>
+                          <h4 className="font-medium">State-Level Search</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Target specific states for focused prospecting. Select one or multiple states 
+                          to search for permits filed within those boundaries.
+                        </p>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge>Metro</Badge>
+                          <h4 className="font-medium">Metro Area Search</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Search major metropolitan areas including surrounding cities
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
+                          <li>Austin Metro (Austin, Round Rock, Georgetown, Cedar Park, etc.)</li>
+                          <li>Phoenix Metro (Phoenix, Scottsdale, Mesa, Tempe, etc.)</li>
+                          <li>Dallas-Fort Worth, Las Vegas, Denver, Atlanta, and more</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge>City</Badge>
+                          <h4 className="font-medium">City-Specific Search</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Hyper-local search for specific cities. Perfect for targeting precise markets 
+                          or following up in areas where you have existing relationships.
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="search-parameters">
+                  <AccordionTrigger>Search Parameters & Filters</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <div>
+                      <h4 className="font-medium mb-2">Minimum Units</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Filter permits by minimum number of residential units. Default is 90+ units to focus 
+                        on larger developments. Adjust the slider from 50 to 500+ units based on your target 
+                        project size.
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Date Range</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Last 7 Days:</strong> Most recent permits, highest urgency</li>
+                        <li><strong>Last 30 Days:</strong> Recent activity, good for regular scans</li>
+                        <li><strong>Last 90 Days:</strong> Quarterly review</li>
+                        <li><strong>Last 6 Months:</strong> Historical analysis</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Status Filter</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        After importing permits, filter by permit status to focus on specific stages:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>All Statuses:</strong> View all imported permits</li>
+                        <li><strong>Filed:</strong> Recently submitted, earliest stage</li>
+                        <li><strong>Under Review:</strong> Being processed by authorities</li>
+                        <li><strong>Approved:</strong> Approved but not yet issued</li>
+                        <li><strong>Issued:</strong> Ready for construction to begin</li>
+                      </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="matching-leads">
+                  <AccordionTrigger>Auto-Matching & Lead Creation</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <div>
+                      <h4 className="font-medium mb-2">Automatic Company Matching</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        When permits are imported, the system uses fuzzy logic to match builders to 
+                        existing companies:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Exact Match:</strong> 95% confidence - Builder name exactly matches company name</li>
+                        <li><strong>Fuzzy Match:</strong> 80% confidence - Similar name + location match</li>
+                        <li><strong>No Match:</strong> New builder not in your CRM</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Automatic Lead Creation</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        For unmatched builders, the system automatically creates new lead companies with:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Company name from permit</li>
+                        <li>Location (city, state, zip)</li>
+                        <li>Address from permit</li>
+                        <li>Contact information (if available)</li>
+                        <li>Industry type set to "Builder"</li>
+                        <li>Status set to "Lead"</li>
+                        <li>Notes with permit details and project information</li>
+                      </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="high-value-alerts">
+                  <AccordionTrigger>High-Value Opportunity Alerts</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <p className="text-sm">
+                      The system automatically identifies and alerts you to high-value opportunities
+                    </p>
+                    <div>
+                      <h4 className="font-medium mb-2">Alert Criteria</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Large Development:</strong> 200+ residential units</li>
+                        <li><strong>High Value:</strong> Estimated project value of $50M+</li>
+                        <li><strong>Known Builder:</strong> Permit from existing customer or priority account</li>
+                        <li><strong>Target Market:</strong> Project in your key geographic markets</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Alert Management</h4>
+                      <p className="text-sm text-muted-foreground">
+                        View alerts in the Alerts tab. Each alert shows project details, location, 
+                        unit count, and estimated value. Acknowledge alerts after reviewing to keep 
+                        your alert list clean and actionable.
+                      </p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="analytics">
+                  <AccordionTrigger>Permit Analytics & Insights</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <div>
+                      <h4 className="font-medium mb-2">Key Metrics</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Total Permits:</strong> All discovered permits in your database</li>
+                        <li><strong>Matched Companies:</strong> Permits linked to existing companies with match rate %</li>
+                        <li><strong>High-Value Projects:</strong> Count of large developments (200+ units or $50M+)</li>
+                        <li><strong>Active Markets:</strong> Number of states with permit activity</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Analytics Dashboard</h4>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        The Analytics tab provides visualizations including:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Total Units:</strong> Sum of all residential units across permits</li>
+                        <li><strong>Total Project Value:</strong> Combined estimated value of all projects</li>
+                        <li><strong>Average Project Size:</strong> Mean units per project</li>
+                        <li><strong>Permits by State:</strong> Bar chart showing geographic distribution</li>
+                        <li><strong>Permits by Region:</strong> Regional breakdown visualization</li>
+                      </ul>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="best-practices">
+                  <AccordionTrigger>Best Practices for Permit Discovery</AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <div>
+                      <h4 className="font-medium mb-2">Regular Scanning Strategy</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li>Run weekly searches for high-priority markets (last 7 days)</li>
+                        <li>Monthly searches for broader regions (last 30 days)</li>
+                        <li>Quarterly deep dives across all markets (last 90 days)</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Timing for Outreach</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        <li><strong>Filed Status:</strong> Early engagement, before competition</li>
+                        <li><strong>Under Review:</strong> Good time to introduce your solutions</li>
+                        <li><strong>Approved/Issued:</strong> Project moving forward, decision time for tech specs</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Follow-Up Actions</h4>
+                      <p className="text-sm text-muted-foreground">
+                        After discovering a high-value permit:
+                      </p>
+                      <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground ml-4">
+                        <li>Review permit details in the permit detail dialog</li>
+                        <li>Check if builder is already in your CRM (matched)</li>
+                        <li>For matched companies, add activity to track outreach</li>
+                        <li>For new leads, assign to appropriate sales rep</li>
+                        <li>Use AI Features to generate personalized outreach strategy</li>
+                      </ol>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

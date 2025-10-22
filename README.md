@@ -1,10 +1,17 @@
-# Google Nest Pro CRM - Version 4.0
+# Google Nest Pro CRM - Version 4.1
 
 A comprehensive CRM system built for managing Google Nest Pro partnerships with builders and contractors.
 
-## Latest Updates (v4.0)
+## Latest Updates (v4.1)
 
 ### New Features
+- **Building Permits Discovery**: AI-powered permit search across regions, states, metros, and cities
+  - Multi-level geographic search (Region, State, Metro Area, City)
+  - Automatic matching to existing companies with fuzzy logic
+  - Auto-create new leads from unmatched permits
+  - High-value opportunity alerts (200+ units or $50M+ projects)
+  - Status filtering (Filed, Under Review, Approved, Issued)
+  - Comprehensive permit analytics and tracking
 - **AI Error Helper**: Interactive chatbot in Settings that helps troubleshoot errors with image support
 - **Enhanced Perspective Filtering**: All dashboard components now respect user perspective filtering (My Records, Assigned to Me, All Records)
 - **Improved Data Views**: Consistent filtering across Priority Distribution, Segment Performance, and Smart Recommendations
@@ -72,17 +79,25 @@ This project is built with:
 
 ## Key Features
 
+- **Building Permit Discovery**: AI-powered search to find large-scale residential developments
+  - Search by region, state, metro area, or city
+  - Auto-match permits to existing companies
+  - Create new leads from unmatched builders
+  - Track high-value opportunities (200+ units, $50M+)
+  - Filter by permit status (Filed, Approved, Issued)
+  - Comprehensive analytics and visualizations
 - **Intelligent Lead Scoring**: Industry-specific scoring algorithms for builders and contractors
 - **Contact Management**: Track decision makers and influencers
 - **Activity Tracking**: Monitor outreach and engagement
 - **AI-Powered Features**: 
+  - Building permit discovery and analysis
   - Error troubleshooting assistant
   - Lead prioritization
   - Outreach strategy recommendations
   - Contact scoring
 - **Advanced Security**: Field-level permissions, encryption, audit logs
 - **Data Enrichment**: Apollo.io integration for company data
-- **Comprehensive Reporting**: Priority distribution, segment performance analytics
+- **Comprehensive Reporting**: Priority distribution, segment performance analytics, permit discovery metrics
 
 ## How can I deploy this project?
 
