@@ -384,9 +384,12 @@ export function EditCompanyDialog({ open, onClose, onOpenChange, onSuccess, comp
         description: 'Company updated and score recalculated'
       });
 
+      // Reset state and close directly (bypass handleClose to avoid unsaved changes check)
       setHasUnsavedChanges(false);
+      setShowCloseWarning(false);
       onSuccess();
-      handleClose();
+      if (onClose) onClose();
+      if (onOpenChange) onOpenChange(false);
     } catch (error: any) {
       toast({
         title: 'Error',
