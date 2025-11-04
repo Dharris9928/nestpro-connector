@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,15 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Copy, Eye, Edit, Ban, Upload } from 'lucide-react';
+import { Loader2, Copy, Eye, Edit, Ban } from 'lucide-react';
 import { SlidePreviewCarousel } from '@/components/presentations/SlidePreviewCarousel';
 import { PresentationTable } from '@/components/presentations/PresentationTable';
 import { AISlideBuilder } from '@/components/presentations/AISlideBuilder';
 import { PresentationAnalytics } from '@/components/presentations/PresentationAnalytics';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-
-// Use the correct worker version to match the installed package
-GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.394/pdf.worker.min.js`;
+// PDF.js removed - using server-side parsing instead
 
 export default function Presentation() {
   const navigate = useNavigate();
@@ -303,61 +300,12 @@ Include contact info or next steps`);
   const [savedPresentationId, setSavedPresentationId] = useState<string | null>(null);
   const [shareableLink, setShareableLink] = useState('');
   const [redesignInstruction, setRedesignInstruction] = useState('');
-  const [isPdfUploading, setIsPdfUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Redirect if not admin
   if (!roleLoading && roleData?.role !== 'admin') {
     navigate('/');
     return null;
   }
-
-  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || file.type !== 'application/pdf') {
-      toast({
-        title: 'Invalid file',
-        description: 'Please upload a PDF file',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsPdfUploading(true);
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await getDocument({ data: arrayBuffer }).promise;
-      
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        fullText += pageText + '\n\n';
-      }
-
-      setOutline(fullText.trim());
-      
-      toast({
-        title: 'PDF loaded!',
-        description: `Extracted text from ${pdf.numPages} pages`,
-      });
-    } catch (error: any) {
-      console.error('PDF upload error:', error);
-      toast({
-        title: 'PDF extraction failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPdfUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
 
   const handleGenerateSlides = async () => {
     if (!outline.trim()) {
@@ -512,41 +460,11 @@ Include contact info or next steps`);
               <CardDescription>Paste your outline and let AI create Google-branded slides</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isPdfUploading}
-                    className="font-google"
-                  >
-                    {isPdfUploading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="mr-2 h-4 w-4" />
-                    )}
-                    Upload PDF
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Or paste your outline below
-                  </span>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={handlePdfUpload}
-                  className="hidden"
-                />
-              </div>
-
               <Textarea
                 placeholder="Paste your presentation outline here...&#10;&#10;Example:&#10;Title: Q4 Sales Performance&#10;&#10;Section 1: Overview&#10;- Key metrics&#10;- Team achievements&#10;&#10;Section 2: Results&#10;- Revenue growth&#10;- New customers"
                 value={outline}
                 onChange={(e) => setOutline(e.target.value)}
-                className="min-h-[200px] font-google"
+                className="min-h-[300px] font-google"
               />
 
               <div className="flex gap-2">
