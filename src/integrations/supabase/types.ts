@@ -1510,6 +1510,8 @@ export type Database = {
           content: string
           conversation_active: boolean | null
           created_at: string | null
+          email_opened_at: string | null
+          email_responded_at: string | null
           generated_at: string | null
           id: string
           notes: string | null
@@ -1529,6 +1531,8 @@ export type Database = {
           content: string
           conversation_active?: boolean | null
           created_at?: string | null
+          email_opened_at?: string | null
+          email_responded_at?: string | null
           generated_at?: string | null
           id?: string
           notes?: string | null
@@ -1548,6 +1552,8 @@ export type Database = {
           content?: string
           conversation_active?: boolean | null
           created_at?: string | null
+          email_opened_at?: string | null
+          email_responded_at?: string | null
           generated_at?: string | null
           id?: string
           notes?: string | null
@@ -3233,6 +3239,8 @@ export type Database = {
           created_at: string | null
           created_by: string
           duration_minutes: number | null
+          email_opened_at: string | null
+          email_responded_at: string | null
           id: string
           message_content: string | null
           next_action: string | null
@@ -3256,6 +3264,8 @@ export type Database = {
           created_at?: string | null
           created_by: string
           duration_minutes?: number | null
+          email_opened_at?: string | null
+          email_responded_at?: string | null
           id?: string
           message_content?: string | null
           next_action?: string | null
@@ -3279,6 +3289,8 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           duration_minutes?: number | null
+          email_opened_at?: string | null
+          email_responded_at?: string | null
           id?: string
           message_content?: string | null
           next_action?: string | null

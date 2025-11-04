@@ -29,6 +29,8 @@ export function EditCommunicationDialog({
     communication_type: 'email' as 'email' | 'call_script' | 'linkedin_message' | 'phone' | 'meeting' | 'demo' | 'training',
     subject: '',
     content: '',
+    email_opened_at: '',
+    email_responded_at: '',
     notes: '',
     opportunity_id: 'none' as string,
   });
@@ -51,10 +53,19 @@ export function EditCommunicationDialog({
 
   useEffect(() => {
     if (communication && open) {
+      // Format datetime for datetime-local input
+      const formatDateTimeLocal = (dateStr: string | null) => {
+        if (!dateStr) return "";
+        const date = new Date(dateStr);
+        return date.toISOString().slice(0, 16);
+      };
+
       setFormData({
         communication_type: communication.communication_type || 'email',
         subject: communication.subject || '',
         content: communication.content || '',
+        email_opened_at: formatDateTimeLocal(communication.email_opened_at),
+        email_responded_at: formatDateTimeLocal(communication.email_responded_at),
         notes: communication.notes || '',
         opportunity_id: communication.opportunity_id || 'none',
       });
@@ -72,6 +83,8 @@ export function EditCommunicationDialog({
           communication_type: formData.communication_type,
           subject: formData.subject || null,
           content: formData.content,
+          email_opened_at: formData.email_opened_at || null,
+          email_responded_at: formData.email_responded_at || null,
           notes: formData.notes || null,
           opportunity_id: formData.opportunity_id === 'none' ? null : formData.opportunity_id,
         })
@@ -181,6 +194,31 @@ export function EditCommunicationDialog({
               className="resize-none font-mono text-sm"
             />
           </div>
+
+          {/* Email Tracking - Only show for email type */}
+          {formData.communication_type === 'email' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email_opened_at">Email Opened Date</Label>
+                <Input
+                  id="email_opened_at"
+                  type="datetime-local"
+                  value={formData.email_opened_at}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email_opened_at: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email_responded_at">Email Responded Date</Label>
+                <Input
+                  id="email_responded_at"
+                  type="datetime-local"
+                  value={formData.email_responded_at}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email_responded_at: e.target.value }))}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-2">
