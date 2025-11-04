@@ -1,9 +1,23 @@
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+interface SegmentCard {
+  title: string;
+  percentage: string;
+  count: string;
+  revenue: string;
+  description: string;
+  characteristics: string[];
+  productFit: { product: string; rating: string }[];
+  borderColor: string;
+  percentageColor: string;
+  revenueColor: string;
+}
 
 interface GoogleSlideRendererProps {
   slide: {
     id: number;
-    type: 'title' | 'section' | 'content' | 'two-column' | 'cta';
+    type: 'title' | 'section' | 'content' | 'two-column' | 'cta' | 'segment-grid';
     title?: string;
     subtitle?: string;
     bullets?: string[];
@@ -12,8 +26,26 @@ interface GoogleSlideRendererProps {
     buttonText?: string;
     background?: string;
     accent?: string;
+    segments?: SegmentCard[];
   };
 }
+
+const getRatingColor = (rating: string) => {
+  switch (rating.toLowerCase()) {
+    case 'excellent':
+      return 'bg-green-500 text-white';
+    case 'strong':
+      return 'bg-green-400 text-white';
+    case 'good':
+      return 'bg-yellow-500 text-white';
+    case 'moderate':
+      return 'bg-blue-500 text-white';
+    case 'low':
+      return 'bg-red-500 text-white';
+    default:
+      return 'bg-gray-500 text-white';
+  }
+};
 
 export function GoogleSlideRenderer({ slide }: GoogleSlideRendererProps) {
   const renderSlideContent = () => {
@@ -119,6 +151,93 @@ export function GoogleSlideRenderer({ slide }: GoogleSlideRendererProps) {
                 {slide.buttonText}
               </button>
             )}
+          </div>
+        );
+
+      case 'segment-grid':
+        return (
+          <div className="h-full bg-white p-8 flex flex-col overflow-auto">
+            <div className="text-center mb-6">
+              <h2 className="text-4xl font-bold mb-3">
+                <span className="text-gray-900">{slide.title?.split(' ').slice(0, -2).join(' ')} </span>
+                <span className="text-blue-500">{slide.title?.split(' ').slice(-2).join(' ')}</span>
+              </h2>
+              {slide.subtitle && (
+                <p className="text-lg text-gray-600 max-w-4xl mx-auto">
+                  {slide.subtitle}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4 flex-1">
+              {slide.segments?.map((segment, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-lg p-4 border-t-4 shadow-sm flex flex-col"
+                  style={{ borderTopColor: segment.borderColor }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-xl font-bold text-gray-900 flex-1">
+                      {segment.title}
+                    </h3>
+                    <div className="text-right ml-2">
+                      <div 
+                        className="text-2xl font-bold px-3 py-1 rounded"
+                        style={{ 
+                          backgroundColor: segment.percentageColor,
+                          color: segment.percentageColor.includes('blue') || segment.percentageColor.includes('green') || segment.percentageColor.includes('red') ? 'white' : '#666'
+                        }}
+                      >
+                        {segment.percentage}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">{segment.count}</div>
+                    </div>
+                  </div>
+
+                  <div className="mb-2">
+                    <span 
+                      className="inline-block px-2 py-0.5 rounded text-xs font-semibold border"
+                      style={{ 
+                        borderColor: segment.revenueColor,
+                        color: segment.revenueColor,
+                        backgroundColor: `${segment.revenueColor}10`
+                      }}
+                    >
+                      {segment.revenue}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-700 mb-3 leading-snug">
+                    {segment.description}
+                  </p>
+
+                  <div className="mb-2">
+                    <h4 className="text-sm font-bold text-gray-900 mb-1">Key Characteristics</h4>
+                    <ul className="space-y-0.5">
+                      {segment.characteristics.map((char, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
+                          <span className="text-gray-400 mt-0.5">•</span>
+                          <span className="leading-tight">{char}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mt-auto pt-2 border-t">
+                    <h4 className="text-sm font-bold text-gray-900 mb-1">Product Fit Assessment</h4>
+                    <div className="space-y-1">
+                      {segment.productFit.map((fit, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-700">{fit.product}</span>
+                          <span className={`px-2 py-0.5 rounded font-semibold ${getRatingColor(fit.rating)}`}>
+                            {fit.rating}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         );
 
