@@ -112,7 +112,8 @@ serve(async (req) => {
         buyingIntentSignals: org.intent_signals || [],
         buyingIntentStrength: org.intent_strength || 'none',
         buyingIntentTopics: org.intent_topics || [],
-        technologies: org.currently_using_any_of_technology_names || []
+        technologies: org.currently_using_any_of_technology_names || [],
+        parentOrganization: org.parent_organization || null
       }
     };
 
@@ -208,8 +209,101 @@ serve(async (req) => {
       companyUpdates.currently_using_technologies = org.currently_using_any_of_technology_names;
     }
 
+    // Handle parent organization/subsidiary relationship
+    let parentCompanyCreated = false;
+    let parentCompanyName = null;
+    
+    if (org.parent_organization && org.parent_organization.name) {
+      console.log('Parent organization detected:', org.parent_organization.name);
+      parentCompanyName = org.parent_organization.name;
+      
+      // Check if parent company already exists in our database
+      const { data: existingParent, error: searchError } = await supabase
+        .from('companies')
+        .select('id, company_name')
+        .ilike('company_name', org.parent_organization.name)
+        .limit(1)
+        .single();
+
+      if (searchError && searchError.code !== 'PGRST116') {
+        console.error('Error searching for parent company:', searchError);
+      }
+
+      if (existingParent) {
+        // Parent company already exists, just link to it
+        console.log('Parent company exists, linking:', existingParent.id);
+        companyUpdates.parent_company_id = existingParent.id;
+        companyUpdates.company_type = 'subsidiary';
+      } else {
+        // Create the parent company
+        console.log('Creating new parent company:', org.parent_organization.name);
+        
+        // Get the current user for created_by field
+        let createdBy = null;
+        if (authHeader) {
+          const { data: { user } } = await supabase.auth.getUser(
+            authHeader.replace('Bearer ', '')
+          );
+          if (user) {
+            createdBy = user.id;
+          }
+        }
+        
+        const newParentData: any = {
+          company_name: org.parent_organization.name,
+          company_type: 'parent',
+          is_parent_company: true,
+          industry_type: companyUpdates.industry_type || 'Contractor',
+          created_by: createdBy
+        };
+
+        // Add optional parent org data if available
+        if (org.parent_organization.website_url) {
+          newParentData.website_url = org.parent_organization.website_url;
+        }
+        if (org.parent_organization.linkedin_url) {
+          newParentData.linkedin_company_url = org.parent_organization.linkedin_url;
+        }
+
+        const { data: newParent, error: createError } = await supabase
+          .from('companies')
+          .insert(newParentData)
+          .select('id, company_name')
+          .single();
+
+        if (createError) {
+          console.error('Error creating parent company:', createError);
+        } else if (newParent) {
+          console.log('Parent company created successfully:', newParent.id);
+          companyUpdates.parent_company_id = newParent.id;
+          companyUpdates.company_type = 'subsidiary';
+          parentCompanyCreated = true;
+          
+          // Create notification for user
+          if (createdBy) {
+            const { error: notifError } = await supabase
+              .from('notifications')
+              .insert({
+                user_id: createdBy,
+                type: 'parent_company_created',
+                title: 'Parent Company Created',
+                message: `A new parent company "${newParent.company_name}" was created and linked during Apollo enrichment. Please review and update the company profile.`,
+                link_url: `/companies?search=${encodeURIComponent(newParent.company_name)}`,
+                is_read: false
+              });
+
+            if (notifError) {
+              console.error('Error creating notification:', notifError);
+            }
+          }
+        }
+      }
+    }
+
     enrichmentData.companyUpdates = companyUpdates;
     enrichmentData.fieldsEnriched = Object.keys(companyUpdates);
+    enrichmentData.parentCompanyCreated = parentCompanyCreated;
+    enrichmentData.parentCompanyName = parentCompanyName;
 
     return new Response(
       JSON.stringify(enrichmentData),

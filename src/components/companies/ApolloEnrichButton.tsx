@@ -60,9 +60,18 @@ export function ApolloEnrichButton({
 
       if (updateError) throw updateError;
 
+      let description = `${data.fieldsEnriched.length} business fields updated from Apollo database.`;
+      
+      if (data.parentCompanyCreated && data.parentCompanyName) {
+        description += ` A new parent company "${data.parentCompanyName}" was created and linked. Please review and update its profile.`;
+      } else if (data.parentCompanyName && !data.parentCompanyCreated) {
+        description += ` Linked to existing parent company "${data.parentCompanyName}".`;
+      }
+
       toast({
         title: 'Apollo Enrichment Complete',
-        description: `${data.fieldsEnriched.length} business fields updated from Apollo database.`,
+        description,
+        duration: data.parentCompanyCreated ? 8000 : 5000,
       });
       
       if (onComplete) onComplete();
