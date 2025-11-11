@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Building2, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Building2, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { EditCompanyDialog } from './EditCompanyDialog';
+import { MissingHierarchyDialog } from './MissingHierarchyDialog';
 
 interface HierarchyNode {
   id: string;
@@ -17,7 +19,10 @@ interface HierarchyNode {
 }
 
 export function CompanyHierarchyTree() {
+  const queryClient = useQueryClient();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [showMissingDialog, setShowMissingDialog] = useState(false);
 
   const { data: hierarchyData, isLoading } = useQuery({
     queryKey: ['company-hierarchy'],
@@ -88,7 +93,7 @@ export function CompanyHierarchyTree() {
     return (
       <div key={node.id} className="select-none">
         <div
-          className="flex items-center gap-2 py-2 px-3 hover:bg-muted/50 rounded-md transition-colors group"
+          className="flex items-center gap-2 py-2 px-3 hover:bg-muted/50 rounded-md transition-colors group cursor-pointer"
           style={{ paddingLeft: `${node.level * 24 + 12}px` }}
         >
           {nodeHasChildren ? (
@@ -96,7 +101,10 @@ export function CompanyHierarchyTree() {
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0"
-              onClick={() => toggleNode(node.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleNode(node.id);
+              }}
             >
               {isExpanded ? (
                 <ChevronDown className="h-4 w-4" />
@@ -110,7 +118,12 @@ export function CompanyHierarchyTree() {
           
           <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           
-          <span className="font-medium text-sm flex-1">{node.company_name}</span>
+          <span 
+            className="font-medium text-sm flex-1 hover:text-primary transition-colors"
+            onClick={() => setSelectedCompanyId(node.id)}
+          >
+            {node.company_name}
+          </span>
           
           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <Badge variant="outline" className="text-xs">
@@ -142,6 +155,14 @@ export function CompanyHierarchyTree() {
             Company Hierarchy
           </CardTitle>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowMissingDialog(true)}
+            >
+              <AlertCircle className="h-4 w-4" />
+              Find Missing Connections
+            </Button>
             <Button variant="outline" size="sm" onClick={expandAll}>
               Expand All
             </Button>
@@ -158,6 +179,20 @@ export function CompanyHierarchyTree() {
           </div>
         </ScrollArea>
       </CardContent>
+
+      <EditCompanyDialog
+        companyId={selectedCompanyId}
+        open={!!selectedCompanyId}
+        onOpenChange={(open) => !open && setSelectedCompanyId(null)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['company-hierarchy'] });
+        }}
+      />
+
+      <MissingHierarchyDialog
+        open={showMissingDialog}
+        onOpenChange={setShowMissingDialog}
+      />
     </Card>
   );
 }
