@@ -209,85 +209,101 @@ serve(async (req) => {
       companyUpdates.currently_using_technologies = org.currently_using_any_of_technology_names;
     }
 
-    // Collect all relationship information for user confirmation
-    const relationships: any = {
-      parent: null,
-      subsidiaries: []
-    };
-
-    // Handle parent organization
+    // Handle parent organization/subsidiary relationship
+    let parentCompanyCreated = false;
+    let parentCompanyName = null;
+    
     if (org.parent_organization && org.parent_organization.name) {
       console.log('Parent organization detected:', org.parent_organization.name);
+      parentCompanyName = org.parent_organization.name;
       
-      // Check if parent company already exists
-      const { data: existingParent } = await supabase
+      // Check if parent company already exists in our database
+      const { data: existingParent, error: searchError } = await supabase
         .from('companies')
         .select('id, company_name')
         .ilike('company_name', org.parent_organization.name)
         .limit(1)
         .single();
 
-      relationships.parent = {
-        name: org.parent_organization.name,
-        website: org.parent_organization.website_url || null,
-        linkedin: org.parent_organization.linkedin_url || null,
-        exists: !!existingParent,
-        existingId: existingParent?.id || null
-      };
-    }
-
-    // Handle subsidiaries/child organizations
-    if (org.subsidiaries && Array.isArray(org.subsidiaries)) {
-      for (const subsidiary of org.subsidiaries) {
-        if (subsidiary.name) {
-          console.log('Subsidiary detected:', subsidiary.name);
-          
-          // Check if subsidiary already exists
-          const { data: existingSub } = await supabase
-            .from('companies')
-            .select('id, company_name')
-            .ilike('company_name', subsidiary.name)
-            .limit(1)
-            .single();
-
-          relationships.subsidiaries.push({
-            name: subsidiary.name,
-            website: subsidiary.website_url || null,
-            linkedin: subsidiary.linkedin_url || null,
-            exists: !!existingSub,
-            existingId: existingSub?.id || null
-          });
-        }
+      if (searchError && searchError.code !== 'PGRST116') {
+        console.error('Error searching for parent company:', searchError);
       }
-    }
 
-    // Also check for child_organizations field (alternative API structure)
-    if (org.child_organizations && Array.isArray(org.child_organizations)) {
-      for (const child of org.child_organizations) {
-        if (child.name && !relationships.subsidiaries.find((s: any) => s.name === child.name)) {
-          console.log('Child organization detected:', child.name);
+      if (existingParent) {
+        // Parent company already exists, just link to it
+        console.log('Parent company exists, linking:', existingParent.id);
+        companyUpdates.parent_company_id = existingParent.id;
+        companyUpdates.company_type = 'subsidiary';
+      } else {
+        // Create the parent company
+        console.log('Creating new parent company:', org.parent_organization.name);
+        
+        // Get the current user for created_by field
+        let createdBy = null;
+        if (authHeader) {
+          const { data: { user } } = await supabase.auth.getUser(
+            authHeader.replace('Bearer ', '')
+          );
+          if (user) {
+            createdBy = user.id;
+          }
+        }
+        
+        const newParentData: any = {
+          company_name: org.parent_organization.name,
+          company_type: 'parent',
+          is_parent_company: true,
+          industry_type: companyUpdates.industry_type || 'Contractor',
+          created_by: createdBy
+        };
+
+        // Add optional parent org data if available
+        if (org.parent_organization.website_url) {
+          newParentData.website_url = org.parent_organization.website_url;
+        }
+        if (org.parent_organization.linkedin_url) {
+          newParentData.linkedin_company_url = org.parent_organization.linkedin_url;
+        }
+
+        const { data: newParent, error: createError } = await supabase
+          .from('companies')
+          .insert(newParentData)
+          .select('id, company_name')
+          .single();
+
+        if (createError) {
+          console.error('Error creating parent company:', createError);
+        } else if (newParent) {
+          console.log('Parent company created successfully:', newParent.id);
+          companyUpdates.parent_company_id = newParent.id;
+          companyUpdates.company_type = 'subsidiary';
+          parentCompanyCreated = true;
           
-          const { data: existingChild } = await supabase
-            .from('companies')
-            .select('id, company_name')
-            .ilike('company_name', child.name)
-            .limit(1)
-            .single();
+          // Create notification for user
+          if (createdBy) {
+            const { error: notifError } = await supabase
+              .from('notifications')
+              .insert({
+                user_id: createdBy,
+                type: 'parent_company_created',
+                title: 'Parent Company Created',
+                message: `A new parent company "${newParent.company_name}" was created and linked during Apollo enrichment. Please review and update the company profile.`,
+                link_url: `/companies?search=${encodeURIComponent(newParent.company_name)}`,
+                is_read: false
+              });
 
-          relationships.subsidiaries.push({
-            name: child.name,
-            website: child.website_url || null,
-            linkedin: child.linkedin_url || null,
-            exists: !!existingChild,
-            existingId: existingChild?.id || null
-          });
+            if (notifError) {
+              console.error('Error creating notification:', notifError);
+            }
+          }
         }
       }
     }
 
     enrichmentData.companyUpdates = companyUpdates;
     enrichmentData.fieldsEnriched = Object.keys(companyUpdates);
-    enrichmentData.relationships = relationships;
+    enrichmentData.parentCompanyCreated = parentCompanyCreated;
+    enrichmentData.parentCompanyName = parentCompanyName;
 
     return new Response(
       JSON.stringify(enrichmentData),
