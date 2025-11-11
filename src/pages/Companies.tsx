@@ -27,6 +27,7 @@ import { CalendarView } from "@/components/views/CalendarView";
 import { GalleryView } from "@/components/views/GalleryView";
 import { ListView } from "@/components/views/ListView";
 import { FormView } from "@/components/views/FormView";
+import { CompanyHierarchyTree } from "@/components/companies/CompanyHierarchyTree";
 import { useToast } from "@/hooks/use-toast";
 import { PerspectiveSelector } from "@/components/common/PerspectiveSelector";
 import { usePerspective } from "@/hooks/usePerspective";
@@ -771,6 +772,10 @@ const Companies = () => {
                 ]}
                 onSubmit={handleFormSubmit}
               />
+            )}
+
+            {currentView === 'hierarchy' && (
+              <CompanyHierarchyTree />
             )}
           </div>
 

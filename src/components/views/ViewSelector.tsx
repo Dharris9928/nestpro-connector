@@ -19,9 +19,10 @@ import {
   Star,
   Lock,
   Users,
+  Network,
 } from 'lucide-react';
 
-export type ViewType = 'grid' | 'kanban' | 'calendar' | 'gallery' | 'list' | 'form' | 'timeline' | 'gantt';
+export type ViewType = 'grid' | 'kanban' | 'calendar' | 'gallery' | 'list' | 'form' | 'timeline' | 'gantt' | 'hierarchy';
 
 interface ViewSelectorProps {
   currentView: ViewType;
@@ -39,6 +40,7 @@ const VIEW_ICONS = {
   form: FileText,
   timeline: Clock,
   gantt: GanttChart,
+  hierarchy: Network,
 };
 
 const VIEW_LABELS = {
@@ -50,6 +52,7 @@ const VIEW_LABELS = {
   form: 'Form',
   timeline: 'Timeline',
   gantt: 'Gantt',
+  hierarchy: 'Hierarchy',
 };
 
 export function ViewSelector({ 
