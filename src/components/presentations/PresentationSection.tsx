@@ -2,6 +2,21 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, CheckCircle, TrendingUp, AlertCircle } from 'lucide-react';
 
+interface FlowchartNode {
+  id: string;
+  label: string;
+  description?: string;
+  type?: 'start' | 'process' | 'decision' | 'end';
+  color?: string;
+}
+
+interface FlowchartConnection {
+  from: string;
+  to: string;
+  label?: string;
+  type?: 'yes' | 'no' | 'default';
+}
+
 interface Section {
   id: number;
   type: string;
@@ -16,6 +31,8 @@ interface Section {
   timeline?: Array<{ date: string; title: string; description: string }>;
   columns?: Array<{ title: string; items: string[] }>;
   questions?: string[];
+  flowchartNodes?: FlowchartNode[];
+  flowchartConnections?: FlowchartConnection[];
   data?: any;
   background?: string;
   accent?: string;
@@ -220,6 +237,103 @@ export function PresentationSection({ section }: PresentationSectionProps) {
             style={{ background: `linear-gradient(135deg, ${section.accent || 'hsl(var(--primary))'} 0%, ${section.background || 'hsl(var(--primary-glow))'} 100%)` }}
           >
             <h2 className="text-5xl font-bold text-white font-google">{section.title}</h2>
+          </div>
+        );
+
+      case 'flowchart':
+        return (
+          <div className="max-w-7xl mx-auto px-8 py-12">
+            <h2 className="text-4xl font-bold mb-12 text-center font-google">{section.title}</h2>
+            <div className="relative">
+              {/* Flowchart visualization */}
+              <div className="flex flex-col items-center gap-4">
+                {section.flowchartNodes?.map((node, idx) => {
+                  const nodeColor = node.color || `hsl(var(--chart-${(idx % 5) + 1}))`;
+                  const isDecision = node.type === 'decision';
+                  const isStart = node.type === 'start';
+                  const isEnd = node.type === 'end';
+                  
+                  return (
+                    <div key={node.id} className="flex flex-col items-center">
+                      {/* Connection line from previous */}
+                      {idx > 0 && !isStart && (
+                        <div className="w-1 h-8 bg-border mb-2" />
+                      )}
+                      
+                      {/* Node */}
+                      <Card 
+                        className={`p-4 min-w-[280px] max-w-md text-center transition-all hover:shadow-lg ${
+                          isDecision ? 'rotate-0 border-2 border-dashed' : ''
+                        } ${isStart || isEnd ? 'rounded-full px-8' : ''}`}
+                        style={{ borderColor: nodeColor }}
+                      >
+                        <div className="flex items-center justify-center gap-3">
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                            style={{ backgroundColor: nodeColor }}
+                          >
+                            {idx + 1}
+                          </div>
+                          <div className="text-left flex-1">
+                            <h4 className="font-bold text-lg">{node.label}</h4>
+                            {node.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{node.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isDecision && (
+                          <div className="mt-3 flex justify-center gap-4 text-xs">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                              ✓ Yes Path
+                            </Badge>
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                              ✗ No Path
+                            </Badge>
+                          </div>
+                        )}
+                      </Card>
+                      
+                      {/* Branching paths for decision nodes */}
+                      {isDecision && section.flowchartConnections && (
+                        <div className="flex gap-8 mt-4">
+                          {section.flowchartConnections
+                            .filter(conn => conn.from === node.id)
+                            .map((conn, connIdx) => {
+                              const targetNode = section.flowchartNodes?.find(n => n.id === conn.to);
+                              return (
+                                <div key={connIdx} className="flex flex-col items-center">
+                                  <div className={`w-1 h-6 ${conn.type === 'yes' ? 'bg-green-500' : 'bg-amber-500'}`} />
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`mb-2 ${conn.type === 'yes' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}
+                                  >
+                                    {conn.label || (conn.type === 'yes' ? 'Yes' : 'No')}
+                                  </Badge>
+                                  {targetNode && (
+                                    <Card className="p-3 min-w-[200px] text-center text-sm border-2" 
+                                      style={{ borderColor: conn.type === 'yes' ? '#22c55e' : '#f59e0b' }}>
+                                      {targetNode.label}
+                                    </Card>
+                                  )}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                      
+                      {/* Arrow to next */}
+                      {idx < (section.flowchartNodes?.length || 0) - 1 && !isDecision && (
+                        <div className="flex flex-col items-center mt-2">
+                          <div className="w-1 h-6 bg-border" />
+                          <ArrowRight className="w-4 h-4 rotate-90 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         );
 

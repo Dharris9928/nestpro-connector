@@ -77,6 +77,10 @@ SECTION TYPES:
    - Use between major presentation sections
    - Fields: title (string), accent (hex color), background (hex color)
 
+10. flowchart: Visual workflow with decision points and branching
+   - Use for operational flows with YES/NO decision branches
+   - Fields: title (string), flowchartNodes (array of {id: string, label: string, description?: string, type?: 'start'|'process'|'decision'|'end', color?: hex}), flowchartConnections (array of {from: string, to: string, label?: string, type?: 'yes'|'no'|'default'})
+
 CRITICAL RULES:
 - DO NOT truncate content - this is a scrollable webpage, not slides with space constraints
 - DO preserve all detail from the outline - include everything meaningful
@@ -183,6 +187,27 @@ Question board section:
     "What other cross-functional opportunities should we explore?"
   ],
   "accent": "#4285F4"
+}
+
+Flowchart section (for workflows with decision branches):
+{
+  "id": 15,
+  "type": "flowchart",
+  "title": "6-Stage Operational Flow",
+  "flowchartNodes": [
+    {"id": "1", "label": "Lead Identification & AI Enrichment", "description": "2 min/lead via LinkedIn, permits, trade associations", "type": "start", "color": "#4285F4"},
+    {"id": "2", "label": "Automated Scoring & Segmentation", "description": "P1/P2/P3 assignment (0-100 points)", "type": "process", "color": "#34A853"},
+    {"id": "3", "label": "Targeted Outreach via Apollo.ai", "description": "Segment-specific sequences", "type": "process", "color": "#FBBC04"},
+    {"id": "4", "label": "Lead Opens Email?", "description": "Check engagement response", "type": "decision", "color": "#EA4335"},
+    {"id": "5a", "label": "Manual Follow-up", "description": "Phone call or Google email", "type": "process", "color": "#34A853"},
+    {"id": "5b", "label": "Return to Funnel", "description": "Different sequence later", "type": "process", "color": "#FBBC04"},
+    {"id": "6", "label": "Internal Handoff", "description": "ASM/RSM/SPM with complete context", "type": "process", "color": "#4285F4"},
+    {"id": "7", "label": "Success Tracking & Optimization", "description": "Apollo analytics + CRM tracking", "type": "end", "color": "#34A853"}
+  ],
+  "flowchartConnections": [
+    {"from": "4", "to": "5a", "label": "Opens/Engages", "type": "yes"},
+    {"from": "4", "to": "5b", "label": "No Response", "type": "no"}
+  ]
 }
 
 CRITICAL OUTPUT FORMAT:
@@ -292,6 +317,21 @@ Return the JSON object directly:
             ...col,
             title: stripHtml(col.title || ''),
             items: col.items ? col.items.map(stripHtml) : []
+          }));
+        }
+        
+        if (sanitized.flowchartNodes && Array.isArray(sanitized.flowchartNodes)) {
+          sanitized.flowchartNodes = sanitized.flowchartNodes.map((node: any) => ({
+            ...node,
+            label: stripHtml(node.label || ''),
+            description: stripHtml(node.description || '')
+          }));
+        }
+        
+        if (sanitized.flowchartConnections && Array.isArray(sanitized.flowchartConnections)) {
+          sanitized.flowchartConnections = sanitized.flowchartConnections.map((conn: any) => ({
+            ...conn,
+            label: stripHtml(conn.label || '')
           }));
         }
         
