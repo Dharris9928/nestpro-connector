@@ -39,11 +39,18 @@ interface ApolloEmailActivity {
   status?: string;
   sent_at?: string;
   created_at?: string;
+  completed_at?: string;
   opened_at?: string;
   clicked_at?: string;
   replied_at?: string;
   bounced_at?: string;
   email_status?: string;
+  // Additional fields from Apollo API
+  replied?: boolean;
+  bounce?: boolean;
+  spam_blocked?: boolean;
+  failed_at?: string;
+  campaign_name?: string;
 }
 
 interface ApolloContact {
@@ -324,23 +331,48 @@ serve(async (req) => {
       const totalCount = totalEntriesFromApi ?? allEmails.length;
 
       // Transform emails with enriched contact data
+      // Map Apollo status values to our normalized status
+      const deriveEmailStatus = (email: ApolloEmailActivity): string => {
+        // Check boolean flags first (these are the most reliable)
+        if (email.bounce) return 'bounced';
+        if (email.spam_blocked) return 'spam_blocked';
+        if (email.replied) return 'replied';
+        
+        // Check status string
+        const status = (email.status || email.email_status || '').toLowerCase();
+        if (status === 'bounced' || status === 'bounce') return 'bounced';
+        if (status === 'replied' || status === 'reply') return 'replied';
+        if (status === 'clicked' || status === 'click') return 'clicked';
+        if (status === 'opened' || status === 'open') return 'opened';
+        if (status === 'spam_blocked' || status === 'spam blocked') return 'spam_blocked';
+        if (status === 'unsubscribed') return 'unsubscribed';
+        
+        // If completed_at exists, it was sent/delivered
+        if (email.completed_at || email.sent_at) return 'delivered';
+        
+        return 'pending';
+      };
+
       const transformedEmails = allEmails.map((email) => {
         const contact = email.contact_id ? contactMap.get(email.contact_id) : null;
+        const derivedStatus = deriveEmailStatus(email);
         
         return {
           apolloId: email.id,
           sequenceId: email.emailer_campaign_id,
-          sequenceName: email.emailer_campaign_name,
+          sequenceName: email.emailer_campaign_name || email.campaign_name,
           stepPosition: email.emailer_step_position,
           subject: email.subject,
           bodyText: email.body_text,
           bodyHtml: email.body_html,
-          status: email.status || email.email_status,
-          sentAt: email.sent_at,
+          status: derivedStatus,
+          rawStatus: email.status,
+          sentAt: email.completed_at || email.sent_at,
           openedAt: email.opened_at,
           clickedAt: email.clicked_at,
-          repliedAt: email.replied_at,
-          bouncedAt: email.bounced_at,
+          repliedAt: email.replied_at || (email.replied ? email.completed_at : null),
+          bouncedAt: email.bounced_at || (email.bounce ? email.completed_at : null),
+          spamBlocked: email.spam_blocked,
           contact: contact
             ? {
                 apolloId: contact.id,

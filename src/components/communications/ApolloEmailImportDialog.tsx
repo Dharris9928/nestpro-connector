@@ -36,11 +36,13 @@ interface ApolloEmail {
   bodyText?: string;
   bodyHtml?: string;
   status?: string;
+  rawStatus?: string;
   sentAt?: string;
   openedAt?: string;
   clickedAt?: string;
   repliedAt?: string;
   bouncedAt?: string;
+  spamBlocked?: boolean;
   contact?: {
     apolloId: string;
     firstName?: string;
@@ -68,7 +70,7 @@ interface ImportResult {
 
 type Step = 'config' | 'preview' | 'importing' | 'results';
 
-type EmailStatus = 'all' | 'delivered' | 'not_opened' | 'opened' | 'clicked' | 'replied' | 'bounced';
+type EmailStatus = 'all' | 'delivered' | 'not_opened' | 'opened' | 'clicked' | 'replied' | 'bounced' | 'spam_blocked' | 'unsubscribed';
 
 const STATUS_OPTIONS: { value: EmailStatus; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -78,14 +80,20 @@ const STATUS_OPTIONS: { value: EmailStatus; label: string }[] = [
   { value: 'clicked', label: 'Clicked' },
   { value: 'replied', label: 'Replied' },
   { value: 'bounced', label: 'Bounced' },
+  { value: 'unsubscribed', label: 'Unsubscribed' },
+  { value: 'spam_blocked', label: 'Spam Blocked' },
 ];
 
+// Map the normalized status from the API to our filter status
 const getEmailStatus = (email: ApolloEmail): EmailStatus => {
-  if (email.bouncedAt) return 'bounced';
-  if (email.repliedAt) return 'replied';
-  if (email.clickedAt) return 'clicked';
-  if (email.openedAt) return 'opened';
-  if (email.sentAt) return 'delivered';
+  const status = (email.status || '').toLowerCase();
+  if (status === 'bounced') return 'bounced';
+  if (status === 'spam_blocked') return 'spam_blocked';
+  if (status === 'unsubscribed') return 'unsubscribed';
+  if (status === 'replied') return 'replied';
+  if (status === 'clicked') return 'clicked';
+  if (status === 'opened') return 'opened';
+  if (status === 'delivered' || status === 'pending') return 'delivered';
   return 'delivered';
 };
 
@@ -114,8 +122,8 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
   const statusCounts = emails.reduce((acc, email) => {
     const status = getEmailStatus(email);
     acc[status] = (acc[status] || 0) + 1;
-    // Track "not_opened" separately
-    if (email.sentAt && !email.openedAt && !email.bouncedAt) {
+    // Track "not_opened" separately - emails that were delivered but not opened
+    if (status === 'delivered') {
       acc['not_opened'] = (acc['not_opened'] || 0) + 1;
     }
     return acc;
@@ -125,7 +133,9 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
   const filteredEmails = emails.filter(email => {
     if (statusFilter === 'all') return true;
     if (statusFilter === 'not_opened') {
-      return email.sentAt && !email.openedAt && !email.bouncedAt;
+      // Not opened means delivered but not opened, clicked, or replied
+      const status = getEmailStatus(email);
+      return status === 'delivered';
     }
     return getEmailStatus(email) === statusFilter;
   });
