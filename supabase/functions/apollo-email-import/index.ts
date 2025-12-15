@@ -1,9 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface ApolloEmailActivity {
@@ -45,60 +45,78 @@ interface ApolloEmailActivity {
   email_status?: string;
 }
 
+type ApolloPagination = {
+  page?: number;
+  per_page?: number;
+  total_entries?: number;
+  total_pages?: number;
+};
+
+function toNumber(value: unknown): number | undefined {
+  const n = typeof value === "string" ? Number(value) : (value as number);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const apolloApiKeyRaw = Deno.env.get('APOLLO_API_KEY');
+    const apolloApiKeyRaw = Deno.env.get("APOLLO_API_KEY");
     const apolloApiKey = apolloApiKeyRaw?.trim();
     if (!apolloApiKey) {
-      throw new Error('Apollo API key not configured');
+      throw new Error("Apollo API key not configured");
     }
 
     // Authenticate user
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error('No authorization header');
+      throw new Error("No authorization header");
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+      authHeader.replace("Bearer ", "")
     );
 
     if (authError || !user) {
-      throw new Error('Unauthorized');
+      throw new Error("Unauthorized");
     }
 
     const body = await req.json();
-    const { action, page = 1, perPage = 100, dateFrom, dateTo, sequenceId } = body;
+    const {
+      action,
+      page = 1,
+      perPage = 100,
+      dateFrom,
+      dateTo,
+      sequenceId,
+    } = body;
 
-    if (action === 'fetch-sequences') {
-      // Fetch email sequences/campaigns
-      console.log('Fetching Apollo email sequences...');
-      
-      const url = new URL('https://api.apollo.io/api/v1/emailer_campaigns/search');
-      url.searchParams.set('page', String(page));
-      url.searchParams.set('per_page', String(perPage));
-      
+    if (action === "fetch-sequences") {
+      console.log("Fetching Apollo email sequences...");
+
+      const url = new URL("https://api.apollo.io/api/v1/emailer_campaigns/search");
+      url.searchParams.set("page", String(page));
+      url.searchParams.set("per_page", String(perPage));
+
       const response = await fetch(url.toString(), {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'accept': 'application/json',
-          'X-Api-Key': apolloApiKey
-        }
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+          accept: "application/json",
+          "X-Api-Key": apolloApiKey,
+        },
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Apollo sequences API error:', response.status, errorText);
+        console.error("Apollo sequences API error:", response.status, errorText);
         throw new Error(`Apollo API error: ${response.status} - ${errorText}`);
       }
 
@@ -109,88 +127,89 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           sequences: data.emailer_campaigns || [],
-          pagination: data.pagination
+          pagination: data.pagination,
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (action === 'fetch-emails') {
-      // Fetch sent emails with pagination support
-      console.log('Fetching Apollo sent emails...');
-      
-      const allEmails: ApolloEmailActivity[] = [];
-      let currentPage = 1;
-      let hasMorePages = true;
-      let totalEntries = 0;
-      
-      while (hasMorePages) {
-        const url = new URL('https://api.apollo.io/api/v1/emailer_messages/search');
-        url.searchParams.set('page', String(currentPage));
-        url.searchParams.set('per_page', String(perPage));
+    if (action === "fetch-emails") {
+      console.log("Fetching Apollo sent emails...");
+
+      const maxPages = 50;
+
+      const fetchPage = async (pageNumber: number) => {
+        const url = new URL("https://api.apollo.io/api/v1/emailer_messages/search");
+        url.searchParams.set("page", String(pageNumber));
+        url.searchParams.set("per_page", String(perPage));
 
         // Use Apollo's documented date range parameters
         if (dateFrom || dateTo) {
-          url.searchParams.set('emailer_message_date_range_mode', 'completed_at');
-          if (dateFrom) {
-            url.searchParams.set('emailerMessageDateRange[min]', dateFrom);
-          }
-          if (dateTo) {
-            url.searchParams.set('emailerMessageDateRange[max]', dateTo);
-          }
-        }
-        
-        // Filter by sequence if selected
-        if (sequenceId) {
-          url.searchParams.append('emailer_campaign_ids[]', sequenceId);
+          url.searchParams.set("emailer_message_date_range_mode", "completed_at");
+          if (dateFrom) url.searchParams.set("emailerMessageDateRange[min]", dateFrom);
+          if (dateTo) url.searchParams.set("emailerMessageDateRange[max]", dateTo);
         }
 
-        console.log(`Fetching page ${currentPage} from URL:`, url.toString());
+        if (sequenceId) {
+          url.searchParams.append("emailer_campaign_ids[]", sequenceId);
+        }
+
+        console.log(`Fetching page ${pageNumber} from URL:`, url.toString());
 
         const response = await fetch(url.toString(), {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-            'accept': 'application/json',
-            'X-Api-Key': apolloApiKey
-          }
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            accept: "application/json",
+            "X-Api-Key": apolloApiKey,
+          },
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Apollo emails API error:', response.status, errorText);
+          console.error("Apollo emails API error:", response.status, errorText);
           throw new Error(`Apollo API error: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
         const emails: ApolloEmailActivity[] = data.emailer_messages || [];
-        
-        console.log(`Page ${currentPage}: Found ${emails.length} emails`);
-        allEmails.push(...emails);
-        
-        // Update pagination info
-        totalEntries = data.pagination?.total_entries || allEmails.length;
-        const totalPages = data.pagination?.total_pages || 1;
-        
-        // Check if there are more pages
-        if (currentPage >= totalPages || emails.length === 0) {
-          hasMorePages = false;
-        } else {
-          currentPage++;
+        const pagination: ApolloPagination | undefined = data.pagination;
+
+        console.log(`Page ${pageNumber}: Found ${emails.length} emails`);
+        if (pagination) {
+          console.log("Apollo pagination:", JSON.stringify(pagination));
         }
-        
-        // Safety limit to prevent infinite loops
-        if (currentPage > 50) {
-          console.log('Reached safety limit of 50 pages');
-          hasMorePages = false;
+
+        return { emails, pagination };
+      };
+
+      const allEmails: ApolloEmailActivity[] = [];
+
+      const startingPage = Math.max(1, Number(page) || 1);
+      const first = await fetchPage(startingPage);
+      allEmails.push(...first.emails);
+
+      const totalEntries = toNumber(first.pagination?.total_entries) ?? allEmails.length;
+      const totalPagesFromApi = toNumber(first.pagination?.total_pages);
+      const computedTotalPages = totalPagesFromApi ?? Math.ceil(totalEntries / perPage);
+      const totalPages = Math.max(1, Math.min(computedTotalPages, maxPages));
+
+      let currentPage = startingPage;
+      while (currentPage < totalPages) {
+        currentPage += 1;
+        const next = await fetchPage(currentPage);
+        allEmails.push(...next.emails);
+
+        // If the API doesn't fill the page, we're done even if pagination is weird
+        if (next.emails.length < perPage) {
+          break;
         }
       }
-      
+
       console.log(`Total emails fetched across all pages: ${allEmails.length}`);
 
-      // Transform to our format
-      const transformedEmails = allEmails.map(email => ({
+      const transformedEmails = allEmails.map((email) => ({
         apolloId: email.id,
         sequenceId: email.emailer_campaign_id,
         sequenceName: email.emailer_campaign_name,
@@ -204,39 +223,51 @@ serve(async (req) => {
         clickedAt: email.clicked_at,
         repliedAt: email.replied_at,
         bouncedAt: email.bounced_at,
-        contact: email.contact ? {
-          apolloId: email.contact.id,
-          firstName: email.contact.first_name,
-          lastName: email.contact.last_name,
-          email: email.contact.email,
-          title: email.contact.title,
-          companyName: email.contact.organization_name || email.contact.organization?.name,
-          companyDomain: email.contact.organization?.website_url
-        } : null,
-        company: email.account ? {
-          apolloId: email.account.id,
-          name: email.account.name,
-          domain: email.account.domain
-        } : null
+        contact: email.contact
+          ? {
+              apolloId: email.contact.id,
+              firstName: email.contact.first_name,
+              lastName: email.contact.last_name,
+              email: email.contact.email,
+              title: email.contact.title,
+              companyName:
+                email.contact.organization_name || email.contact.organization?.name,
+              companyDomain: email.contact.organization?.website_url,
+            }
+          : null,
+        company: email.account
+          ? {
+              apolloId: email.account.id,
+              name: email.account.name,
+              domain: email.account.domain,
+            }
+          : null,
       }));
 
       return new Response(
         JSON.stringify({
           success: true,
           emails: transformedEmails,
-          totalCount: totalEntries
+          totalCount: totalEntries,
+          pagination: {
+            page: startingPage,
+            per_page: perPage,
+            total_entries: totalEntries,
+            total_pages: totalPages,
+          },
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    throw new Error('Invalid action');
-
+    throw new Error("Invalid action");
   } catch (error) {
-    console.error('Apollo email import error:', error);
+    console.error("Apollo email import error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Import failed' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Import failed",
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
