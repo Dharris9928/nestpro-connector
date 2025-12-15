@@ -41,8 +41,11 @@ interface ApolloEmailActivity {
   created_at?: string;
   completed_at?: string;
   opened_at?: string;
+  open_count?: number;
   clicked_at?: string;
+  click_count?: number;
   replied_at?: string;
+  reply_count?: number;
   bounced_at?: string;
   email_status?: string;
   // Additional fields from Apollo API
@@ -334,23 +337,39 @@ serve(async (req) => {
       // Transform emails with enriched contact data
       // Map Apollo status values to our normalized status
       const deriveEmailStatus = (email: ApolloEmailActivity): string => {
-        // Check boolean flags first (these are the most reliable)
-        if (email.bounce) return 'bounced';
-        if (email.spam_blocked) return 'spam_blocked';
-        if (email.replied) return 'replied';
-        
-        // Check status string
-        const status = (email.status || email.email_status || '').toLowerCase();
-        if (status === 'bounced' || status === 'bounce') return 'bounced';
-        if (status === 'replied' || status === 'reply') return 'replied';
-        if (status === 'clicked' || status === 'click') return 'clicked';
-        if (status === 'opened' || status === 'open') return 'opened';
-        if (status === 'spam_blocked' || status === 'spam blocked') return 'spam_blocked';
+        const status = (email.status || email.email_status || '').toLowerCase().trim();
+
+        // Failure / special states first
+        if (email.bounce || status === 'bounced' || status === 'bounce' || !!email.bounced_at) return 'bounced';
+        if (email.spam_blocked || status === 'spam_blocked' || status === 'spam blocked') return 'spam_blocked';
         if (status === 'unsubscribed') return 'unsubscribed';
-        
+
+        // Engagement states (most to least advanced)
+        if (
+          email.replied ||
+          !!email.replied_at ||
+          (email.reply_count ?? 0) > 0 ||
+          status === 'replied' ||
+          status === 'reply'
+        ) return 'replied';
+
+        if (
+          !!email.clicked_at ||
+          (email.click_count ?? 0) > 0 ||
+          status === 'clicked' ||
+          status === 'click'
+        ) return 'clicked';
+
+        if (
+          !!email.opened_at ||
+          (email.open_count ?? 0) > 0 ||
+          status === 'opened' ||
+          status === 'open'
+        ) return 'opened';
+
         // If completed_at exists, it was sent/delivered
         if (email.completed_at || email.sent_at) return 'delivered';
-        
+
         return 'pending';
       };
 
@@ -370,8 +389,11 @@ serve(async (req) => {
           rawStatus: email.status,
           sentAt: email.completed_at || email.sent_at,
           openedAt: email.opened_at,
+          openCount: email.open_count,
           clickedAt: email.clicked_at,
+          clickCount: email.click_count,
           repliedAt: email.replied_at || (email.replied ? email.completed_at : null),
+          replyCount: email.reply_count,
           bouncedAt: email.bounced_at || (email.bounce ? email.completed_at : null),
           spamBlocked: email.spam_blocked,
           contact: contact
