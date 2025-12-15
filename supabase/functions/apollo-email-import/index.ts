@@ -30,6 +30,7 @@ interface ApolloEmailActivity {
       website_url?: string;
     };
   };
+  account_id?: string;
   account?: {
     id: string;
     name?: string;
@@ -43,6 +44,26 @@ interface ApolloEmailActivity {
   replied_at?: string;
   bounced_at?: string;
   email_status?: string;
+}
+
+interface ApolloContact {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  title?: string;
+  organization_name?: string;
+  organization?: {
+    id: string;
+    name?: string;
+    website_url?: string;
+  };
+  account_id?: string;
+  account?: {
+    id: string;
+    name?: string;
+    domain?: string;
+  };
 }
 
 type ApolloPagination = {
@@ -69,7 +90,6 @@ serve(async (req) => {
       throw new Error("Apollo API key not configured");
     }
 
-    // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("No authorization header");
@@ -138,12 +158,11 @@ serve(async (req) => {
 
       const maxPages = 50;
 
-      const fetchPage = async (pageNumber: number) => {
+      const fetchEmailPage = async (pageNumber: number) => {
         const url = new URL("https://api.apollo.io/api/v1/emailer_messages/search");
         url.searchParams.set("page", String(pageNumber));
         url.searchParams.set("per_page", String(perPage));
 
-        // Use Apollo's documented date range parameters
         if (dateFrom || dateTo) {
           url.searchParams.set("emailer_message_date_range_mode", "completed_at");
           if (dateFrom) url.searchParams.set("emailerMessageDateRange[min]", dateFrom);
@@ -154,7 +173,7 @@ serve(async (req) => {
           url.searchParams.append("emailer_campaign_ids[]", sequenceId);
         }
 
-        console.log(`Fetching page ${pageNumber} from URL:`, url.toString());
+        console.log(`Fetching email page ${pageNumber}`);
 
         const response = await fetch(url.toString(), {
           method: "GET",
@@ -177,20 +196,68 @@ serve(async (req) => {
         const pagination: ApolloPagination | undefined = data.pagination;
 
         console.log(`Page ${pageNumber}: Found ${emails.length} emails`);
-        if (pagination) {
-          console.log("Apollo pagination:", JSON.stringify(pagination));
-        } else {
-          console.log("Apollo pagination missing for this response");
+
+        // Log sample structure on first page
+        if (emails.length > 0 && pageNumber === 1) {
+          const sample = emails[0];
+          console.log("Sample email keys:", Object.keys(sample));
+          console.log("contact_id:", sample.contact_id);
+          console.log("account_id:", sample.account_id);
         }
 
         return { emails, pagination };
       };
 
+      // Fetch contacts by IDs in batches
+      const fetchContacts = async (contactIds: string[]): Promise<Map<string, ApolloContact>> => {
+        const contactMap = new Map<string, ApolloContact>();
+        if (contactIds.length === 0) return contactMap;
+
+        // Apollo's people/match endpoint allows fetching by IDs
+        const batchSize = 100;
+        for (let i = 0; i < contactIds.length; i += batchSize) {
+          const batch = contactIds.slice(i, i + batchSize);
+          
+          try {
+            const response = await fetch("https://api.apollo.io/api/v1/contacts/search", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache",
+                accept: "application/json",
+                "X-Api-Key": apolloApiKey,
+              },
+              body: JSON.stringify({
+                contact_ids: batch,
+                per_page: batchSize,
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              const contacts: ApolloContact[] = data.contacts || [];
+              console.log(`Fetched ${contacts.length} contacts for batch ${Math.floor(i/batchSize) + 1}`);
+              
+              for (const contact of contacts) {
+                contactMap.set(contact.id, contact);
+              }
+            } else {
+              console.error("Failed to fetch contacts batch:", response.status);
+            }
+          } catch (error) {
+            console.error("Error fetching contacts:", error);
+          }
+        }
+
+        return contactMap;
+      };
+
+      // Collect all emails
       const allEmails: ApolloEmailActivity[] = [];
       const seenIds = new Set<string>();
 
       const startingPage = Math.max(1, Number(page) || 1);
-      const first = await fetchPage(startingPage);
+      const first = await fetchEmailPage(startingPage);
 
       for (const e of first.emails) {
         if (!seenIds.has(e.id)) {
@@ -199,7 +266,6 @@ serve(async (req) => {
         }
       }
 
-      // Prefer API-provided totals, but do NOT rely on them (they can be missing).
       const totalEntriesFromApi = toNumber(first.pagination?.total_entries);
       const totalPagesFromApi = toNumber(first.pagination?.total_pages);
 
@@ -207,13 +273,12 @@ serve(async (req) => {
       let pagesFetched = 1;
 
       while (pagesFetched < maxPages) {
-        // If the API tells us the last page, respect it.
         if (totalPagesFromApi && currentPage >= totalPagesFromApi) {
           break;
         }
 
         const nextPage = currentPage + 1;
-        const next = await fetchPage(nextPage);
+        const next = await fetchEmailPage(nextPage);
 
         if (!next.emails.length) {
           break;
@@ -228,7 +293,6 @@ serve(async (req) => {
           }
         }
 
-        // If Apollo keeps returning the same page, stop to avoid duplicates/infinite loops.
         if (newCount === 0) {
           console.log(`Page ${nextPage} contained no new email IDs; stopping pagination.`);
           break;
@@ -237,50 +301,82 @@ serve(async (req) => {
         currentPage = nextPage;
         pagesFetched += 1;
 
-        // If we got a partial page, we're done.
         if (next.emails.length < perPage) {
           break;
         }
       }
 
+      console.log(`Total emails fetched: ${allEmails.length}`);
+
+      // Collect unique contact IDs
+      const contactIds = [...new Set(
+        allEmails
+          .map(e => e.contact_id)
+          .filter((id): id is string => !!id)
+      )];
+
+      console.log(`Found ${contactIds.length} unique contact IDs to fetch`);
+
+      // Fetch contact details
+      const contactMap = await fetchContacts(contactIds);
+      console.log(`Successfully fetched ${contactMap.size} contact details`);
+
       const totalCount = totalEntriesFromApi ?? allEmails.length;
 
-      console.log(`Total emails fetched across all pages: ${allEmails.length}`);
-
-      const transformedEmails = allEmails.map((email) => ({
-        apolloId: email.id,
-        sequenceId: email.emailer_campaign_id,
-        sequenceName: email.emailer_campaign_name,
-        stepPosition: email.emailer_step_position,
-        subject: email.subject,
-        bodyText: email.body_text,
-        bodyHtml: email.body_html,
-        status: email.status || email.email_status,
-        sentAt: email.sent_at,
-        openedAt: email.opened_at,
-        clickedAt: email.clicked_at,
-        repliedAt: email.replied_at,
-        bouncedAt: email.bounced_at,
-        contact: email.contact
-          ? {
-              apolloId: email.contact.id,
-              firstName: email.contact.first_name,
-              lastName: email.contact.last_name,
-              email: email.contact.email,
-              title: email.contact.title,
-              companyName:
-                email.contact.organization_name || email.contact.organization?.name,
-              companyDomain: email.contact.organization?.website_url,
-            }
-          : null,
-        company: email.account
-          ? {
-              apolloId: email.account.id,
-              name: email.account.name,
-              domain: email.account.domain,
-            }
-          : null,
-      }));
+      // Transform emails with enriched contact data
+      const transformedEmails = allEmails.map((email) => {
+        const contact = email.contact_id ? contactMap.get(email.contact_id) : null;
+        
+        return {
+          apolloId: email.id,
+          sequenceId: email.emailer_campaign_id,
+          sequenceName: email.emailer_campaign_name,
+          stepPosition: email.emailer_step_position,
+          subject: email.subject,
+          bodyText: email.body_text,
+          bodyHtml: email.body_html,
+          status: email.status || email.email_status,
+          sentAt: email.sent_at,
+          openedAt: email.opened_at,
+          clickedAt: email.clicked_at,
+          repliedAt: email.replied_at,
+          bouncedAt: email.bounced_at,
+          contact: contact
+            ? {
+                apolloId: contact.id,
+                firstName: contact.first_name,
+                lastName: contact.last_name,
+                email: contact.email,
+                title: contact.title,
+                companyName: contact.organization_name || contact.organization?.name || contact.account?.name,
+                companyDomain: contact.organization?.website_url || contact.account?.domain,
+              }
+            : email.contact
+            ? {
+                apolloId: email.contact.id,
+                firstName: email.contact.first_name,
+                lastName: email.contact.last_name,
+                email: email.contact.email,
+                title: email.contact.title,
+                companyName: email.contact.organization_name || email.contact.organization?.name,
+                companyDomain: email.contact.organization?.website_url,
+              }
+            : null,
+          company: contact?.account
+            ? {
+                apolloId: contact.account.id,
+                name: contact.account.name,
+                domain: contact.account.domain,
+              }
+            : email.account
+            ? {
+                apolloId: email.account.id,
+                name: email.account.name,
+                domain: email.account.domain,
+              }
+            : null,
+        };
+      });
 
       return new Response(
         JSON.stringify({
