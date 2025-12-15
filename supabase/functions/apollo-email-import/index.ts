@@ -81,24 +81,24 @@ serve(async (req) => {
       // Fetch email sequences/campaigns
       console.log('Fetching Apollo email sequences...');
       
-      const response = await fetch('https://api.apollo.io/v1/emailer_campaigns/search', {
-        method: 'POST',
+      const url = new URL('https://api.apollo.io/api/v1/emailer_campaigns/search');
+      url.searchParams.set('api_key', apolloApiKey);
+      url.searchParams.set('page', String(page));
+      url.searchParams.set('per_page', String(perPage));
+      
+      const response = await fetch(url.toString(), {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
-          'X-Api-Key': apolloApiKey
-        },
-        body: JSON.stringify({
-          api_key: apolloApiKey,
-          page: page,
-          per_page: perPage
-        })
+          'accept': 'application/json'
+        }
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Apollo sequences API error:', errorText);
-        throw new Error(`Apollo API error: ${response.status}`);
+        console.error('Apollo sequences API error:', response.status, errorText);
+        throw new Error(`Apollo API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
@@ -118,39 +118,39 @@ serve(async (req) => {
       // Fetch sent emails
       console.log('Fetching Apollo sent emails...');
       
-      const searchParams: Record<string, unknown> = {
-        api_key: apolloApiKey,
-        page: page,
-        per_page: perPage,
-        sort_by_field: 'sent_at',
-        sort_ascending: false
-      };
+      const url = new URL('https://api.apollo.io/api/v1/emailer_messages/search');
+      url.searchParams.set('api_key', apolloApiKey);
+      url.searchParams.set('page', String(page));
+      url.searchParams.set('per_page', String(perPage));
+      url.searchParams.set('sort_by_field', 'created_at');
+      url.searchParams.set('sort_ascending', 'false');
 
       // Add date filters if provided
       if (dateFrom) {
-        searchParams.sent_at_start = dateFrom;
+        url.searchParams.set('emailer_message_created_at_gt', dateFrom);
       }
       if (dateTo) {
-        searchParams.sent_at_end = dateTo;
+        url.searchParams.set('emailer_message_created_at_lt', dateTo);
       }
       if (sequenceId) {
-        searchParams.emailer_campaign_ids = [sequenceId];
+        url.searchParams.append('emailer_campaign_ids[]', sequenceId);
       }
 
-      const response = await fetch('https://api.apollo.io/v1/emailer_messages/search', {
-        method: 'POST',
+      console.log('Fetching from URL:', url.toString().replace(apolloApiKey, 'REDACTED'));
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
-          'X-Api-Key': apolloApiKey
-        },
-        body: JSON.stringify(searchParams)
+          'accept': 'application/json'
+        }
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Apollo emails API error:', errorText);
-        throw new Error(`Apollo API error: ${response.status}`);
+        console.error('Apollo emails API error:', response.status, errorText);
+        throw new Error(`Apollo API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
