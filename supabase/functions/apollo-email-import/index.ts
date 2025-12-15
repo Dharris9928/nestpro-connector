@@ -336,7 +336,66 @@ serve(async (req) => {
 
       // Transform emails with enriched contact data
       // Map Apollo status values to our normalized status
-      const deriveEmailStatus = (email: ApolloEmailActivity): string => {
+
+      const deriveEngagementFromRecipients = (recipients: unknown) => {
+        const list = Array.isArray(recipients) ? (recipients as Array<Record<string, unknown>>) : [];
+
+        const getNum = (obj: Record<string, unknown>, keys: string[]) => {
+          for (const k of keys) {
+            const v = obj[k];
+            if (typeof v === 'number' && Number.isFinite(v)) return v;
+            if (typeof v === 'string') {
+              const n = Number(v);
+              if (Number.isFinite(n)) return n;
+            }
+          }
+          return undefined;
+        };
+
+        const getStr = (obj: Record<string, unknown>, keys: string[]) => {
+          for (const k of keys) {
+            const v = obj[k];
+            if (typeof v === 'string' && v) return v;
+          }
+          return undefined;
+        };
+
+        const getBool = (obj: Record<string, unknown>, keys: string[]) => {
+          for (const k of keys) {
+            const v = obj[k];
+            if (typeof v === 'boolean') return v;
+          }
+          return undefined;
+        };
+
+        let openCount = 0;
+        let clickCount = 0;
+        let replyCount = 0;
+        let openedAt: string | undefined;
+        let clickedAt: string | undefined;
+        let repliedAt: string | undefined;
+
+        for (const r of list) {
+          openCount += getNum(r, ['open_count', 'opens', 'openCount']) ?? (getBool(r, ['opened', 'open']) ? 1 : 0);
+          clickCount += getNum(r, ['click_count', 'clicks', 'clickCount']) ?? (getBool(r, ['clicked', 'click']) ? 1 : 0);
+          replyCount += getNum(r, ['reply_count', 'replies', 'replyCount']) ?? (getBool(r, ['replied', 'reply']) ? 1 : 0);
+
+          openedAt ||= getStr(r, ['opened_at', 'first_opened_at', 'openedAt']);
+          clickedAt ||= getStr(r, ['clicked_at', 'first_clicked_at', 'clickedAt']);
+          repliedAt ||= getStr(r, ['replied_at', 'first_replied_at', 'repliedAt']);
+        }
+
+        return {
+          openCount,
+          clickCount,
+          replyCount,
+          openedAt,
+          clickedAt,
+          repliedAt,
+        };
+      };
+
+      const deriveEmailStatus = (email: ApolloEmailActivity, engagement: { openCount: number; clickCount: number; replyCount: number }) => {
         const status = (email.status || email.email_status || '').toLowerCase().trim();
 
         // Failure / special states first
@@ -345,27 +404,9 @@ serve(async (req) => {
         if (status === 'unsubscribed') return 'unsubscribed';
 
         // Engagement states (most to least advanced)
-        if (
-          email.replied ||
-          !!email.replied_at ||
-          (email.reply_count ?? 0) > 0 ||
-          status === 'replied' ||
-          status === 'reply'
-        ) return 'replied';
-
-        if (
-          !!email.clicked_at ||
-          (email.click_count ?? 0) > 0 ||
-          status === 'clicked' ||
-          status === 'click'
-        ) return 'clicked';
-
-        if (
-          !!email.opened_at ||
-          (email.open_count ?? 0) > 0 ||
-          status === 'opened' ||
-          status === 'open'
-        ) return 'opened';
+        if (email.replied || !!email.replied_at || (email.reply_count ?? 0) > 0 || engagement.replyCount > 0 || status === 'replied' || status === 'reply') return 'replied';
+        if (!!email.clicked_at || (email.click_count ?? 0) > 0 || engagement.clickCount > 0 || status === 'clicked' || status === 'click') return 'clicked';
+        if (!!email.opened_at || (email.open_count ?? 0) > 0 || engagement.openCount > 0 || status === 'opened' || status === 'open') return 'opened';
 
         // If completed_at exists, it was sent/delivered
         if (email.completed_at || email.sent_at) return 'delivered';
@@ -375,8 +416,10 @@ serve(async (req) => {
 
       const transformedEmails = allEmails.map((email) => {
         const contact = email.contact_id ? contactMap.get(email.contact_id) : null;
-        const derivedStatus = deriveEmailStatus(email);
-        
+
+        const engagement = deriveEngagementFromRecipients(email.recipients);
+        const derivedStatus = deriveEmailStatus(email, engagement);
+
         return {
           apolloId: email.id,
           sequenceId: email.emailer_campaign_id,
@@ -388,12 +431,12 @@ serve(async (req) => {
           status: derivedStatus,
           rawStatus: email.status,
           sentAt: email.completed_at || email.sent_at,
-          openedAt: email.opened_at,
-          openCount: email.open_count,
-          clickedAt: email.clicked_at,
-          clickCount: email.click_count,
-          repliedAt: email.replied_at || (email.replied ? email.completed_at : null),
-          replyCount: email.reply_count,
+          openedAt: email.opened_at || engagement.openedAt,
+          openCount: (email.open_count ?? 0) + engagement.openCount,
+          clickedAt: email.clicked_at || engagement.clickedAt,
+          clickCount: (email.click_count ?? 0) + engagement.clickCount,
+          repliedAt: email.replied_at || engagement.repliedAt || (email.replied ? email.completed_at : null),
+          replyCount: (email.reply_count ?? 0) + engagement.replyCount,
           bouncedAt: email.bounced_at || (email.bounce ? email.completed_at : null),
           spamBlocked: email.spam_blocked,
           contact: contact
