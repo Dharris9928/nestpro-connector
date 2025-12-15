@@ -123,16 +123,18 @@ serve(async (req) => {
       url.searchParams.set('page', String(page));
       url.searchParams.set('per_page', String(perPage));
 
-      // NOTE: Apollo's emailer_messages index does not support sorting by created_at/sent_at.
-      // We rely on Apollo's default ordering and filter by their supported timestamp params.
-
-      // Add date filters if provided
-      if (dateFrom) {
-        url.searchParams.set('emailer_message_created_at_gt', dateFrom);
+      // Use Apollo's documented date range parameters
+      if (dateFrom || dateTo) {
+        url.searchParams.set('emailer_message_date_range_mode', 'completed_at');
+        if (dateFrom) {
+          url.searchParams.set('emailerMessageDateRange[min]', dateFrom);
+        }
+        if (dateTo) {
+          url.searchParams.set('emailerMessageDateRange[max]', dateTo);
+        }
       }
-      if (dateTo) {
-        url.searchParams.set('emailer_message_created_at_lt', dateTo);
-      }
+      
+      // Filter by sequence if selected
       if (sequenceId) {
         url.searchParams.append('emailer_campaign_ids[]', sequenceId);
       }
