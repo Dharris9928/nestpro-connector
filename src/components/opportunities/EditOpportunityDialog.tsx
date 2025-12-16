@@ -9,7 +9,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { CompanySearchSelect } from "./CompanySearchSelect";
-import { SalesRepSelect } from "../companies/SalesRepSelect";
+import { UnifiedAssignmentSelect } from "../companies/UnifiedAssignmentSelect";
 import { ContractorSearchSelect } from "./ContractorSearchSelect";
 import { ContactMultiSelect } from "@/components/common/ContactMultiSelect";
 
@@ -197,9 +197,10 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity }: EditO
 
             <div>
               <Label htmlFor="assigned_to">Assigned To</Label>
-              <SalesRepSelect
+              <UnifiedAssignmentSelect
                 value={formData.assigned_to}
                 onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
+                rawIds={true}
               />
             </div>
           </div>

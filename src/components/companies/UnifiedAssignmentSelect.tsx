@@ -7,9 +7,11 @@ interface UnifiedAssignmentSelectProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  /** If true, returns raw UUIDs instead of prefixed IDs (user:xxx, salesrep:xxx) */
+  rawIds?: boolean;
 }
 
-export function UnifiedAssignmentSelect({ value, onValueChange, placeholder = "Select assignee..." }: UnifiedAssignmentSelectProps) {
+export function UnifiedAssignmentSelect({ value, onValueChange, placeholder = "Select assignee...", rawIds = false }: UnifiedAssignmentSelectProps) {
   const { data: systemUsers, isLoading: loadingUsers } = useQuery({
     queryKey: ['users-for-assignment'],
     queryFn: async () => {
@@ -36,7 +38,7 @@ export function UnifiedAssignmentSelect({ value, onValueChange, placeholder = "S
       // Filter profiles to only include users with the required roles
       const roleUserIds = new Set(roles?.map(r => r.user_id) || []);
       return profiles.filter(p => roleUserIds.has(p.id)).map(p => ({
-        id: `user:${p.id}`,
+        id: rawIds ? p.id : `user:${p.id}`,
         name: `${p.first_name} ${p.last_name}`,
         type: 'System User' as const
       }));
@@ -54,7 +56,7 @@ export function UnifiedAssignmentSelect({ value, onValueChange, placeholder = "S
 
       if (error) throw error;
       return (data as any)?.map((rep: any) => ({
-        id: `salesrep:${rep.id}`,
+        id: rawIds ? rep.id : `salesrep:${rep.id}`,
         name: `${rep.first_name} ${rep.last_name}`,
         type: 'External Sales Rep' as const
       })) || [];

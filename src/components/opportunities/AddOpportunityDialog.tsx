@@ -31,8 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserAssignmentSelect } from "@/components/companies/UserAssignmentSelect";
-import { SalesRepSelect } from "@/components/companies/SalesRepSelect";
+import { UnifiedAssignmentSelect } from "@/components/companies/UnifiedAssignmentSelect";
 import { CompanySearchSelect } from "@/components/opportunities/CompanySearchSelect";
 import { ContractorSearchSelect } from "@/components/opportunities/ContractorSearchSelect";
 import { OpportunityProductsForm } from "@/components/opportunities/OpportunityProductsForm";
@@ -256,10 +255,11 @@ export function AddOpportunityDialog({ open, onOpenChange, prefilledCompanyId }:
                   <FormItem>
                     <FormLabel>Assigned To</FormLabel>
                     <FormControl>
-                      <SalesRepSelect
+                      <UnifiedAssignmentSelect
                         value={field.value}
                         onValueChange={field.onChange}
-                        placeholder="Select sales rep..."
+                        placeholder="Select assignee..."
+                        rawIds={true}
                       />
                     </FormControl>
                     <FormMessage />
