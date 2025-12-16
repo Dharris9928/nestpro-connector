@@ -55,6 +55,11 @@ interface ApolloEmailActivity {
   failed_at?: string;
   campaign_name?: string;
   recipients?: Array<Record<string, unknown>>;
+  emailer_message_stats?: Array<{
+    status?: string;
+    emailer_message_status?: string;
+    status_changed_at?: string;
+  }>;
 }
 
 interface ApolloContact {
@@ -218,37 +223,19 @@ serve(async (req) => {
             replied: sample.replied,
             bounce: sample.bounce,
             spam_blocked: sample.spam_blocked,
-            enable_tracking: (sample as unknown as Record<string, unknown>)?.enable_tracking,
+            opened_at: sample.opened_at,
+            open_count: sample.open_count,
+            clicked_at: sample.clicked_at,
+            click_count: sample.click_count,
           });
 
-          const recipients = Array.isArray(sample.recipients)
-            ? (sample.recipients as Array<Record<string, unknown>>)
-            : [];
-
-          if (recipients.length > 0) {
-            const recipient0 = recipients[0];
-            const safeKeys = Object.keys(recipient0).filter((k) => {
-              const kl = k.toLowerCase();
-              return !kl.includes('email') && !kl.includes('name') && !kl.includes('address');
-            });
-            console.log("Sample recipient keys (sanitized):", safeKeys.slice(0, 80));
-
-            const safePreview = Object.fromEntries(
-              Object.entries(recipient0).filter(([k]) => {
-                const kl = k.toLowerCase();
-                if (kl.includes('email') || kl.includes('name') || kl.includes('address')) return false;
-                return (
-                  kl.includes('open') ||
-                  kl.includes('click') ||
-                  kl.includes('reply') ||
-                  kl.includes('bounce') ||
-                  kl.includes('spam') ||
-                  kl.includes('unsub') ||
-                  kl.includes('track')
-                );
-              })
-            );
-            console.log("Sample recipient engagement-ish fields (sanitized):", safePreview);
+          // Log emailer_message_stats which contains engagement data
+          const statsArray = (sample as unknown as Record<string, unknown>)?.emailer_message_stats;
+          if (Array.isArray(statsArray) && statsArray.length > 0) {
+            console.log("Sample emailer_message_stats count:", statsArray.length);
+            console.log("Sample emailer_message_stats[0]:", JSON.stringify(statsArray[0], null, 2));
+          } else {
+            console.log("No emailer_message_stats found in sample email");
           }
 
           console.log("contact_id:", sample.contact_id);
@@ -385,98 +372,46 @@ serve(async (req) => {
         repliedAt?: string;
       };
 
-      const deriveEngagementFromRecipients = (recipients: unknown): Engagement => {
-        const list = Array.isArray(recipients)
-          ? (recipients as Array<Record<string, unknown>>)
-          : [];
-
-        const toNum = (v: unknown): number | undefined => {
-          if (typeof v === "number" && Number.isFinite(v)) return v;
-          if (typeof v === "string") {
-            const n = Number(v);
-            if (Number.isFinite(n)) return n;
-          }
-          return undefined;
-        };
-
-        const toStr = (v: unknown): string | undefined => {
-          return typeof v === "string" && v.length > 0 ? v : undefined;
-        };
-
-        const extractFromValue = (value: unknown, acc: Engagement, depth: number) => {
-          if (depth > 4 || value == null) return;
-
-          if (Array.isArray(value)) {
-            for (const item of value) extractFromValue(item, acc, depth + 1);
-            return;
-          }
-
-          if (typeof value !== "object") return;
-
-          for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-            const key = k.toLowerCase();
-
-            // Counts
-            const n = toNum(v);
-            if (n !== undefined) {
-              if ((key.includes("open") && (key.includes("count") || key === "opens" || key === "open"))) {
-                acc.openCount = Math.max(acc.openCount, n);
-              }
-              if ((key.includes("click") && (key.includes("count") || key === "clicks" || key === "click"))) {
-                acc.clickCount = Math.max(acc.clickCount, n);
-              }
-              if ((key.includes("reply") || key.includes("repl")) && key.includes("count")) {
-                acc.replyCount = Math.max(acc.replyCount, n);
-              }
-            }
-
-            // Boolean signals
-            if (typeof v === "boolean" && v) {
-              if (key === "opened" || key === "open" || key.includes("opened")) {
-                acc.openCount = Math.max(acc.openCount, 1);
-              }
-              if (key === "clicked" || key === "click" || key.includes("clicked")) {
-                acc.clickCount = Math.max(acc.clickCount, 1);
-              }
-              if (key === "replied" || key === "reply" || key.includes("replied")) {
-                acc.replyCount = Math.max(acc.replyCount, 1);
-              }
-            }
-
-            // Timestamps
-            const s = toStr(v);
-            if (s) {
-              if ((key.includes("open") || key.includes("opened")) && key.includes("_at")) acc.openedAt ||= s;
-              if ((key.includes("click") || key.includes("clicked")) && key.includes("_at")) acc.clickedAt ||= s;
-              if ((key.includes("reply") || key.includes("replied")) && key.includes("_at")) acc.repliedAt ||= s;
-            }
-
-            // Recurse
-            if (typeof v === "object" && v !== null) {
-              extractFromValue(v, acc, depth + 1);
-            }
-          }
-        };
-
-        const total: Engagement = {
+      // Derive engagement from emailer_message_stats array (Apollo's engagement tracking)
+      const deriveEngagementFromStats = (email: ApolloEmailActivity): Engagement => {
+        const result: Engagement = {
           openCount: 0,
           clickCount: 0,
           replyCount: 0,
         };
 
-        for (const r of list) {
-          const per: Engagement = { openCount: 0, clickCount: 0, replyCount: 0 };
-          extractFromValue(r, per, 0);
-
-          total.openCount += per.openCount;
-          total.clickCount += per.clickCount;
-          total.replyCount += per.replyCount;
-          total.openedAt ||= per.openedAt;
-          total.clickedAt ||= per.clickedAt;
-          total.repliedAt ||= per.repliedAt;
+        const stats = email.emailer_message_stats;
+        if (!stats || !Array.isArray(stats)) {
+          return result;
         }
 
-        return total;
+        for (const stat of stats) {
+          const status = (stat?.status || stat?.emailer_message_status || '').toLowerCase();
+          
+          // Apollo uses statuses like "email_opened", "email_clicked", "email_replied"
+          if (status.includes('opened') || status.includes('open')) {
+            result.openCount++;
+            if (!result.openedAt && stat.status_changed_at) {
+              result.openedAt = stat.status_changed_at;
+            }
+          }
+          
+          if (status.includes('clicked') || status.includes('click')) {
+            result.clickCount++;
+            if (!result.clickedAt && stat.status_changed_at) {
+              result.clickedAt = stat.status_changed_at;
+            }
+          }
+          
+          if (status.includes('replied') || status.includes('reply')) {
+            result.replyCount++;
+            if (!result.repliedAt && stat.status_changed_at) {
+              result.repliedAt = stat.status_changed_at;
+            }
+          }
+        }
+
+        return result;
       };
 
       const deriveEmailStatus = (email: ApolloEmailActivity, engagement: { openCount: number; clickCount: number; replyCount: number }) => {
@@ -501,7 +436,7 @@ serve(async (req) => {
       const transformedEmails = allEmails.map((email) => {
         const contact = email.contact_id ? contactMap.get(email.contact_id) : null;
 
-        const engagement = deriveEngagementFromRecipients(email.recipients);
+        const engagement = deriveEngagementFromStats(email);
         const derivedStatus = deriveEmailStatus(email, engagement);
 
         return {
