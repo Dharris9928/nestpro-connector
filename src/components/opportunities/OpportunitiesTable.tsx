@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Opportunity {
   id: string;
@@ -23,6 +25,7 @@ interface Opportunity {
   notes: string | null;
   created_at: string;
   company_id: string;
+  assigned_to: string | null;
   companies?: { company_name: string } | null;
   profiles?: { first_name: string; last_name: string } | null;
   opportunity_products?: any[];
@@ -47,6 +50,42 @@ export function OpportunitiesTable({ opportunities, isLoading, onSelectOpportuni
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Get assigned_to IDs that don't have profiles (likely sales_reps)
+  const unassignedIds = useMemo(() => {
+    return opportunities
+      .filter(o => o.assigned_to && !o.profiles)
+      .map(o => o.assigned_to as string);
+  }, [opportunities]);
+
+  // Fetch sales_reps for those without profiles
+  const { data: salesRepsMap } = useQuery({
+    queryKey: ['sales-reps-for-opportunities', unassignedIds],
+    queryFn: async () => {
+      if (unassignedIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from('sales_reps' as any)
+        .select('id, first_name, last_name')
+        .in('id', unassignedIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data as any[])?.forEach(rep => {
+        map[rep.id] = `${rep.first_name} ${rep.last_name}`;
+      });
+      return map;
+    },
+    enabled: unassignedIds.length > 0,
+  });
+
+  const getAssigneeName = (opportunity: Opportunity) => {
+    if (opportunity.profiles) {
+      return `${opportunity.profiles.first_name} ${opportunity.profiles.last_name}`;
+    }
+    if (opportunity.assigned_to && salesRepsMap?.[opportunity.assigned_to]) {
+      return salesRepsMap[opportunity.assigned_to];
+    }
+    return "Unassigned";
+  };
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -211,9 +250,7 @@ export function OpportunitiesTable({ opportunities, isLoading, onSelectOpportuni
                   : "—"}
               </TableCell>
               <TableCell>
-                {opportunity.profiles
-                  ? `${opportunity.profiles.first_name} ${opportunity.profiles.last_name}`
-                  : "Unassigned"}
+                {getAssigneeName(opportunity)}
               </TableCell>
               <TableCell>
                 {opportunity.expected_close_date
