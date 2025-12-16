@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ImpersonationBanner } from "./components/common/ImpersonationBanner";
+import { RealtimeQueryInvalidator } from "@/components/common/RealtimeQueryInvalidator";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import Contacts from "./pages/Contacts";
@@ -27,6 +28,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <RealtimeQueryInvalidator />
     <TooltipProvider>
       <Toaster />
       <Sonner />
