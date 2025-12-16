@@ -48,7 +48,7 @@ export default function Opportunities() {
 
       let query = supabase
         .from('opportunities' as any)
-        .select('*, companies(company_name, state, city)');
+        .select('*, companies!opportunities_company_id_fkey(company_name, state, city)');
 
       // Apply perspective filter
       if (perspective === 'my_records') {
