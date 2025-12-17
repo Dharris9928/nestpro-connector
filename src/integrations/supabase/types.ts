@@ -3193,11 +3193,14 @@ export type Database = {
           contractor_id: string | null
           created_at: string | null
           created_by: string
+          distributor: string | null
           expected_close_date: string | null
           id: string
           notes: string | null
           opportunity_name: string
           probability: number | null
+          sales_personnel_contact_id: string | null
+          source: string | null
           stage: string
           unit_needed_date: string | null
           updated_at: string | null
@@ -3211,11 +3214,14 @@ export type Database = {
           contractor_id?: string | null
           created_at?: string | null
           created_by: string
+          distributor?: string | null
           expected_close_date?: string | null
           id?: string
           notes?: string | null
           opportunity_name: string
           probability?: number | null
+          sales_personnel_contact_id?: string | null
+          source?: string | null
           stage?: string
           unit_needed_date?: string | null
           updated_at?: string | null
@@ -3229,11 +3235,14 @@ export type Database = {
           contractor_id?: string | null
           created_at?: string | null
           created_by?: string
+          distributor?: string | null
           expected_close_date?: string | null
           id?: string
           notes?: string | null
           opportunity_name?: string
           probability?: number | null
+          sales_personnel_contact_id?: string | null
+          source?: string | null
           stage?: string
           unit_needed_date?: string | null
           updated_at?: string | null
@@ -3293,6 +3302,34 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_sales_personnel_contact_id_fkey"
+            columns: ["sales_personnel_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_sales_personnel_contact_id_fkey"
+            columns: ["sales_personnel_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_sales_personnel_contact_id_fkey"
+            columns: ["sales_personnel_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_decrypted_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_sales_personnel_contact_id_fkey"
+            columns: ["sales_personnel_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_masked"
             referencedColumns: ["id"]
           },
         ]

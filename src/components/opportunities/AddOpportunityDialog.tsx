@@ -36,6 +36,7 @@ import { CompanySearchSelect } from "@/components/opportunities/CompanySearchSel
 import { ContractorSearchSelect } from "@/components/opportunities/ContractorSearchSelect";
 import { OpportunityProductsForm } from "@/components/opportunities/OpportunityProductsForm";
 import { ContactMultiSelect } from "@/components/common/ContactMultiSelect";
+import { SalesPersonnelSelect } from "@/components/opportunities/SalesPersonnelSelect";
 
 const opportunitySchema = z.object({
   company_id: z.string().min(1, "Company is required"),
@@ -48,6 +49,9 @@ const opportunitySchema = z.object({
   confidence: z.string().optional(),
   unit_needed_date: z.string().optional(),
   notes: z.string().optional(),
+  distributor: z.string().optional(),
+  source: z.string().optional(),
+  sales_personnel_contact_id: z.string().optional(),
 });
 
 type OpportunityProduct = {
@@ -116,11 +120,19 @@ export function AddOpportunityDialog({ open, onOpenChange, prefilledCompanyId }:
       const { data: opportunity, error: oppError } = await supabase
         .from('opportunities' as any)
         .insert({
-          ...values,
+          company_id: values.company_id,
+          opportunity_name: values.opportunity_name,
+          stage: values.stage,
           amount: values.amount ? parseFloat(values.amount) : null,
           confidence: values.confidence ? parseInt(values.confidence) : null,
           assigned_to: values.assigned_to === "unassigned" ? null : (values.assigned_to || null),
           contractor_id: values.contractor_id || null,
+          expected_close_date: values.expected_close_date || null,
+          unit_needed_date: values.unit_needed_date || null,
+          notes: values.notes || null,
+          distributor: values.distributor || null,
+          source: values.source || null,
+          sales_personnel_contact_id: values.sales_personnel_contact_id || null,
           created_by: currentUser.id,
         })
         .select()
@@ -278,6 +290,65 @@ export function AddOpportunityDialog({ open, onOpenChange, prefilledCompanyId }:
                     <ContractorSearchSelect
                       value={field.value}
                       onValueChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* New Fields: Distributor, Source, Sales Personnel */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="distributor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Distributor</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter distributor name..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Source</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select source..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Job Quote">Job Quote</SelectItem>
+                        <SelectItem value="External Request">External Request</SelectItem>
+                        <SelectItem value="Outreach">Outreach</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="sales_personnel_contact_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sales Personnel</FormLabel>
+                  <FormControl>
+                    <SalesPersonnelSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      companyId={companyId}
                     />
                   </FormControl>
                   <FormMessage />
