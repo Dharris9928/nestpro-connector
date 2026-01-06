@@ -12,6 +12,7 @@ import { PipelineFunnelChart } from "@/components/pipeline/PipelineFunnelChart";
 import { EmailPerformanceCard } from "@/components/pipeline/EmailPerformanceCard";
 import { MeetingAnalyticsCard } from "@/components/pipeline/MeetingAnalyticsCard";
 import { LeadHandoffCard } from "@/components/pipeline/LeadHandoffCard";
+import { ClosedDealsCard } from "@/components/pipeline/ClosedDealsCard";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -134,10 +135,11 @@ export default function PipelineAnalytics() {
       <PipelineFunnelChart metrics={metrics} isLoading={isLoading} />
 
       {/* Detail Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <EmailPerformanceCard metrics={metrics} isLoading={isLoading} />
         <MeetingAnalyticsCard metrics={metrics} isLoading={isLoading} />
         <LeadHandoffCard metrics={metrics} isLoading={isLoading} />
+        <ClosedDealsCard metrics={metrics} isLoading={isLoading} />
       </div>
     </div>
   );

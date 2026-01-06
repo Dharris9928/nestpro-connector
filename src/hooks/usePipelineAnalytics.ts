@@ -15,11 +15,14 @@ interface PipelineMetrics {
   meetingsScheduled: number;
   meetingsCompleted: number;
   leadsAssigned: number;
+  closedDeals: number;
+  closedDealValue: number;
   openRate: number;
   responseRate: number;
   scheduleRate: number;
   completionRate: number;
   handoffRate: number;
+  closeRate: number;
   avgResponseTimeDays: number;
   totalPipelineValue: number;
   previousPeriod: {
@@ -29,6 +32,7 @@ interface PipelineMetrics {
     meetingsScheduled: number;
     meetingsCompleted: number;
     leadsAssigned: number;
+    closedDeals: number;
   };
 }
 
@@ -107,7 +111,7 @@ export function usePipelineAnalytics(
       // Fetch opportunities (leads assigned)
       let oppsQuery = supabase
         .from("opportunities")
-        .select("id, assigned_to, amount, created_at")
+        .select("id, assigned_to, amount, created_at, stage, closed_date")
         .not("assigned_to", "is", null)
         .gte("created_at", fromDate)
         .lte("created_at", toDate);
@@ -120,7 +124,7 @@ export function usePipelineAnalytics(
       // Fetch previous period opportunities
       let prevOppsQuery = supabase
         .from("opportunities")
-        .select("id, assigned_to")
+        .select("id, assigned_to, stage")
         .not("assigned_to", "is", null)
         .gte("created_at", prevFrom)
         .lte("created_at", prevTo);
@@ -135,6 +139,11 @@ export function usePipelineAnalytics(
       const meetingsScheduled = meetingsData?.filter(m => m.status === "Scheduled" || m.status === "Completed").length || 0;
       const meetingsCompleted = meetingsData?.filter(m => m.status === "Completed").length || 0;
       const leadsAssigned = oppsData?.length || 0;
+      
+      // Calculate closed deals (manual selection via stage = 'closed_won')
+      const closedDealsData = oppsData?.filter(o => o.stage === 'closed_won') || [];
+      const closedDeals = closedDealsData.length;
+      const closedDealValue = closedDealsData.reduce((sum, opp) => sum + (opp.amount || 0), 0);
 
       // Calculate previous period metrics
       const prevCommsSent = prevCommsData?.filter(c => c.sent_at).length || 0;
@@ -143,6 +152,7 @@ export function usePipelineAnalytics(
       const prevMeetingsScheduled = prevMeetingsData?.filter(m => m.status === "Scheduled" || m.status === "Completed").length || 0;
       const prevMeetingsCompleted = prevMeetingsData?.filter(m => m.status === "Completed").length || 0;
       const prevLeadsAssigned = prevOppsData?.length || 0;
+      const prevClosedDeals = prevOppsData?.filter(o => o.stage === 'closed_won').length || 0;
 
       // Calculate conversion rates
       const openRate = commsSent > 0 ? (emailsOpened / commsSent) * 100 : 0;
@@ -150,6 +160,7 @@ export function usePipelineAnalytics(
       const scheduleRate = responsesReceived > 0 ? (meetingsScheduled / responsesReceived) * 100 : 0;
       const completionRate = meetingsScheduled > 0 ? (meetingsCompleted / meetingsScheduled) * 100 : 0;
       const handoffRate = meetingsCompleted > 0 ? (leadsAssigned / meetingsCompleted) * 100 : 0;
+      const closeRate = leadsAssigned > 0 ? (closedDeals / leadsAssigned) * 100 : 0;
 
       // Calculate average response time
       let totalResponseTime = 0;
@@ -177,11 +188,14 @@ export function usePipelineAnalytics(
         meetingsScheduled,
         meetingsCompleted,
         leadsAssigned,
+        closedDeals,
+        closedDealValue,
         openRate,
         responseRate,
         scheduleRate,
         completionRate,
         handoffRate,
+        closeRate,
         avgResponseTimeDays,
         totalPipelineValue,
         previousPeriod: {
@@ -191,6 +205,7 @@ export function usePipelineAnalytics(
           meetingsScheduled: prevMeetingsScheduled,
           meetingsCompleted: prevMeetingsCompleted,
           leadsAssigned: prevLeadsAssigned,
+          closedDeals: prevClosedDeals,
         },
       };
     },

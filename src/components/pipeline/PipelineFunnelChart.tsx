@@ -11,11 +11,13 @@ interface PipelineFunnelChartProps {
     meetingsScheduled: number;
     meetingsCompleted: number;
     leadsAssigned: number;
+    closedDeals: number;
     openRate: number;
     responseRate: number;
     scheduleRate: number;
     completionRate: number;
     handoffRate: number;
+    closeRate: number;
   } | undefined;
   isLoading: boolean;
 }
@@ -27,6 +29,7 @@ const COLORS = [
   "hsl(45, 93%, 47%)",   // Yellow - Scheduled
   "hsl(24, 95%, 53%)",   // Orange - Completed
   "hsl(280, 87%, 61%)",  // Purple - Assigned
+  "hsl(160, 84%, 39%)",  // Emerald - Closed
 ];
 
 export function PipelineFunnelChart({ metrics, isLoading }: PipelineFunnelChartProps) {
@@ -52,6 +55,7 @@ export function PipelineFunnelChart({ metrics, isLoading }: PipelineFunnelChartP
     { name: "Scheduled", value: metrics.meetingsScheduled, fill: COLORS[3] },
     { name: "Completed", value: metrics.meetingsCompleted, fill: COLORS[4] },
     { name: "Assigned", value: metrics.leadsAssigned, fill: COLORS[5] },
+    { name: "Closed", value: metrics.closedDeals, fill: COLORS[6] },
   ];
 
   const conversionSteps = [
@@ -60,6 +64,7 @@ export function PipelineFunnelChart({ metrics, isLoading }: PipelineFunnelChartP
     { from: "Responded", to: "Scheduled", rate: metrics.scheduleRate },
     { from: "Scheduled", to: "Completed", rate: metrics.completionRate },
     { from: "Completed", to: "Assigned", rate: metrics.handoffRate },
+    { from: "Assigned", to: "Closed", rate: metrics.closeRate },
   ];
 
   // Custom tooltip for funnel chart

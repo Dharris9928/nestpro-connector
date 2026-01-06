@@ -1,12 +1,34 @@
 # Google Nest Pro CRM - Technical Documentation
 
-**Version:** 4.2  
-**Last Updated:** 2025-11-07
+**Version:** 4.3  
+**Last Updated:** 2026-01-06
 
 ## Overview
-A comprehensive CRM system built for managing Google Nest Pro partnerships with builders and contractors. Features intelligent lead scoring, user management with approval workflows, contact tracking, activity monitoring, AI-powered enrichment, detailed import/export capabilities with error tracking, AI-powered error assistance, and enterprise-grade security with A+ rating.
+A comprehensive CRM system built for managing Google Nest Pro partnerships with builders and contractors. Features intelligent lead scoring, user management with approval workflows, contact tracking, activity monitoring, AI-powered enrichment, detailed import/export capabilities with error tracking, AI-powered error assistance, pipeline analytics with closed deal tracking, and enterprise-grade security with A+ rating.
 
-## Recent Features & Enhancements (v4.2)
+## Recent Features & Enhancements (v4.3)
+
+### Pipeline Analytics (NEW - v4.3)
+- **Full Sales Funnel Tracking**: Track every stage from outreach to closed deal
+  - Communications Sent → Emails Opened → Responses → Meetings Scheduled → Meetings Completed → Leads Assigned → **Closed Deals**
+- **7 KPI Cards**: Real-time metrics with period-over-period comparison
+- **Funnel Visualization**: Interactive Recharts funnel chart with conversion rates
+- **Closed Deals Tracking**: Manual selection via opportunity stage `closed_won`
+  - Close Rate calculation (Closed ÷ Assigned)
+  - Closed Deal Value aggregation
+  - Previous period comparison
+- **Date Range Filtering**: Quick presets (This Week, This Month, Last 30/90 Days) + custom range
+- **Perspective Filtering**: Filter by My Records, Assigned to Me, or All Records
+- **Detail Cards**: Email Performance, Meeting Analytics, Lead Handoff, Closed Deals
+- **Key Files**:
+  - `src/pages/PipelineAnalytics.tsx` - Main page
+  - `src/hooks/usePipelineAnalytics.ts` - Data fetching hook
+  - `src/components/pipeline/PipelineKPICards.tsx` - KPI cards
+  - `src/components/pipeline/PipelineFunnelChart.tsx` - Funnel visualization
+  - `src/components/pipeline/ClosedDealsCard.tsx` - Closed deals detail card
+- **How to Mark a Deal as Closed**: Navigate to Opportunities → Edit opportunity → Change Stage to "Closed Won"
+
+## Previous Features (v4.2)
 
 ### Enterprise Security Enhancements (NEW - v4.2)
 - **XSS Protection**: Comprehensive DOMPurify sanitization in RichTextEditor
