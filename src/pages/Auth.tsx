@@ -424,6 +424,7 @@ const Auth = () => {
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -437,6 +438,7 @@ const Auth = () => {
                   required
                   maxLength={requiresPasswordChange ? undefined : 6}
                   disabled={requiresPasswordChange}
+                  autoComplete="one-time-code"
                 />
                 <p className="text-xs text-muted-foreground">
                   {requiresPasswordChange 
@@ -451,6 +453,7 @@ const Auth = () => {
                   id="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                 />
                 <PasswordRequirements password={newPassword} />
@@ -461,6 +464,7 @@ const Auth = () => {
                   id="confirm-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                 />
               </div>
@@ -533,7 +537,7 @@ const Auth = () => {
                   </Button>
                 </form>
               ) : (
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} name="login" className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
                     <Input
@@ -542,6 +546,7 @@ const Auth = () => {
                       placeholder="name@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -560,6 +565,7 @@ const Auth = () => {
                       id="login-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
                       required
                     />
                   </div>
@@ -571,7 +577,7 @@ const Auth = () => {
             </TabsContent>
             
             <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
+              <form onSubmit={handleSignup} name="signup" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="first-name">First Name</Label>
@@ -580,6 +586,7 @@ const Auth = () => {
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      autoComplete="given-name"
                       required
                     />
                   </div>
@@ -590,6 +597,7 @@ const Auth = () => {
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
+                      autoComplete="family-name"
                       required
                     />
                   </div>
@@ -602,6 +610,7 @@ const Auth = () => {
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -611,6 +620,7 @@ const Auth = () => {
                     id="signup-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
                     required
                   />
                   <PasswordRequirements password={password} />

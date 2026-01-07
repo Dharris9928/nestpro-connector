@@ -105,7 +105,7 @@ export function MFAVerificationDialog({ open, onOpenChange, onSuccess, factorId 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleVerify(); }} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="mfa-code">Verification Code</Label>
             <Input
@@ -116,18 +116,19 @@ export function MFAVerificationDialog({ open, onOpenChange, onSuccess, factorId 
               value={verifyCode}
               onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
               className="text-center text-2xl tracking-widest"
+              autoComplete="one-time-code"
               autoFocus
             />
           </div>
 
           <Button
-            onClick={handleVerify}
+            type="submit"
             disabled={isLoading || verifyCode.length !== 6}
             className="w-full"
           >
             {isLoading ? 'Verifying...' : 'Verify'}
           </Button>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
