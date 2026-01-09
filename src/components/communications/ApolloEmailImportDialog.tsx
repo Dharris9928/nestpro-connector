@@ -288,7 +288,6 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
     });
     setSelectedEmails(new Set(emailsToSelect.map(e => e.apolloId)));
   };
-  };
 
   const importEmails = async () => {
     setStep('importing');
@@ -451,27 +450,31 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
           result.communicationsCreated++;
           
           // Also record in apollo_email_activities for duplicate prevention
-          await supabase.from('apollo_email_activities').insert({
-            company_id: companyId,
-            contact_id: contactId,
-            created_by: user.id,
-            activity_type: 'email',
-            subject: email.subject,
-            content: email.bodyText || email.bodyHtml || '',
-            activity_date: email.sentAt || new Date().toISOString(),
-            sent_at: email.sentAt,
-            opened_at: email.openedAt,
-            clicked_at: email.clickedAt,
-            replied_at: email.repliedAt,
-            sequence_name: email.sequenceName,
-            sequence_step: email.stepPosition,
-            open_count: email.openCount || 0,
-            click_count: email.clickCount || 0,
-            reply_count: email.replyCount || 0,
-            status: email.status,
-            apollo_activity_id: email.apolloId,
-            apollo_contact_email: email.contact?.email
-          }).catch(err => console.error('Failed to log apollo activity:', err));
+          try {
+            await supabase.from('apollo_email_activities').insert({
+              company_id: companyId,
+              contact_id: contactId,
+              created_by: user.id,
+              activity_type: 'email',
+              subject: email.subject,
+              content: email.bodyText || email.bodyHtml || '',
+              activity_date: email.sentAt || new Date().toISOString(),
+              sent_at: email.sentAt,
+              opened_at: email.openedAt,
+              clicked_at: email.clickedAt,
+              replied_at: email.repliedAt,
+              sequence_name: email.sequenceName,
+              sequence_step: email.stepPosition,
+              open_count: email.openCount || 0,
+              click_count: email.clickCount || 0,
+              reply_count: email.replyCount || 0,
+              status: email.status,
+              apollo_activity_id: email.apolloId,
+              apollo_contact_email: email.contact?.email
+            });
+          } catch (err) {
+            console.error('Failed to log apollo activity:', err);
+          }
         }
 
       } catch (error) {
