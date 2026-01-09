@@ -10,7 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Mail, Building2, User, CheckCircle2, XCircle, Clock, Loader2, Download, RefreshCw, Eye, EyeOff, Filter, X } from 'lucide-react';
+import { Mail, Building2, User, CheckCircle2, XCircle, Clock, Loader2, Download, RefreshCw, Eye, EyeOff, Filter, X, MousePointer } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, subDays } from 'date-fns';
 
 interface ApolloEmailImportDialogProps {
@@ -137,21 +138,49 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
   const [statusFilter, setStatusFilter] = useState<EmailStatus>('all');
   const [alreadyImportedIds, setAlreadyImportedIds] = useState<Set<string>>(new Set());
   
+  // Manual status overrides (for when Apollo doesn't report opens correctly)
+  const [manualOpenedIds, setManualOpenedIds] = useState<Set<string>>(new Set());
+  
   // Import state
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
-  // Compute status counts
+  // Toggle manual opened status for an email
+  const toggleManualOpened = (apolloId: string) => {
+    const newSet = new Set(manualOpenedIds);
+    if (newSet.has(apolloId)) {
+      newSet.delete(apolloId);
+    } else {
+      newSet.add(apolloId);
+    }
+    setManualOpenedIds(newSet);
+  };
+
+  // Enhanced getEmailStatus that respects manual overrides
+  const getEmailStatusWithOverride = (email: ApolloEmail): EmailStatus => {
+    // If manually marked as opened, return opened (unless it has higher engagement)
+    if (manualOpenedIds.has(email.apolloId)) {
+      const baseStatus = getEmailStatus(email);
+      // If already replied/clicked, keep that (higher engagement)
+      if (baseStatus === 'replied' || baseStatus === 'clicked') {
+        return baseStatus;
+      }
+      return 'opened';
+    }
+    return getEmailStatus(email);
+  };
+
+  // Compute status counts (using override)
   const statusCounts = emails.reduce((acc, email) => {
-    const status = getEmailStatus(email);
+    const status = getEmailStatusWithOverride(email);
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  // Filter emails based on status
+  // Filter emails based on status (using override)
   const filteredEmails = emails.filter(email => {
     if (statusFilter === 'all') return true;
-    return getEmailStatus(email) === statusFilter;
+    return getEmailStatusWithOverride(email) === statusFilter;
   });
 
   // Fetch sequences and last import date on open
@@ -168,6 +197,7 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
       setImportResult(null);
       setStatusFilter('all');
       setAlreadyImportedIds(new Set());
+      setManualOpenedIds(new Set());
     }
   }, [open]);
 
@@ -504,7 +534,8 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
   };
 
   const getStatusBadge = (email: ApolloEmail) => {
-    const status = getEmailStatus(email);
+    const status = getEmailStatusWithOverride(email);
+    const isManuallyOpened = manualOpenedIds.has(email.apolloId);
     
     switch (status) {
       case 'replied':
@@ -512,7 +543,11 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
       case 'clicked':
         return <Badge className="bg-blue-500">Clicked</Badge>;
       case 'opened':
-        return <Badge className="bg-yellow-500 text-black">Opened</Badge>;
+        return (
+          <Badge className="bg-yellow-500 text-black">
+            {isManuallyOpened ? '✓ Opened (Manual)' : 'Opened'}
+          </Badge>
+        );
       case 'not_opened':
         return <Badge className="bg-emerald-600">Not Opened</Badge>;
       case 'scheduled':
@@ -676,11 +711,50 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
                       disabled={isAlreadyImported}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium truncate">{email.subject || '(No subject)'}</span>
                         {getStatusBadge(email)}
                         {isAlreadyImported && (
                           <Badge variant="outline" className="text-xs bg-muted">Already Imported</Badge>
+                        )}
+                        {/* Manual toggle for opened status - only show if not already opened/clicked/replied */}
+                        {getEmailStatusWithOverride(email) === 'not_opened' && !isAlreadyImported && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleManualOpened(email.apolloId);
+                                  }}
+                                >
+                                  <MousePointer className="h-3 w-3 mr-1" />
+                                  Mark Opened
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Mark as opened if Apollo didn't track it correctly</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        {/* Show undo button if manually marked as opened */}
+                        {manualOpenedIds.has(email.apolloId) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleManualOpened(email.apolloId);
+                            }}
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Undo
+                          </Button>
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">

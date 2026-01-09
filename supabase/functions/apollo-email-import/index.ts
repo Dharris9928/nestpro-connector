@@ -372,7 +372,7 @@ serve(async (req) => {
         repliedAt?: string;
       };
 
-      // Derive engagement from emailer_message_stats array (Apollo's engagement tracking)
+      // Derive engagement from emailer_message_stats array AND recipients array (Apollo's engagement tracking)
       const deriveEngagementFromStats = (email: ApolloEmailActivity): Engagement => {
         const result: Engagement = {
           openCount: 0,
@@ -380,33 +380,75 @@ serve(async (req) => {
           replyCount: 0,
         };
 
+        // Check emailer_message_stats array
         const stats = email.emailer_message_stats;
-        if (!stats || !Array.isArray(stats)) {
-          return result;
+        if (stats && Array.isArray(stats)) {
+          for (const stat of stats) {
+            const status = (stat?.status || stat?.emailer_message_status || '').toLowerCase();
+            
+            if (status.includes('opened') || status.includes('open')) {
+              result.openCount++;
+              if (!result.openedAt && stat.status_changed_at) {
+                result.openedAt = stat.status_changed_at;
+              }
+            }
+            
+            if (status.includes('clicked') || status.includes('click')) {
+              result.clickCount++;
+              if (!result.clickedAt && stat.status_changed_at) {
+                result.clickedAt = stat.status_changed_at;
+              }
+            }
+            
+            if (status.includes('replied') || status.includes('reply')) {
+              result.replyCount++;
+              if (!result.repliedAt && stat.status_changed_at) {
+                result.repliedAt = stat.status_changed_at;
+              }
+            }
+          }
         }
 
-        for (const stat of stats) {
-          const status = (stat?.status || stat?.emailer_message_status || '').toLowerCase();
-          
-          // Apollo uses statuses like "email_opened", "email_clicked", "email_replied"
-          if (status.includes('opened') || status.includes('open')) {
-            result.openCount++;
-            if (!result.openedAt && stat.status_changed_at) {
-              result.openedAt = stat.status_changed_at;
+        // Also check the recipients array - Apollo often puts engagement data there
+        const recipients = email.recipients;
+        if (recipients && Array.isArray(recipients)) {
+          for (const recipient of recipients) {
+            const rec = recipient as Record<string, unknown>;
+            
+            // Check for opens in recipient
+            if (rec.opened_at || rec.email_opened_at) {
+              result.openCount++;
+              if (!result.openedAt) {
+                result.openedAt = (rec.opened_at || rec.email_opened_at) as string;
+              }
             }
-          }
-          
-          if (status.includes('clicked') || status.includes('click')) {
-            result.clickCount++;
-            if (!result.clickedAt && stat.status_changed_at) {
-              result.clickedAt = stat.status_changed_at;
+            
+            // Check open_count on recipient
+            const recOpenCount = toNumber(rec.open_count);
+            if (recOpenCount && recOpenCount > 0) {
+              result.openCount = Math.max(result.openCount, recOpenCount);
             }
-          }
-          
-          if (status.includes('replied') || status.includes('reply')) {
-            result.replyCount++;
-            if (!result.repliedAt && stat.status_changed_at) {
-              result.repliedAt = stat.status_changed_at;
+            
+            // Check for clicks in recipient
+            if (rec.clicked_at || rec.email_clicked_at) {
+              result.clickCount++;
+              if (!result.clickedAt) {
+                result.clickedAt = (rec.clicked_at || rec.email_clicked_at) as string;
+              }
+            }
+            
+            // Check click_count on recipient
+            const recClickCount = toNumber(rec.click_count);
+            if (recClickCount && recClickCount > 0) {
+              result.clickCount = Math.max(result.clickCount, recClickCount);
+            }
+            
+            // Check for replies in recipient
+            if (rec.replied_at || rec.email_replied_at) {
+              result.replyCount++;
+              if (!result.repliedAt) {
+                result.repliedAt = (rec.replied_at || rec.email_replied_at) as string;
+              }
             }
           }
         }
