@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { NewCommunicationDialog } from '@/components/companies/NewCommunicationDialog';
 import { EditCommunicationDialog } from '@/components/companies/EditCommunicationDialog';
 import { ApolloEmailImportDialog } from '@/components/communications/ApolloEmailImportDialog';
+import { AddCommunicationDialog } from '@/components/communications/AddCommunicationDialog';
 import { useNavigate } from 'react-router-dom';
 
 export default function Communications() {
@@ -252,6 +253,7 @@ export default function Communications() {
               <Download className="h-4 w-4 mr-2" />
               Import from Apollo
             </Button>
+            <AddCommunicationDialog onSuccess={() => refetch()} />
             <NewCommunicationDialog 
               onSuccess={() => {
                 refetch();
