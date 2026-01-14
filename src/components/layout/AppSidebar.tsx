@@ -1,4 +1,4 @@
-import { Home, Building2, Users, Activity, BarChart3, Brain, Target, Settings, LogOut, HelpCircle, MessageSquare, DollarSign, FileText, Presentation, TrendingUp } from "lucide-react";
+import { Home, Building2, Users, Activity, BarChart3, Brain, Target, Settings, LogOut, HelpCircle, MessageSquare, DollarSign, FileText, Presentation, TrendingUp, ClipboardList } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -19,6 +19,7 @@ const menuItems = [
   { title: "Companies", url: "/companies", icon: Building2 },
   { title: "Contacts", url: "/contacts", icon: Users },
   { title: "Opportunities", url: "/opportunities", icon: DollarSign },
+  { title: "Job Quotes", url: "/job-quotes", icon: ClipboardList },
   { title: "Communications", url: "/communications", icon: MessageSquare },
   { title: "Activities", url: "/activities", icon: Activity },
   { title: "Reports", url: "/reports", icon: BarChart3 },

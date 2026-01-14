@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import Presentation from "./pages/Presentation";
 import PresentationView from "./pages/PresentationView";
 import PipelineAnalytics from "./pages/PipelineAnalytics";
+import JobQuotes from "./pages/JobQuotes";
 
 const queryClient = new QueryClient();
 
@@ -155,6 +156,14 @@ const App = () => (
             element={
               <AppLayout>
                 <PipelineAnalytics />
+              </AppLayout>
+            }
+          />
+          <Route
+            path="/job-quotes"
+            element={
+              <AppLayout>
+                <JobQuotes />
               </AppLayout>
             }
           />
