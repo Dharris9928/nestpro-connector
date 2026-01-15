@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Mail, MailOpen, MessageSquareReply, CalendarPlus, CalendarCheck, UserCheck, Trophy, TrendingUp, TrendingDown, Minus, Phone, Presentation } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KPIDetailDialog, KPICategory } from "./KPIDetailDialog";
 
 interface KPICardProps {
   label: string;
@@ -10,9 +12,10 @@ interface KPICardProps {
   icon: React.ReactNode;
   colorClass: string;
   format?: "number" | "currency";
+  onClick?: () => void;
 }
 
-function KPICard({ label, value, previousValue, icon, colorClass, format = "number" }: KPICardProps) {
+function KPICard({ label, value, previousValue, icon, colorClass, format = "number", onClick }: KPICardProps) {
   const percentChange = previousValue > 0 
     ? ((value - previousValue) / previousValue) * 100 
     : value > 0 ? 100 : 0;
@@ -26,7 +29,13 @@ function KPICard({ label, value, previousValue, icon, colorClass, format = "numb
     : value.toLocaleString();
 
   return (
-    <Card className="overflow-hidden">
+    <Card 
+      className={cn(
+        "overflow-hidden transition-all",
+        onClick && "cursor-pointer hover:shadow-md hover:border-primary/50"
+      )}
+      onClick={onClick}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className={cn("p-2 rounded-lg", colorClass)}>
@@ -104,6 +113,14 @@ interface PipelineKPICardsProps {
 }
 
 export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) {
+  const [selectedCategory, setSelectedCategory] = useState<KPICategory | null>(null);
+  const [dialogTitle, setDialogTitle] = useState("");
+
+  const handleCardClick = (category: KPICategory, title: string) => {
+    setSelectedCategory(category);
+    setDialogTitle(title);
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -116,13 +133,21 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
 
   if (!metrics) return null;
 
-  const kpiData = [
+  const kpiData: Array<{
+    label: string;
+    value: number;
+    previousValue: number;
+    icon: React.ReactNode;
+    colorClass: string;
+    category: KPICategory;
+  }> = [
     {
       label: "Comms Sent",
       value: metrics.commsSent,
       previousValue: metrics.previousPeriod.commsSent,
       icon: <Mail className="h-5 w-5 text-blue-600" />,
       colorClass: "bg-blue-100 dark:bg-blue-900/30",
+      category: "comms_sent",
     },
     {
       label: "Emails Opened",
@@ -130,6 +155,7 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       previousValue: metrics.previousPeriod.emailsOpened,
       icon: <MailOpen className="h-5 w-5 text-cyan-600" />,
       colorClass: "bg-cyan-100 dark:bg-cyan-900/30",
+      category: "emails_opened",
     },
     {
       label: "Replies Received",
@@ -137,6 +163,7 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       previousValue: metrics.previousPeriod.responsesReceived,
       icon: <MessageSquareReply className="h-5 w-5 text-green-600" />,
       colorClass: "bg-green-100 dark:bg-green-900/30",
+      category: "replies_received",
     },
     {
       label: "Phone Calls",
@@ -144,6 +171,7 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       previousValue: metrics.previousPeriod.phoneCalls || 0,
       icon: <Phone className="h-5 w-5 text-violet-600" />,
       colorClass: "bg-violet-100 dark:bg-violet-900/30",
+      category: "phone_calls",
     },
     {
       label: "Meetings Scheduled",
@@ -151,6 +179,7 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       previousValue: metrics.previousPeriod.meetingsScheduled + (metrics.previousPeriod.demosScheduled || 0),
       icon: <CalendarPlus className="h-5 w-5 text-yellow-600" />,
       colorClass: "bg-yellow-100 dark:bg-yellow-900/30",
+      category: "meetings_scheduled",
     },
     {
       label: "Demos Completed",
@@ -158,6 +187,7 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       previousValue: metrics.previousPeriod.demosCompleted || 0,
       icon: <Presentation className="h-5 w-5 text-orange-600" />,
       colorClass: "bg-orange-100 dark:bg-orange-900/30",
+      category: "demos_completed",
     },
     {
       label: "Leads Assigned",
@@ -165,6 +195,7 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       previousValue: metrics.previousPeriod.leadsAssigned,
       icon: <UserCheck className="h-5 w-5 text-purple-600" />,
       colorClass: "bg-purple-100 dark:bg-purple-900/30",
+      category: "leads_assigned",
     },
     {
       label: "Closed Deals",
@@ -172,14 +203,32 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       previousValue: metrics.previousPeriod.closedDeals,
       icon: <Trophy className="h-5 w-5 text-emerald-600" />,
       colorClass: "bg-emerald-100 dark:bg-emerald-900/30",
+      category: "closed_deals",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {kpiData.map((kpi) => (
-        <KPICard key={kpi.label} {...kpi} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpiData.map((kpi) => (
+          <KPICard 
+            key={kpi.label} 
+            label={kpi.label}
+            value={kpi.value}
+            previousValue={kpi.previousValue}
+            icon={kpi.icon}
+            colorClass={kpi.colorClass}
+            onClick={() => handleCardClick(kpi.category, kpi.label)}
+          />
+        ))}
+      </div>
+
+      <KPIDetailDialog
+        open={!!selectedCategory}
+        onOpenChange={(open) => !open && setSelectedCategory(null)}
+        category={selectedCategory}
+        title={dialogTitle}
+      />
+    </>
   );
 }
