@@ -1,7 +1,12 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveContainer, FunnelChart, Funnel, Cell, Tooltip, LabelList } from "recharts";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
+import { EmailedCompany, ResponseDetail, HandoffDetail } from "@/hooks/usePipelineAnalytics";
 
 interface PipelineFunnelChartProps {
   metrics: {
@@ -18,8 +23,12 @@ interface PipelineFunnelChartProps {
     completionRate: number;
     handoffRate: number;
     closeRate: number;
+    emailedCompanies?: EmailedCompany[];
+    responseDetails?: ResponseDetail[];
+    handoffDetails?: HandoffDetail[];
   } | undefined;
   isLoading: boolean;
+  regionLabel?: string;
 }
 
 const COLORS = [
@@ -32,7 +41,9 @@ const COLORS = [
   "hsl(160, 84%, 39%)",  // Emerald - Closed
 ];
 
-export function PipelineFunnelChart({ metrics, isLoading }: PipelineFunnelChartProps) {
+export function PipelineFunnelChart({ metrics, isLoading, regionLabel }: PipelineFunnelChartProps) {
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
+
   if (isLoading) {
     return (
       <Card>
@@ -77,16 +88,52 @@ export function PipelineFunnelChart({ metrics, isLoading }: PipelineFunnelChartP
           <p className="text-sm text-muted-foreground">
             Count: <span className="font-medium text-foreground">{data.value.toLocaleString()}</span>
           </p>
+          {data.value > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">Click to see companies</p>
+          )}
         </div>
       );
     }
     return null;
   };
 
+  const handleFunnelClick = (data: any) => {
+    if (data && data.name && data.value > 0) {
+      setExpandedStage(expandedStage === data.name ? null : data.name);
+    }
+  };
+
+  const getCompaniesForStage = (stage: string) => {
+    switch (stage) {
+      case "Sent":
+        return metrics.emailedCompanies?.map(c => ({
+          name: c.company_name,
+          detail: format(new Date(c.sent_at), "MMM d, yyyy"),
+        })) || [];
+      case "Responded":
+        return metrics.responseDetails?.map(r => ({
+          name: r.company_name,
+          detail: r.contact_name ? `${r.contact_name} - ${format(new Date(r.responded_at), "MMM d")}` : format(new Date(r.responded_at), "MMM d"),
+        })) || [];
+      case "Assigned":
+        return metrics.handoffDetails?.map(h => ({
+          name: h.company_name,
+          detail: `To: ${h.assigned_to_name}`,
+        })) || [];
+      default:
+        return [];
+    }
+  };
+
+  const stageCompanies = expandedStage ? getCompaniesForStage(expandedStage) : [];
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Pipeline Funnel</CardTitle>
+        <CardTitle className="text-lg flex items-center gap-2">
+          Pipeline Funnel
+          {regionLabel && <span className="text-sm font-normal text-muted-foreground">({regionLabel})</span>}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
@@ -97,9 +144,14 @@ export function PipelineFunnelChart({ metrics, isLoading }: PipelineFunnelChartP
                 dataKey="value"
                 data={funnelData}
                 isAnimationActive
+                onClick={handleFunnelClick}
               >
                 {funnelData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.fill} 
+                    style={{ cursor: entry.value > 0 ? 'pointer' : 'default' }}
+                  />
                 ))}
                 <LabelList
                   position="right"
@@ -119,6 +171,43 @@ export function PipelineFunnelChart({ metrics, isLoading }: PipelineFunnelChartP
             </FunnelChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Expanded Company Details */}
+        {expandedStage && stageCompanies.length > 0 && (
+          <div className="mt-4 border rounded-lg p-3 bg-muted/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">{expandedStage} - Companies ({stageCompanies.length})</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setExpandedStage(null)}
+                className="h-6 px-2"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+            </div>
+            <ScrollArea className="h-[120px]">
+              <div className="space-y-1">
+                {stageCompanies.map((company, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-sm py-1 px-2 rounded hover:bg-muted">
+                    <span className="font-medium">{company.name}</span>
+                    <span className="text-muted-foreground text-xs">{company.detail}</span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+
+        {/* Show hint when no stage selected */}
+        {!expandedStage && (metrics.emailedCompanies?.length || 0) > 0 && (
+          <div className="mt-3 text-center">
+            <p className="text-xs text-muted-foreground">Click on Sent, Responded, or Assigned stages to see company details</p>
+          </div>
+        )}
 
         {/* Conversion rates */}
         <div className="mt-6 border-t pt-4">

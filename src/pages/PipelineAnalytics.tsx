@@ -198,7 +198,7 @@ export default function PipelineAnalytics() {
               <span className="text-lg font-semibold text-purple-600">🟣 West Coast</span>
             </div>
             <PipelineKPICards metrics={westMetrics} isLoading={isLoadingWest} />
-            <PipelineFunnelChart metrics={westMetrics} isLoading={isLoadingWest} />
+            <PipelineFunnelChart metrics={westMetrics} isLoading={isLoadingWest} regionLabel="West" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <EmailPerformanceCard metrics={westMetrics} isLoading={isLoadingWest} />
               <MeetingAnalyticsCard metrics={westMetrics} isLoading={isLoadingWest} />
@@ -213,7 +213,7 @@ export default function PipelineAnalytics() {
               <span className="text-lg font-semibold text-blue-600">🔵 East Coast</span>
             </div>
             <PipelineKPICards metrics={eastMetrics} isLoading={isLoadingEast} />
-            <PipelineFunnelChart metrics={eastMetrics} isLoading={isLoadingEast} />
+            <PipelineFunnelChart metrics={eastMetrics} isLoading={isLoadingEast} regionLabel="East" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <EmailPerformanceCard metrics={eastMetrics} isLoading={isLoadingEast} />
               <MeetingAnalyticsCard metrics={eastMetrics} isLoading={isLoadingEast} />

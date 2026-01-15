@@ -252,6 +252,19 @@ export default function Communications() {
     }
   };
 
+  const getEmailStatusBadge = (comm: any) => {
+    if (comm.email_responded_at) {
+      return <Badge className="bg-green-600 text-white">Responded</Badge>;
+    }
+    if (comm.email_opened_at) {
+      return <Badge className="bg-cyan-600 text-white">Opened</Badge>;
+    }
+    if (comm.sent_at) {
+      return <Badge className="bg-blue-600 text-white">Sent</Badge>;
+    }
+    return <Badge variant="outline">Draft</Badge>;
+  };
+
   const clearFilters = () => {
     setSearchQuery('');
     setIndustryTypeFilter('all');
@@ -429,6 +442,7 @@ export default function Communications() {
                       <div className="flex items-center gap-2 flex-wrap">
                         {getTypeIcon(comm.communication_type)}
                         <CardTitle className="text-base">{getTypeLabel(comm.communication_type)}</CardTitle>
+                        {getEmailStatusBadge(comm)}
                         {comm.used && <Badge variant="secondary">Used</Badge>}
                         <Badge variant={comm.conversation_active !== false ? "default" : "secondary"}>
                           {comm.conversation_active !== false ? "Active" : "Inactive"}
