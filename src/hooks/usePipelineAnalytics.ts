@@ -225,16 +225,13 @@ export function usePipelineAnalytics(
       const demosData = activitiesData.filter(a => a.activity_type === "Demo");
       const phoneData = activitiesData.filter(a => a.activity_type === "Phone");
 
-      // Calculate upcoming meetings - created within date range with a scheduled_date
+      // Calculate upcoming meetings - scheduled but NOT yet completed
       const upcomingMeetingsData = activitiesData.filter(a => {
         if (!["Meeting", "Demo"].includes(a.activity_type)) return false;
         if (!a.scheduled_date) return false;
-        const createdDate = a.created_at ? new Date(a.created_at) : null;
-        const from = new Date(fromDate);
-        const to = new Date(toDate);
-        to.setHours(23, 59, 59, 999); // Include full day
-        // Count if created within date range and has a scheduled date
-        return createdDate && createdDate >= from && createdDate <= to;
+        // Exclude completed meetings - they go to "Meetings Conducted"
+        if (a.outcome === "Completed" || a.completed_date) return false;
+        return true;
       });
 
       // Fetch previous period activities
@@ -279,15 +276,13 @@ export function usePipelineAnalytics(
       const prevDemosData = prevActivitiesData.filter(a => a.activity_type === "Demo");
       const prevPhoneData = prevActivitiesData.filter(a => a.activity_type === "Phone");
       
-      // Previous period upcoming meetings (for comparison)
+      // Previous period upcoming meetings (for comparison) - exclude completed
       const prevUpcomingMeetingsData = prevActivitiesData.filter(a => {
         if (!["Meeting", "Demo"].includes(a.activity_type)) return false;
         if (!a.scheduled_date) return false;
-        const createdDate = a.created_at ? new Date(a.created_at) : null;
-        const from = new Date(prevFrom);
-        const to = new Date(prevTo);
-        to.setHours(23, 59, 59, 999);
-        return createdDate && createdDate >= from && createdDate <= to;
+        // Exclude completed meetings
+        if (a.outcome === "Completed" || a.completed_date) return false;
+        return true;
       });
 
       // Fetch opportunities (leads assigned) with company and assignee info
