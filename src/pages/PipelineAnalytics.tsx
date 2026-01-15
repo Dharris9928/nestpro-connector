@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,6 +30,8 @@ export default function PipelineAnalytics() {
   const [dateRange, setDateRange] = useState(() => getDatePreset("last_30"));
   const [regionFilter, setRegionFilter] = useState<RegionFilter>("all");
   const [viewTab, setViewTab] = useState<ViewTab>("analytics");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -43,6 +46,12 @@ export default function PipelineAnalytics() {
   // Fetch both regions for comparison tab
   const { data: westMetrics, isLoading: isLoadingWest } = usePipelineAnalytics(dateRange, perspective, userId, "west");
   const { data: eastMetrics, isLoading: isLoadingEast } = usePipelineAnalytics(dateRange, perspective, userId, "east");
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["pipeline-analytics"] });
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
   const handlePresetChange = (preset: DatePreset) => {
     if (preset !== "custom") {
       setDatePreset(preset);
@@ -147,6 +156,16 @@ export default function PipelineAnalytics() {
         </Tabs>
         
         <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing || isLoading}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            Refresh
+          </Button>
           <RegionToggle value={regionFilter} onChange={setRegionFilter} />
           <PerspectiveSelector
             value={perspective}
