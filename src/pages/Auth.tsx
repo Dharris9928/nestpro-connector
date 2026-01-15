@@ -401,7 +401,7 @@ const Auth = () => {
   // If we're in password reset mode, show the reset form
   if (isResettingPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <main className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-4">
@@ -485,12 +485,12 @@ const Auth = () => {
             </form>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <main className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
@@ -640,7 +640,7 @@ const Auth = () => {
           onSuccess={handleMFASuccess}
           factorId={pendingMFAFactorId}
         />
-    </div>
+    </main>
   );
 };
 
