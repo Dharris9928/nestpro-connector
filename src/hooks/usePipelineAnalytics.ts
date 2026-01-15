@@ -34,8 +34,11 @@ interface PipelineMetrics {
   commsSent: number;
   emailsOpened: number;
   responsesReceived: number;
+  phoneCalls: number;
   meetingsScheduled: number;
   meetingsCompleted: number;
+  demosScheduled: number;
+  demosCompleted: number;
   leadsAssigned: number;
   closedDeals: number;
   closedDealValue: number;
@@ -54,8 +57,11 @@ interface PipelineMetrics {
     commsSent: number;
     emailsOpened: number;
     responsesReceived: number;
+    phoneCalls: number;
     meetingsScheduled: number;
     meetingsCompleted: number;
+    demosScheduled: number;
+    demosCompleted: number;
     leadsAssigned: number;
     closedDeals: number;
   };
@@ -166,22 +172,33 @@ export function usePipelineAnalytics(
         }
       }
 
-      // Fetch meetings (activities with type Meeting)
-      let meetingsQuery = supabase
+      // Fetch all activities (Meeting, Demo, Phone)
+      let activitiesQuery = supabase
         .from("outreach_activities")
-        .select("id, activity_type, status, scheduled_date, completed_date, company_id")
-        .eq("activity_type", "Meeting")
-        .gte("scheduled_date", fromDate)
-        .lte("scheduled_date", toDate);
+        .select("id, activity_type, outcome, scheduled_date, completed_date, company_id")
+        .in("activity_type", ["Meeting", "Demo", "Phone"])
+        .or(`scheduled_date.gte.${fromDate},completed_date.gte.${fromDate}`)
+        .or(`scheduled_date.lte.${toDate},completed_date.lte.${toDate}`);
       
-      meetingsQuery = buildPerspectiveFilter(meetingsQuery);
-      const { data: meetingsDataRaw, error: meetingsError } = await meetingsQuery;
+      activitiesQuery = buildPerspectiveFilter(activitiesQuery);
+      const { data: activitiesDataRaw, error: activitiesError } = await activitiesQuery;
       
-      if (meetingsError) throw meetingsError;
+      if (activitiesError) throw activitiesError;
 
-      let meetingsData = meetingsDataRaw || [];
-      if (filterStates && meetingsData.length > 0) {
-        const companyIds = [...new Set(meetingsData.map(m => m.company_id).filter(Boolean))];
+      let activitiesData = activitiesDataRaw || [];
+      
+      // Filter by date range more precisely
+      activitiesData = activitiesData.filter(a => {
+        const schedDate = a.scheduled_date ? new Date(a.scheduled_date) : null;
+        const compDate = a.completed_date ? new Date(a.completed_date) : null;
+        const from = new Date(fromDate);
+        const to = new Date(toDate);
+        return (schedDate && schedDate >= from && schedDate <= to) || 
+               (compDate && compDate >= from && compDate <= to);
+      });
+
+      if (filterStates && activitiesData.length > 0) {
+        const companyIds = [...new Set(activitiesData.map(m => m.company_id).filter(Boolean))];
         if (companyIds.length > 0) {
           const { data: companies } = await supabase
             .from("companies")
@@ -189,24 +206,38 @@ export function usePipelineAnalytics(
             .in("id", companyIds)
             .in("state", filterStates);
           const validCompanyIds = new Set(companies?.map(c => c.id) || []);
-          meetingsData = meetingsData.filter(m => validCompanyIds.has(m.company_id));
+          activitiesData = activitiesData.filter(m => validCompanyIds.has(m.company_id));
         }
       }
 
-      // Fetch previous period meetings
-      let prevMeetingsQuery = supabase
+      // Separate by type
+      const meetingsData = activitiesData.filter(a => a.activity_type === "Meeting");
+      const demosData = activitiesData.filter(a => a.activity_type === "Demo");
+      const phoneData = activitiesData.filter(a => a.activity_type === "Phone");
+
+      // Fetch previous period activities
+      let prevActivitiesQuery = supabase
         .from("outreach_activities")
-        .select("id, activity_type, status, company_id")
-        .eq("activity_type", "Meeting")
-        .gte("scheduled_date", prevFrom)
-        .lte("scheduled_date", prevTo);
+        .select("id, activity_type, outcome, scheduled_date, completed_date, company_id")
+        .in("activity_type", ["Meeting", "Demo", "Phone"])
+        .or(`scheduled_date.gte.${prevFrom},completed_date.gte.${prevFrom}`)
+        .or(`scheduled_date.lte.${prevTo},completed_date.lte.${prevTo}`);
       
-      prevMeetingsQuery = buildPerspectiveFilter(prevMeetingsQuery);
-      const { data: prevMeetingsDataRaw } = await prevMeetingsQuery;
+      prevActivitiesQuery = buildPerspectiveFilter(prevActivitiesQuery);
+      const { data: prevActivitiesDataRaw } = await prevActivitiesQuery;
       
-      let prevMeetingsData = prevMeetingsDataRaw || [];
-      if (filterStates && prevMeetingsData.length > 0) {
-        const companyIds = [...new Set(prevMeetingsData.map(m => m.company_id).filter(Boolean))];
+      let prevActivitiesData = prevActivitiesDataRaw || [];
+      prevActivitiesData = prevActivitiesData.filter(a => {
+        const schedDate = a.scheduled_date ? new Date(a.scheduled_date) : null;
+        const compDate = a.completed_date ? new Date(a.completed_date) : null;
+        const from = new Date(prevFrom);
+        const to = new Date(prevTo);
+        return (schedDate && schedDate >= from && schedDate <= to) || 
+               (compDate && compDate >= from && compDate <= to);
+      });
+
+      if (filterStates && prevActivitiesData.length > 0) {
+        const companyIds = [...new Set(prevActivitiesData.map(m => m.company_id).filter(Boolean))];
         if (companyIds.length > 0) {
           const { data: companies } = await supabase
             .from("companies")
@@ -214,9 +245,13 @@ export function usePipelineAnalytics(
             .in("id", companyIds)
             .in("state", filterStates);
           const validCompanyIds = new Set(companies?.map(c => c.id) || []);
-          prevMeetingsData = prevMeetingsData.filter(m => validCompanyIds.has(m.company_id));
+          prevActivitiesData = prevActivitiesData.filter(m => validCompanyIds.has(m.company_id));
         }
       }
+
+      const prevMeetingsData = prevActivitiesData.filter(a => a.activity_type === "Meeting");
+      const prevDemosData = prevActivitiesData.filter(a => a.activity_type === "Demo");
+      const prevPhoneData = prevActivitiesData.filter(a => a.activity_type === "Phone");
 
       // Fetch opportunities (leads assigned) with company and assignee info
       let oppsQuery = supabase
@@ -307,8 +342,18 @@ export function usePipelineAnalytics(
       const commsSent = commsData.filter(c => c.sent_at).length;
       const emailsOpened = commsData.filter(c => c.email_opened_at).length;
       const responsesReceived = commsData.filter(c => c.email_responded_at).length;
-      const meetingsScheduled = meetingsData.filter(m => m.status === "Scheduled" || m.status === "Completed").length;
-      const meetingsCompleted = meetingsData.filter(m => m.status === "Completed").length;
+      
+      // Meetings (Scheduled or Completed outcome)
+      const meetingsScheduled = meetingsData.filter(m => m.outcome === "Scheduled" || m.outcome === "Completed").length;
+      const meetingsCompleted = meetingsData.filter(m => m.outcome === "Completed").length;
+      
+      // Demos
+      const demosScheduled = demosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
+      const demosCompleted = demosData.filter(d => d.outcome === "Completed").length;
+      
+      // Phone calls (count all completed phone activities)
+      const phoneCalls = phoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
+      
       const leadsAssigned = oppsData.length;
       
       // Calculate closed deals (manual selection via stage = 'closed_won')
@@ -320,17 +365,23 @@ export function usePipelineAnalytics(
       const prevCommsSent = prevCommsData.filter(c => c.sent_at).length;
       const prevEmailsOpened = prevCommsData.filter(c => c.email_opened_at).length;
       const prevResponsesReceived = prevCommsData.filter(c => c.email_responded_at).length;
-      const prevMeetingsScheduled = prevMeetingsData.filter(m => m.status === "Scheduled" || m.status === "Completed").length;
-      const prevMeetingsCompleted = prevMeetingsData.filter(m => m.status === "Completed").length;
+      const prevMeetingsScheduled = prevMeetingsData.filter(m => m.outcome === "Scheduled" || m.outcome === "Completed").length;
+      const prevMeetingsCompleted = prevMeetingsData.filter(m => m.outcome === "Completed").length;
+      const prevDemosScheduled = prevDemosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
+      const prevDemosCompleted = prevDemosData.filter(d => d.outcome === "Completed").length;
+      const prevPhoneCalls = prevPhoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
       const prevLeadsAssigned = prevOppsData.length;
       const prevClosedDeals = prevOppsData.filter(o => o.stage === 'closed_won').length;
 
-      // Calculate conversion rates
+      // Calculate conversion rates (combined meetings + demos for engagement rate)
+      const totalEngagements = meetingsScheduled + demosScheduled;
+      const totalCompleted = meetingsCompleted + demosCompleted;
+      
       const openRate = commsSent > 0 ? (emailsOpened / commsSent) * 100 : 0;
       const responseRate = emailsOpened > 0 ? (responsesReceived / emailsOpened) * 100 : 0;
-      const scheduleRate = responsesReceived > 0 ? (meetingsScheduled / responsesReceived) * 100 : 0;
-      const completionRate = meetingsScheduled > 0 ? (meetingsCompleted / meetingsScheduled) * 100 : 0;
-      const handoffRate = meetingsCompleted > 0 ? (leadsAssigned / meetingsCompleted) * 100 : 0;
+      const scheduleRate = responsesReceived > 0 ? (totalEngagements / responsesReceived) * 100 : 0;
+      const completionRate = totalEngagements > 0 ? (totalCompleted / totalEngagements) * 100 : 0;
+      const handoffRate = totalCompleted > 0 ? (leadsAssigned / totalCompleted) * 100 : 0;
       const closeRate = leadsAssigned > 0 ? (closedDeals / leadsAssigned) * 100 : 0;
 
       // Calculate average response time
@@ -395,8 +446,11 @@ export function usePipelineAnalytics(
         commsSent,
         emailsOpened,
         responsesReceived,
+        phoneCalls,
         meetingsScheduled,
         meetingsCompleted,
+        demosScheduled,
+        demosCompleted,
         leadsAssigned,
         closedDeals,
         closedDealValue,
@@ -415,8 +469,11 @@ export function usePipelineAnalytics(
           commsSent: prevCommsSent,
           emailsOpened: prevEmailsOpened,
           responsesReceived: prevResponsesReceived,
+          phoneCalls: prevPhoneCalls,
           meetingsScheduled: prevMeetingsScheduled,
           meetingsCompleted: prevMeetingsCompleted,
+          demosScheduled: prevDemosScheduled,
+          demosCompleted: prevDemosCompleted,
           leadsAssigned: prevLeadsAssigned,
           closedDeals: prevClosedDeals,
         },

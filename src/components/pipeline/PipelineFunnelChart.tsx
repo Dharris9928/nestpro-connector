@@ -13,8 +13,11 @@ interface PipelineFunnelChartProps {
     commsSent: number;
     emailsOpened: number;
     responsesReceived: number;
+    phoneCalls?: number;
     meetingsScheduled: number;
     meetingsCompleted: number;
+    demosScheduled?: number;
+    demosCompleted?: number;
     leadsAssigned: number;
     closedDeals: number;
     openRate: number;
@@ -35,8 +38,9 @@ const COLORS = [
   "hsl(217, 91%, 60%)",  // Blue - Sent
   "hsl(186, 91%, 45%)",  // Cyan - Opened
   "hsl(142, 76%, 36%)",  // Green - Responded
-  "hsl(45, 93%, 47%)",   // Yellow - Scheduled
-  "hsl(24, 95%, 53%)",   // Orange - Completed
+  "hsl(262, 83%, 58%)",  // Violet - Phone Calls
+  "hsl(45, 93%, 47%)",   // Yellow - Meetings
+  "hsl(24, 95%, 53%)",   // Orange - Demos
   "hsl(280, 87%, 61%)",  // Purple - Assigned
   "hsl(160, 84%, 39%)",  // Emerald - Closed
 ];
@@ -59,21 +63,26 @@ export function PipelineFunnelChart({ metrics, isLoading, regionLabel }: Pipelin
 
   if (!metrics) return null;
 
+  // Calculate combined engagement metrics
+  const totalEngagements = (metrics.meetingsScheduled || 0) + (metrics.demosScheduled || 0);
+  const totalCompleted = (metrics.meetingsCompleted || 0) + (metrics.demosCompleted || 0);
+
   const funnelData = [
     { name: "Sent", value: metrics.commsSent, fill: COLORS[0] },
     { name: "Opened", value: metrics.emailsOpened, fill: COLORS[1] },
     { name: "Responded", value: metrics.responsesReceived, fill: COLORS[2] },
-    { name: "Scheduled", value: metrics.meetingsScheduled, fill: COLORS[3] },
-    { name: "Completed", value: metrics.meetingsCompleted, fill: COLORS[4] },
-    { name: "Assigned", value: metrics.leadsAssigned, fill: COLORS[5] },
-    { name: "Closed", value: metrics.closedDeals, fill: COLORS[6] },
+    { name: "Calls", value: metrics.phoneCalls || 0, fill: COLORS[3] },
+    { name: "Meetings", value: totalEngagements, fill: COLORS[4] },
+    { name: "Completed", value: totalCompleted, fill: COLORS[5] },
+    { name: "Assigned", value: metrics.leadsAssigned, fill: COLORS[6] },
+    { name: "Closed", value: metrics.closedDeals, fill: COLORS[7] },
   ];
 
   const conversionSteps = [
     { from: "Sent", to: "Opened", rate: metrics.openRate },
     { from: "Opened", to: "Responded", rate: metrics.responseRate },
-    { from: "Responded", to: "Scheduled", rate: metrics.scheduleRate },
-    { from: "Scheduled", to: "Completed", rate: metrics.completionRate },
+    { from: "Responded", to: "Meetings", rate: metrics.scheduleRate },
+    { from: "Meetings", to: "Completed", rate: metrics.completionRate },
     { from: "Completed", to: "Assigned", rate: metrics.handoffRate },
     { from: "Assigned", to: "Closed", rate: metrics.closeRate },
   ];

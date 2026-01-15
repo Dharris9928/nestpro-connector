@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Mail, MailOpen, MessageSquareReply, CalendarPlus, CalendarCheck, UserCheck, Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Mail, MailOpen, MessageSquareReply, CalendarPlus, CalendarCheck, UserCheck, Trophy, TrendingUp, TrendingDown, Minus, Phone, Presentation } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface KPICardProps {
@@ -78,8 +78,11 @@ interface PipelineKPICardsProps {
     commsSent: number;
     emailsOpened: number;
     responsesReceived: number;
+    phoneCalls?: number;
     meetingsScheduled: number;
     meetingsCompleted: number;
+    demosScheduled?: number;
+    demosCompleted?: number;
     leadsAssigned: number;
     closedDeals: number;
     closedDealValue: number;
@@ -88,8 +91,11 @@ interface PipelineKPICardsProps {
       commsSent: number;
       emailsOpened: number;
       responsesReceived: number;
+      phoneCalls?: number;
       meetingsScheduled: number;
       meetingsCompleted: number;
+      demosScheduled?: number;
+      demosCompleted?: number;
       leadsAssigned: number;
       closedDeals: number;
     };
@@ -101,7 +107,7 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 7 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <KPICardSkeleton key={i} />
         ))}
       </div>
@@ -126,24 +132,31 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       colorClass: "bg-cyan-100 dark:bg-cyan-900/30",
     },
     {
-      label: "Responses Received",
+      label: "Replies Received",
       value: metrics.responsesReceived,
       previousValue: metrics.previousPeriod.responsesReceived,
       icon: <MessageSquareReply className="h-5 w-5 text-green-600" />,
       colorClass: "bg-green-100 dark:bg-green-900/30",
     },
     {
+      label: "Phone Calls",
+      value: metrics.phoneCalls || 0,
+      previousValue: metrics.previousPeriod.phoneCalls || 0,
+      icon: <Phone className="h-5 w-5 text-violet-600" />,
+      colorClass: "bg-violet-100 dark:bg-violet-900/30",
+    },
+    {
       label: "Meetings Scheduled",
-      value: metrics.meetingsScheduled,
-      previousValue: metrics.previousPeriod.meetingsScheduled,
+      value: metrics.meetingsScheduled + (metrics.demosScheduled || 0),
+      previousValue: metrics.previousPeriod.meetingsScheduled + (metrics.previousPeriod.demosScheduled || 0),
       icon: <CalendarPlus className="h-5 w-5 text-yellow-600" />,
       colorClass: "bg-yellow-100 dark:bg-yellow-900/30",
     },
     {
-      label: "Meetings Completed",
-      value: metrics.meetingsCompleted,
-      previousValue: metrics.previousPeriod.meetingsCompleted,
-      icon: <CalendarCheck className="h-5 w-5 text-orange-600" />,
+      label: "Demos Completed",
+      value: metrics.demosCompleted || 0,
+      previousValue: metrics.previousPeriod.demosCompleted || 0,
+      icon: <Presentation className="h-5 w-5 text-orange-600" />,
       colorClass: "bg-orange-100 dark:bg-orange-900/30",
     },
     {
