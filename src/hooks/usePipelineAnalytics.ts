@@ -193,7 +193,7 @@ export function usePipelineAnalytics(
 
       let activitiesData = activitiesDataRaw || [];
       
-      // Filter by date range more precisely (scheduled, completed, or created)
+      // Filter by date range - include activities created within range OR scheduled for future
       activitiesData = activitiesData.filter(a => {
         const schedDate = a.scheduled_date ? new Date(a.scheduled_date) : null;
         const compDate = a.completed_date ? new Date(a.completed_date) : null;
@@ -201,10 +201,16 @@ export function usePipelineAnalytics(
         const from = new Date(fromDate);
         from.setHours(0, 0, 0, 0);
         const to = new Date(toDate);
-        to.setHours(23, 59, 59, 999); // Include full end day
-        return (schedDate && schedDate >= from && schedDate <= to) || 
-               (compDate && compDate >= from && compDate <= to) ||
-               (createdDate && createdDate >= from && createdDate <= to);
+        to.setHours(23, 59, 59, 999);
+        const today = new Date();
+        
+        // Include if: created within range, completed within range, OR scheduled for future (upcoming)
+        const createdInRange = createdDate && createdDate >= from && createdDate <= to;
+        const completedInRange = compDate && compDate >= from && compDate <= to;
+        const scheduledInRange = schedDate && schedDate >= from && schedDate <= to;
+        const scheduledForFuture = schedDate && schedDate >= today && !a.completed_date && a.outcome !== "Completed";
+        
+        return createdInRange || completedInRange || scheduledInRange || scheduledForFuture;
       });
 
       if (filterStates && activitiesData.length > 0) {
