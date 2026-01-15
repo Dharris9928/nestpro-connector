@@ -567,6 +567,29 @@ export default function Communications() {
                       >
                         <Reply className="h-4 w-4" />
                       </Button>
+                      {/* Quick status buttons - always visible for sent emails */}
+                      {!comm.email_opened_at && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMarkAsOpened(comm.id)}
+                          title="Mark as opened"
+                          className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!comm.email_responded_at && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleMarkAsResponded(comm.id)}
+                          title="Mark as replied"
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant={comm.conversation_active !== false ? "secondary" : "default"}
                         size="sm"
@@ -575,31 +598,6 @@ export default function Communications() {
                       >
                         {comm.conversation_active !== false ? "Inactive" : "Active"}
                       </Button>
-                      {/* Manual status override buttons */}
-                      {comm.sent_at && !comm.email_opened_at && !comm.email_responded_at && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleMarkAsOpened(comm.id)}
-                          title="Mark as opened"
-                          className="text-cyan-600 border-cyan-600 hover:bg-cyan-50"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Opened
-                        </Button>
-                      )}
-                      {comm.sent_at && !comm.email_responded_at && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleMarkAsResponded(comm.id)}
-                          title="Mark as responded"
-                          className="text-green-600 border-green-600 hover:bg-green-50"
-                        >
-                          <MessageCircle className="h-4 w-4 mr-1" />
-                          Replied
-                        </Button>
-                      )}
                       {!comm.used && (
                         <Button
                           variant="ghost"
