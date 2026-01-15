@@ -17,7 +17,7 @@ export function CommunicationsFunnel() {
       // Get email communications data
       const { data: communications, error: commError } = await supabase
         .from("company_communications")
-        .select("id, sent_at, email_opened_at, email_responded_at, communication_type");
+        .select("id, sent_at, email_opened_at, email_responded_at, communication_type, assigned_to");
 
       if (commError) throw commError;
 
@@ -36,6 +36,7 @@ export function CommunicationsFunnel() {
       const meetingsBooked = activities?.filter(a => 
         a.activity_type === "Meeting" && a.outcome === "Scheduled"
       ).length || 0;
+      const handoffs = communications?.filter(c => c.assigned_to).length || 0;
 
       return {
         emailsSent,
@@ -43,6 +44,7 @@ export function CommunicationsFunnel() {
         emailsReplied,
         callsMade,
         meetingsBooked,
+        handoffs,
       };
     },
   });
@@ -55,7 +57,7 @@ export function CommunicationsFunnel() {
         </CardHeader>
         <CardContent>
           <div className="flex items-end justify-between gap-4 h-48">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <Skeleton key={i} className="flex-1 h-32" />
             ))}
           </div>
@@ -95,7 +97,13 @@ export function CommunicationsFunnel() {
       label: "Meetings Booked",
       count: funnelData?.meetingsBooked || 0,
       percentage: baseCount > 0 ? Math.round((funnelData?.meetingsBooked || 0) / baseCount * 100) : 0,
-      color: "hsl(217, 91%, 90%)", // blue-200
+      color: "hsl(217, 91%, 85%)", // blue-200
+    },
+    {
+      label: "Handoffs",
+      count: funnelData?.handoffs || 0,
+      percentage: baseCount > 0 ? Math.round((funnelData?.handoffs || 0) / baseCount * 100) : 0,
+      color: "hsl(270, 70%, 70%)", // purple
     },
   ];
 
@@ -167,6 +175,12 @@ export function CommunicationsFunnel() {
             <span className="text-muted-foreground">Meeting Rate:</span>
             <span className="font-semibold">
               {stages[4].percentage}%
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Handoff Rate:</span>
+            <span className="font-semibold">
+              {stages[5].percentage}%
             </span>
           </div>
         </div>
