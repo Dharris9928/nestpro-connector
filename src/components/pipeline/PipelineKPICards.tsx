@@ -176,19 +176,11 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       category: "phone_calls",
     },
     {
-      label: "Meetings Scheduled",
-      value: metrics.meetingsScheduled + (metrics.demosScheduled || 0),
-      previousValue: metrics.previousPeriod.meetingsScheduled + (metrics.previousPeriod.demosScheduled || 0),
-      icon: <CalendarPlus className="h-5 w-5 text-yellow-600" />,
-      colorClass: "bg-yellow-100 dark:bg-yellow-900/30",
-      category: "meetings_scheduled",
-    },
-    {
       label: "Upcoming Meetings",
       value: metrics.upcomingMeetings || 0,
       previousValue: metrics.previousPeriod.upcomingMeetings || 0,
-      icon: <CalendarClock className="h-5 w-5 text-teal-600" />,
-      colorClass: "bg-teal-100 dark:bg-teal-900/30",
+      icon: <CalendarClock className="h-5 w-5 text-yellow-600" />,
+      colorClass: "bg-yellow-100 dark:bg-yellow-900/30",
       category: "upcoming_meetings",
     },
     {
