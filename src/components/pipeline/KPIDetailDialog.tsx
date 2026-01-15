@@ -17,6 +17,7 @@ export type KPICategory =
   | "replies_received"
   | "phone_calls"
   | "meetings_scheduled"
+  | "upcoming_meetings"
   | "demos_completed"
   | "leads_assigned"
   | "closed_deals";
@@ -106,18 +107,38 @@ export function KPIDetailDialog({ open, onOpenChange, category, title }: KPIDeta
         case "meetings_scheduled": {
           const { data, error } = await supabase
             .from("outreach_activities")
-            .select("id, subject_line, scheduled_date, outcome, companies(company_name)")
+            .select("id, subject_line, scheduled_date, created_at, outcome, companies(company_name)")
             .in("activity_type", ["Meeting", "Demo"])
             .eq("outcome", "Scheduled")
-            .order("scheduled_date", { ascending: false })
+            .order("created_at", { ascending: false })
             .limit(100);
           if (error) throw error;
           return data?.map(d => ({
             id: d.id,
             title: d.subject_line || "Meeting",
             subtitle: d.companies?.company_name || "Unknown company",
-            contact: null,
-            date: d.scheduled_date,
+            contact: d.scheduled_date ? `Scheduled for: ${format(new Date(d.scheduled_date), "MMM d, yyyy")}` : null,
+            date: d.created_at,
+            badge: d.outcome,
+          })) || [];
+        }
+
+        case "upcoming_meetings": {
+          const today = new Date().toISOString().split('T')[0];
+          const { data, error } = await supabase
+            .from("outreach_activities")
+            .select("id, subject_line, scheduled_date, created_at, outcome, companies(company_name)")
+            .in("activity_type", ["Meeting", "Demo"])
+            .gte("scheduled_date", today)
+            .order("scheduled_date", { ascending: true })
+            .limit(100);
+          if (error) throw error;
+          return data?.map(d => ({
+            id: d.id,
+            title: d.subject_line || "Meeting",
+            subtitle: d.companies?.company_name || "Unknown company",
+            contact: d.scheduled_date ? `Scheduled for: ${format(new Date(d.scheduled_date), "MMM d, yyyy")}` : null,
+            date: d.created_at,
             badge: d.outcome,
           })) || [];
         }

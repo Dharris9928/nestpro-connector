@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Mail, MailOpen, MessageSquareReply, CalendarPlus, CalendarCheck, UserCheck, Trophy, TrendingUp, TrendingDown, Minus, Phone, Presentation } from "lucide-react";
+import { Mail, MailOpen, MessageSquareReply, CalendarPlus, CalendarCheck, CalendarClock, UserCheck, Trophy, TrendingUp, TrendingDown, Minus, Phone, Presentation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KPIDetailDialog, KPICategory } from "./KPIDetailDialog";
 
@@ -90,6 +90,7 @@ interface PipelineKPICardsProps {
     phoneCalls?: number;
     meetingsScheduled: number;
     meetingsCompleted: number;
+    upcomingMeetings?: number;
     demosScheduled?: number;
     demosCompleted?: number;
     leadsAssigned: number;
@@ -103,6 +104,7 @@ interface PipelineKPICardsProps {
       phoneCalls?: number;
       meetingsScheduled: number;
       meetingsCompleted: number;
+      upcomingMeetings?: number;
       demosScheduled?: number;
       demosCompleted?: number;
       leadsAssigned: number;
@@ -180,6 +182,14 @@ export function PipelineKPICards({ metrics, isLoading }: PipelineKPICardsProps) 
       icon: <CalendarPlus className="h-5 w-5 text-yellow-600" />,
       colorClass: "bg-yellow-100 dark:bg-yellow-900/30",
       category: "meetings_scheduled",
+    },
+    {
+      label: "Upcoming Meetings",
+      value: metrics.upcomingMeetings || 0,
+      previousValue: metrics.previousPeriod.upcomingMeetings || 0,
+      icon: <CalendarClock className="h-5 w-5 text-teal-600" />,
+      colorClass: "bg-teal-100 dark:bg-teal-900/30",
+      category: "upcoming_meetings",
     },
     {
       label: "Demos Completed",

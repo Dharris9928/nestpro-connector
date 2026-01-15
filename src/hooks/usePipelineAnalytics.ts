@@ -37,6 +37,7 @@ interface PipelineMetrics {
   phoneCalls: number;
   meetingsScheduled: number;
   meetingsCompleted: number;
+  upcomingMeetings: number;
   demosScheduled: number;
   demosCompleted: number;
   leadsAssigned: number;
@@ -60,6 +61,7 @@ interface PipelineMetrics {
     phoneCalls: number;
     meetingsScheduled: number;
     meetingsCompleted: number;
+    upcomingMeetings: number;
     demosScheduled: number;
     demosCompleted: number;
     leadsAssigned: number;
@@ -172,13 +174,13 @@ export function usePipelineAnalytics(
         }
       }
 
-      // Fetch all activities (Meeting, Demo, Phone)
+      // Fetch all activities (Meeting, Demo, Phone) - include created_at for upcoming meetings
       let activitiesQuery = supabase
         .from("outreach_activities")
-        .select("id, activity_type, outcome, scheduled_date, completed_date, company_id")
+        .select("id, activity_type, outcome, scheduled_date, completed_date, created_at, company_id")
         .in("activity_type", ["Meeting", "Demo", "Phone"])
-        .or(`scheduled_date.gte.${fromDate},completed_date.gte.${fromDate}`)
-        .or(`scheduled_date.lte.${toDate},completed_date.lte.${toDate}`);
+        .or(`scheduled_date.gte.${fromDate},completed_date.gte.${fromDate},created_at.gte.${fromDate}`)
+        .or(`scheduled_date.lte.${toDate},completed_date.lte.${toDate},created_at.lte.${toDate}`);
       
       activitiesQuery = buildPerspectiveFilter(activitiesQuery);
       const { data: activitiesDataRaw, error: activitiesError } = await activitiesQuery;
@@ -187,14 +189,16 @@ export function usePipelineAnalytics(
 
       let activitiesData = activitiesDataRaw || [];
       
-      // Filter by date range more precisely
+      // Filter by date range more precisely (scheduled, completed, or created)
       activitiesData = activitiesData.filter(a => {
         const schedDate = a.scheduled_date ? new Date(a.scheduled_date) : null;
         const compDate = a.completed_date ? new Date(a.completed_date) : null;
+        const createdDate = a.created_at ? new Date(a.created_at) : null;
         const from = new Date(fromDate);
         const to = new Date(toDate);
         return (schedDate && schedDate >= from && schedDate <= to) || 
-               (compDate && compDate >= from && compDate <= to);
+               (compDate && compDate >= from && compDate <= to) ||
+               (createdDate && createdDate >= from && createdDate <= to);
       });
 
       if (filterStates && activitiesData.length > 0) {
@@ -215,13 +219,27 @@ export function usePipelineAnalytics(
       const demosData = activitiesData.filter(a => a.activity_type === "Demo");
       const phoneData = activitiesData.filter(a => a.activity_type === "Phone");
 
+      // Calculate upcoming meetings - created within date range with future scheduled_date
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const upcomingMeetingsData = activitiesData.filter(a => {
+        if (!["Meeting", "Demo"].includes(a.activity_type)) return false;
+        if (!a.scheduled_date) return false;
+        const schedDate = new Date(a.scheduled_date);
+        const createdDate = a.created_at ? new Date(a.created_at) : null;
+        const from = new Date(fromDate);
+        const to = new Date(toDate);
+        // Count if created within date range and scheduled for today or future
+        return createdDate && createdDate >= from && createdDate <= to && schedDate >= today;
+      });
+
       // Fetch previous period activities
       let prevActivitiesQuery = supabase
         .from("outreach_activities")
-        .select("id, activity_type, outcome, scheduled_date, completed_date, company_id")
+        .select("id, activity_type, outcome, scheduled_date, completed_date, created_at, company_id")
         .in("activity_type", ["Meeting", "Demo", "Phone"])
-        .or(`scheduled_date.gte.${prevFrom},completed_date.gte.${prevFrom}`)
-        .or(`scheduled_date.lte.${prevTo},completed_date.lte.${prevTo}`);
+        .or(`scheduled_date.gte.${prevFrom},completed_date.gte.${prevFrom},created_at.gte.${prevFrom}`)
+        .or(`scheduled_date.lte.${prevTo},completed_date.lte.${prevTo},created_at.lte.${prevTo}`);
       
       prevActivitiesQuery = buildPerspectiveFilter(prevActivitiesQuery);
       const { data: prevActivitiesDataRaw } = await prevActivitiesQuery;
@@ -230,10 +248,12 @@ export function usePipelineAnalytics(
       prevActivitiesData = prevActivitiesData.filter(a => {
         const schedDate = a.scheduled_date ? new Date(a.scheduled_date) : null;
         const compDate = a.completed_date ? new Date(a.completed_date) : null;
+        const createdDate = a.created_at ? new Date(a.created_at) : null;
         const from = new Date(prevFrom);
         const to = new Date(prevTo);
         return (schedDate && schedDate >= from && schedDate <= to) || 
-               (compDate && compDate >= from && compDate <= to);
+               (compDate && compDate >= from && compDate <= to) ||
+               (createdDate && createdDate >= from && createdDate <= to);
       });
 
       if (filterStates && prevActivitiesData.length > 0) {
@@ -252,6 +272,17 @@ export function usePipelineAnalytics(
       const prevMeetingsData = prevActivitiesData.filter(a => a.activity_type === "Meeting");
       const prevDemosData = prevActivitiesData.filter(a => a.activity_type === "Demo");
       const prevPhoneData = prevActivitiesData.filter(a => a.activity_type === "Phone");
+      
+      // Previous period upcoming meetings (for comparison)
+      const prevUpcomingMeetingsData = prevActivitiesData.filter(a => {
+        if (!["Meeting", "Demo"].includes(a.activity_type)) return false;
+        if (!a.scheduled_date) return false;
+        const schedDate = new Date(a.scheduled_date);
+        const createdDate = a.created_at ? new Date(a.created_at) : null;
+        const from = new Date(prevFrom);
+        const to = new Date(prevTo);
+        return createdDate && createdDate >= from && createdDate <= to && schedDate >= today;
+      });
 
       // Fetch opportunities (leads assigned) with company and assignee info
       let oppsQuery = supabase
@@ -354,6 +385,9 @@ export function usePipelineAnalytics(
       // Phone calls (count all completed phone activities)
       const phoneCalls = phoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
       
+      // Upcoming meetings count
+      const upcomingMeetings = upcomingMeetingsData.length;
+      
       const leadsAssigned = oppsData.length;
       
       // Calculate closed deals (manual selection via stage = 'closed_won')
@@ -370,6 +404,7 @@ export function usePipelineAnalytics(
       const prevDemosScheduled = prevDemosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
       const prevDemosCompleted = prevDemosData.filter(d => d.outcome === "Completed").length;
       const prevPhoneCalls = prevPhoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
+      const prevUpcomingMeetings = prevUpcomingMeetingsData.length;
       const prevLeadsAssigned = prevOppsData.length;
       const prevClosedDeals = prevOppsData.filter(o => o.stage === 'closed_won').length;
 
@@ -449,6 +484,7 @@ export function usePipelineAnalytics(
         phoneCalls,
         meetingsScheduled,
         meetingsCompleted,
+        upcomingMeetings,
         demosScheduled,
         demosCompleted,
         leadsAssigned,
@@ -472,6 +508,7 @@ export function usePipelineAnalytics(
           phoneCalls: prevPhoneCalls,
           meetingsScheduled: prevMeetingsScheduled,
           meetingsCompleted: prevMeetingsCompleted,
+          upcomingMeetings: prevUpcomingMeetings,
           demosScheduled: prevDemosScheduled,
           demosCompleted: prevDemosCompleted,
           leadsAssigned: prevLeadsAssigned,
