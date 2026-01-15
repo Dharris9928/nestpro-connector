@@ -18,6 +18,7 @@ import { AddCommunicationDialog } from '@/components/communications/AddCommunica
 import { MarkAsRepliedDialog } from '@/components/communications/MarkAsRepliedDialog';
 import { HandoffDialog } from '@/components/communications/HandoffDialog';
 import { ScheduleMeetingDialog } from '@/components/communications/ScheduleMeetingDialog';
+import { CommunicationsFunnel } from '@/components/communications/CommunicationsFunnel';
 import { useNavigate } from 'react-router-dom';
 
 export default function Communications() {
@@ -540,6 +541,11 @@ export default function Communications() {
             Clear all filters
           </Button>
         )}
+      </div>
+
+      {/* Communications Funnel Visualization */}
+      <div className="px-6 pt-4">
+        <CommunicationsFunnel />
       </div>
 
       {/* Communications List */}
