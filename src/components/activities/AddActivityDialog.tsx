@@ -160,6 +160,10 @@ export function AddActivityDialog({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
+      // For meetings/demos with "Scheduled" outcome, don't set completed_date
+      const isMeetingType = formData.activity_type === "Meeting" || formData.activity_type === "Demo";
+      const isScheduled = formData.outcome === "Scheduled";
+      
       // Create activity
       const { data: activity, error: activityError } = await supabase
         .from("outreach_activities")
@@ -169,7 +173,8 @@ export function AddActivityDialog({
           subject_line: formData.subject_line,
           message_content: formData.message_content,
           outcome: formData.outcome as any,
-          completed_date: formData.completed_date,
+          // Only set completed_date for non-meeting types OR completed meetings
+          completed_date: (isMeetingType && isScheduled) ? null : (formData.completed_date || null),
           scheduled_date: formData.scheduled_date || null,
           email_opened_at: formData.email_opened_at || null,
           email_responded_at: formData.email_responded_at || null,
@@ -307,12 +312,14 @@ export function AddActivityDialog({
             <Select
               value={formData.activity_type}
               onValueChange={(value: any) => {
-                // Auto-set outcome to "Scheduled" for meetings
+                // Auto-set outcome to "Scheduled" for meetings and clear completed_date
                 const isMeetingType = value === "Meeting" || value === "Demo";
                 setFormData((prev) => ({ 
                   ...prev, 
                   activity_type: value,
-                  outcome: isMeetingType ? "Scheduled" : prev.outcome
+                  outcome: isMeetingType ? "Scheduled" : prev.outcome,
+                  // Clear completed_date for meetings - it will be set when meeting is marked complete
+                  completed_date: isMeetingType ? "" : prev.completed_date
                 }));
               }}
             >
@@ -338,7 +345,7 @@ export function AddActivityDialog({
                 Scheduled Date *
               </Label>
               <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
-                You'll receive a notification after this date to update the activity status.
+                When the meeting is scheduled to occur. You'll be prompted to complete it after this date.
               </p>
               <Input
                 id="scheduled_date"
@@ -378,43 +385,48 @@ export function AddActivityDialog({
             />
           </div>
 
-          <div>
-            <Label htmlFor="outcome">Outcome *</Label>
-            <Select
-              value={formData.outcome}
-              onValueChange={(value: any) =>
-                setFormData((prev) => ({ ...prev, outcome: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Scheduled">Scheduled</SelectItem>
-                <SelectItem value="Sent">Sent</SelectItem>
-                <SelectItem value="Opened">Opened</SelectItem>
-                <SelectItem value="Clicked">Clicked</SelectItem>
-                <SelectItem value="Replied">Replied</SelectItem>
-                <SelectItem value="Connected">Connected</SelectItem>
-                <SelectItem value="No Answer">No Answer</SelectItem>
-                <SelectItem value="Bounced">Bounced</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Only show outcome for non-meeting types */}
+          {formData.activity_type !== "Meeting" && formData.activity_type !== "Demo" && (
+            <div>
+              <Label htmlFor="outcome">Outcome *</Label>
+              <Select
+                value={formData.outcome}
+                onValueChange={(value: any) =>
+                  setFormData((prev) => ({ ...prev, outcome: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Sent">Sent</SelectItem>
+                  <SelectItem value="Opened">Opened</SelectItem>
+                  <SelectItem value="Clicked">Clicked</SelectItem>
+                  <SelectItem value="Replied">Replied</SelectItem>
+                  <SelectItem value="Connected">Connected</SelectItem>
+                  <SelectItem value="No Answer">No Answer</SelectItem>
+                  <SelectItem value="Bounced">Bounced</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          <div>
-            <Label htmlFor="completed_date">Date *</Label>
-            <Input
-              id="completed_date"
-              type="date"
-              value={formData.completed_date}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, completed_date: e.target.value }))
-              }
-            />
-          </div>
+          {/* Show activity date only for non-meeting types */}
+          {formData.activity_type !== "Meeting" && formData.activity_type !== "Demo" && (
+            <div>
+              <Label htmlFor="completed_date">Date *</Label>
+              <Input
+                id="completed_date"
+                type="date"
+                value={formData.completed_date}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, completed_date: e.target.value }))
+                }
+              />
+            </div>
+          )}
 
           {formData.activity_type === "Email" && (
             <div className="grid grid-cols-2 gap-4">

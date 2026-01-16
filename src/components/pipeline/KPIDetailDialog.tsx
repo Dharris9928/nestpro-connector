@@ -106,11 +106,14 @@ export function KPIDetailDialog({ open, onOpenChange, category, title }: KPIDeta
         }
 
         case "upcoming_meetings": {
+          // Upcoming = scheduled but NOT completed (no completed_date AND outcome is Scheduled)
           const { data, error } = await supabase
             .from("outreach_activities")
             .select("id, subject_line, scheduled_date, created_at, outcome, companies(company_name)")
             .in("activity_type", ["Meeting", "Demo"])
-            .order("created_at", { ascending: false })
+            .eq("outcome", "Scheduled")
+            .is("completed_date", null)
+            .order("scheduled_date", { ascending: true })
             .limit(100);
           if (error) throw error;
           return data?.map(d => ({
@@ -124,11 +127,12 @@ export function KPIDetailDialog({ open, onOpenChange, category, title }: KPIDeta
         }
 
         case "meetings_conducted": {
+          // Conducted = has completed_date OR outcome is Completed
           const { data, error } = await supabase
             .from("outreach_activities")
-            .select("id, subject_line, completed_date, scheduled_date, companies(company_name)")
+            .select("id, subject_line, completed_date, scheduled_date, outcome, companies(company_name)")
             .in("activity_type", ["Meeting", "Demo"])
-            .eq("outcome", "Completed")
+            .or("completed_date.not.is.null,outcome.eq.Completed")
             .order("completed_date", { ascending: false })
             .limit(100);
           if (error) throw error;
@@ -138,7 +142,7 @@ export function KPIDetailDialog({ open, onOpenChange, category, title }: KPIDeta
             subtitle: d.companies?.company_name || "Unknown company",
             contact: d.scheduled_date ? `Was scheduled for: ${format(new Date(d.scheduled_date), "MMM d, yyyy")}` : null,
             date: d.completed_date,
-            badge: "Completed",
+            badge: d.outcome === "Completed" ? "Completed" : "Conducted",
           })) || [];
         }
 
