@@ -250,7 +250,9 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
           dateFrom,
           dateTo,
           sequenceId: selectedSequence !== 'all' ? selectedSequence : undefined,
-          perPage: 100
+          perPage: 100,
+          maxPages: 10, // Limit to 10 pages (1000 emails) for faster response
+          skipEngagementFetch: true // Skip individual engagement fetches for speed
         }
       });
 

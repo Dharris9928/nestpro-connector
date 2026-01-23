@@ -131,6 +131,8 @@ serve(async (req) => {
       dateFrom,
       dateTo,
       sequenceId,
+      maxPages: requestedMaxPages,
+      skipEngagementFetch = false, // Skip individual email fetches for faster response
     } = body;
 
     if (action === "fetch-sequences") {
@@ -172,7 +174,8 @@ serve(async (req) => {
     if (action === "fetch-emails") {
       console.log("Fetching Apollo sent emails...");
 
-      const maxPages = 50;
+      // Use requested max pages or default to 10 for faster response (can paginate on client)
+      const maxPages = Math.min(requestedMaxPages || 10, 50);
 
       const fetchEmailPage = async (pageNumber: number) => {
         const url = new URL("https://api.apollo.io/api/v1/emailer_messages/search");
@@ -434,9 +437,15 @@ serve(async (req) => {
       console.log(`Successfully fetched ${contactMap.size} contact details`);
 
       // Fetch engagement data for emails (opens/clicks/replies) from individual email endpoints
-      const emailIds = allEmails.map(e => e.id);
-      const engagementMap = await fetchEmailActivities(emailIds);
-      console.log(`Successfully fetched engagement for ${engagementMap.size} emails`);
+      // This is optional and can be skipped for faster initial load
+      let engagementMap = new Map<string, EmailEngagement>();
+      if (!skipEngagementFetch) {
+        const emailIds = allEmails.map(e => e.id);
+        engagementMap = await fetchEmailActivities(emailIds);
+        console.log(`Successfully fetched engagement for ${engagementMap.size} emails`);
+      } else {
+        console.log("Skipping engagement fetch for faster response");
+      }
 
       const totalCount = totalEntriesFromApi ?? allEmails.length;
 
