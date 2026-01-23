@@ -164,8 +164,9 @@ export function PipelineFunnelChart({ metrics, isLoading, regionLabel }: Pipelin
                 ))}
                 <LabelList
                   position="center"
-                  fill="#fff"
-                  stroke="none"
+                  fill="#1a1a1a"
+                  stroke="#fff"
+                  strokeWidth={0.5}
                   dataKey="value"
                   className="text-sm font-bold"
                   formatter={(value: number, entry: any) => {
