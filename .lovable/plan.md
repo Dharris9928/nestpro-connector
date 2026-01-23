@@ -1,188 +1,119 @@
 
 
-# Apollo Opened Emails CSV Import Feature
+# Updated Apollo Email Import - Adapting to Real CSV Format
 
-## Overview
-Create a new import feature that allows users to upload an Apollo CSV export of opened emails and use it to update the `opened_at`, `open_count`, and status fields in both `apollo_email_activities` and `company_communications` tables.
+## Problem
+The current implementation expects an "Opened At" timestamp column, but the actual Apollo export uses a **boolean `Open` column** (true/false). We need to adapt the logic to work with your real CSV format.
 
-## Current State Analysis
-- **1,643 emails** currently in `apollo_email_activities` table
-- All records have `apollo_activity_id` (Apollo's unique identifier)
-- Currently **0 records** have `opened_at` populated
-- The `company_communications` table has `email_opened_at` field ready for updates
+## Apollo CSV Columns (Actual)
+| Column | Example | Used For |
+|--------|---------|----------|
+| `To Email` | john@acme.com | Match to contact |
+| `Subject` | "Follow up..." | Match to email record |
+| `Sent At (PST)` | "January 09, 2026 07:32" | Fallback for opened_at |
+| `Open` | true/false | Filter opened emails |
+| `Click` | true/false | Track link clicks |
+| `Replied` | true/false | Track replies |
+| `To Company` | "Acme Corp" | Company context |
 
-## Matching Strategy (Priority Order)
-
-1. **Primary Match: Apollo Message ID**
-   - Apollo exports include a "Message ID" or "Activity ID" column
-   - Direct match against `apollo_email_activities.apollo_activity_id`
-   - Most reliable method
-
-2. **Secondary Match: Email + Subject + Date**
-   - Match on `apollo_contact_email` + `subject` + date range
-   - Useful when Apollo ID isn't in the export
-
-3. **Tertiary Match: Contact Email Only**
-   - Update all emails to a specific contact as "opened"
-   - Least precise, but useful for bulk engagement updates
-
-## Implementation Plan
-
-### Step 1: Create Apollo Engagement CSV Import Dialog
-**New file: `src/components/communications/ApolloEngagementImportDialog.tsx`**
+## Updated Matching Flow
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  Import Apollo Opened Emails                        │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  Step 1: Upload CSV                                 │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  Drag & drop Apollo export CSV here           │  │
-│  │  or click to browse                           │  │
-│  └───────────────────────────────────────────────┘  │
-│                                                     │
-│  Step 2: Map Columns                                │
-│  - Email column: [dropdown]                         │
-│  - Subject column: [dropdown]                       │
-│  - Opened At column: [dropdown]                     │
-│  - Apollo ID column: [dropdown] (optional)          │
-│                                                     │
-│  Step 3: Preview & Match                            │
-│  ┌───────────────────────────────────────────────┐  │
-│  │ 847 opened emails in CSV                      │  │
-│  │ 623 matched to existing records               │  │
-│  │ 224 unmatched (new contacts)                  │  │
-│  └───────────────────────────────────────────────┘  │
-│                                                     │
-│  [Cancel]                    [Update 623 Records]   │
-└─────────────────────────────────────────────────────┘
+Step 1: Upload CSV
+         │
+         ▼
+Step 2: Auto-detect columns
+         │ - "To Email" → email
+         │ - "Subject" → subject  
+         │ - "Open" → opened (boolean)
+         │ - "Sent At (PST)" → sentAt
+         ▼
+Step 3: Filter rows where Open = "true"
+         │
+         ▼
+Step 4: Match to apollo_email_activities
+         │ - By Email + Subject (85% confidence)
+         │ - By Email only if unique (60% confidence)
+         ▼
+Step 5: Update matched records
+         │ - opened_at = Sent At timestamp (best available)
+         │ - open_count = 1
+         │ - status = "opened"
 ```
 
-**Features:**
-- CSV parsing with Papa Parse (already installed)
-- Dynamic column mapping (auto-detect common Apollo column names)
-- Preview of matched vs unmatched records
-- Dry-run mode to see what will be updated before committing
+## Changes Required
 
-### Step 2: Create Processing Logic
-**New file: `src/lib/apollo/importOpenedEmails.ts`**
+### File 1: `src/lib/apollo/importOpenedEmails.ts`
 
-```typescript
-interface OpenedEmailRow {
-  email: string;
-  subject?: string;
-  openedAt: string;
-  apolloId?: string;
-  openCount?: number;
-}
+1. **Update column mappings** to detect Apollo's actual format:
+   - Add `"to email"` to email variations
+   - Add `"open"` as boolean field
+   - Handle `"Sent At (PST)"` format with partial matching
 
-interface MatchResult {
-  matched: number;
-  unmatched: number;
-  updated: number;
-  errors: string[];
-}
-```
+2. **Change parseOpenedEmails logic**:
+   - Filter by `Open = "true"` (boolean string)
+   - Use `Sent At` as the `openedAt` timestamp (since Apollo doesn't provide exact open time)
+   - Make `openedAt` column optional (derive from `sentAt`)
 
-**Matching Algorithm:**
-1. Parse CSV and extract opened email records
-2. Query `apollo_email_activities` for potential matches
-3. For each CSV row:
-   - Try Apollo ID match first (exact)
-   - Fall back to email + subject match (fuzzy)
-   - Track match confidence
-4. Batch update matched records with `opened_at` timestamp
-5. Also update linked `company_communications` records
+3. **Add click/reply tracking** (bonus):
+   - Track `Click`, `Replied` columns too
+   - Update `clicked_at`, `replied_at` fields
 
-### Step 3: Database Updates
+### File 2: `src/components/communications/ApolloEngagementImportDialog.tsx`
 
-**Records to update:**
-- `apollo_email_activities`:
-  - `opened_at` → timestamp from CSV
-  - `open_count` → count from CSV (or 1 if not provided)
-  - `status` → 'opened'
-  
-- `company_communications` (via join on company_id + contact_id + subject):
-  - `email_opened_at` → timestamp from CSV
+1. **Update required field validation**:
+   - Change from requiring `openedAt` to requiring `opened` (boolean) OR `email`
+   - Make the flow work with boolean open status
 
-### Step 4: Add UI Access Point
-**Modified file: `src/pages/Communications.tsx`**
+2. **Improve column mapping UI**:
+   - Show "Open Status (Boolean)" option
+   - Allow `Sent At` to be used as fallback timestamp
 
-Add a new button/menu option:
-- "Import Opened Emails (Apollo CSV)" in the import dropdown
-- Triggers the new `ApolloEngagementImportDialog`
-
----
-
-## Expected Apollo CSV Columns
-
-Based on Apollo's export format, typical columns include:
-
-| Apollo Column Name | Purpose |
-|-------------------|---------|
-| `Email` or `Contact Email` | Match to contact |
-| `Subject` or `Email Subject` | Match to email record |
-| `Opened` | Boolean (Yes/No) |
-| `Opened At` or `First Opened At` | Timestamp |
-| `Open Count` or `Total Opens` | Number of opens |
-| `Message ID` or `Email ID` | Apollo's unique identifier |
-
----
+3. **Update preview display**:
+   - Show count of rows where `Open = true`
+   - Clarify that `Sent At` will be used as `opened_at` timestamp
 
 ## Technical Details
 
-### Files to Create
-1. `src/components/communications/ApolloEngagementImportDialog.tsx` - Main dialog component
-2. `src/lib/apollo/importOpenedEmails.ts` - Processing logic
-
-### Files to Modify
-1. `src/pages/Communications.tsx` - Add button to trigger import
-2. Optionally add to Pipeline Analytics page for quick access
-
-### Matching Query Example
-```sql
--- Find matching apollo_email_activities for a CSV row
-SELECT id, apollo_activity_id, subject, apollo_contact_email 
-FROM apollo_email_activities
-WHERE 
-  apollo_activity_id = $apolloId  -- Primary match
-  OR (
-    apollo_contact_email = $email 
-    AND subject ILIKE $subject
-    AND sent_at::date = $sentDate
-  )
+### Column Detection Updates
+```typescript
+// Add to APOLLO_COLUMN_MAPPINGS
+email: [...existing, 'to email', 'to'],
+sentAt: [...existing, 'sent at (pst)', 'sent at (utc)'],
+opened: ['open', 'opened', 'is opened', 'was opened'],
+clicked: ['click', 'clicked', 'is clicked'],
+replied: ['replied', 'reply', 'is replied'],
 ```
 
-### Update Query Example  
-```sql
--- Update engagement data
-UPDATE apollo_email_activities
-SET 
-  opened_at = $openedAt,
-  open_count = GREATEST(COALESCE(open_count, 0), $openCount),
-  status = 'opened'
-WHERE id = $matchedId;
+### Boolean Filtering Logic
+```typescript
+// Instead of checking for openedAt timestamp:
+const openedValue = columnMapping.opened 
+  ? row[columnMapping.opened]?.toLowerCase().trim() 
+  : null;
+
+// Skip if not opened
+if (openedValue !== 'true') continue;
+
+// Use sentAt as the opened timestamp (best available)
+const openedAt = columnMapping.sentAt 
+  ? row[columnMapping.sentAt]?.trim() 
+  : new Date().toISOString();
 ```
 
----
+### Matching Logic (Unchanged)
+The matching by email+subject against `apollo_email_activities` remains the same - we just change how we identify which rows to process.
 
-## Benefits
+## Expected Result
 
-1. **Sync Apollo engagement data** that wasn't captured via API
-2. **Backfill historical opens** from before automated import was set up
-3. **Manual override capability** when Apollo API tracking fails
-4. **Accurate funnel metrics** in Pipeline Analytics
+After import:
+- **856 rows** in your CSV
+- Filter to rows where `Open = true` (e.g., ~200+ opened emails)
+- Match those against your **1,643 records** in `apollo_email_activities`
+- Update `opened_at`, `open_count`, `status` for matched records
+- Also sync `email_opened_at` in `company_communications`
 
----
-
-## Alternative: Quick Bulk Update
-
-For a simpler approach, we could also add a "Mark as Opened" bulk action:
-- Select multiple communications in the table
-- Click "Mark as Opened" 
-- Optionally enter the opened date/time
-- Updates all selected records
-
-This would complement the CSV import for quick manual updates.
+## Files to Modify
+1. `src/lib/apollo/importOpenedEmails.ts` - Core logic updates
+2. `src/components/communications/ApolloEngagementImportDialog.tsx` - UI updates
 
