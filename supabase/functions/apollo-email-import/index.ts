@@ -601,14 +601,44 @@ serve(async (req) => {
         
         const derivedStatus = deriveEmailStatus(email, engagement);
 
+        // Apollo returns empty HTML shells for scheduled/draft emails or when content needs dynamic assembly
+        // Check if bodyHtml is essentially empty (just an empty HTML shell)
+        const isEmptyHtml = (html: string | undefined): boolean => {
+          if (!html) return true;
+          const stripped = html.replace(/<[^>]*>/g, '').trim();
+          return stripped.length === 0;
+        };
+        
+        // Use bodyText as fallback if bodyHtml is empty, or indicate content is pending
+        const rawRecord = email as unknown as Record<string, unknown>;
+        const bodyHtmlLoaded = rawRecord.body_html_loaded !== false;
+        const needsDynamicAssemble = rawRecord.needs_dynamic_assemble === true;
+        
+        let effectiveBodyHtml = email.body_html;
+        let effectiveBodyText = email.body_text;
+        
+        // If HTML is empty shell and we have body_text, use that
+        if (isEmptyHtml(email.body_html) && email.body_text && email.body_text.trim().length > 0) {
+          effectiveBodyHtml = `<p>${email.body_text.replace(/\n/g, '<br/>')}</p>`;
+        }
+        
+        // If both are empty and email is scheduled/draft, indicate content is pending
+        if (isEmptyHtml(effectiveBodyHtml) && (!effectiveBodyText || effectiveBodyText.trim().length === 0)) {
+          if (!bodyHtmlLoaded || needsDynamicAssemble || derivedStatus === 'scheduled' || derivedStatus === 'draft') {
+            effectiveBodyText = '[Email content will be generated at send time]';
+            effectiveBodyHtml = '<p><em>[Email content will be generated at send time]</em></p>';
+          }
+        }
+
         return {
           apolloId: email.id,
           sequenceId: email.emailer_campaign_id,
           sequenceName: email.emailer_campaign_name || email.campaign_name,
           stepPosition: email.emailer_step_position,
           subject: email.subject,
-          bodyText: email.body_text,
-          bodyHtml: email.body_html,
+          bodyText: effectiveBodyText,
+          bodyHtml: effectiveBodyHtml,
+          contentPending: !bodyHtmlLoaded || needsDynamicAssemble,
           status: derivedStatus,
           rawStatus: email.status,
           sentAt: email.completed_at || email.sent_at,
