@@ -6,7 +6,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Mail, Phone, Linkedin, Loader2, Plus, Calendar, Video, GraduationCap, MessageSquare } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Mail, Phone, Linkedin, Loader2, Plus, Calendar, Video, GraduationCap, MessageSquare, Sparkles, PenLine } from 'lucide-react';
 import { CompanySearchSelect } from '../opportunities/CompanySearchSelect';
 import { ContactMultiSelect } from '@/components/common/ContactMultiSelect';
 
@@ -25,6 +27,7 @@ interface Contact {
 }
 
 type CommunicationType = 'email' | 'call_script' | 'linkedin_message' | 'phone' | 'meeting' | 'demo' | 'training';
+type InputMode = 'ai' | 'manual';
 
 interface NewCommunicationDialogProps {
   onSuccess?: () => void;
@@ -34,6 +37,7 @@ interface NewCommunicationDialogProps {
   prefilledContactId?: string;
   prefilledPreviousContext?: string;
   prefilledCommunicationType?: CommunicationType;
+  defaultMode?: InputMode;
 }
 
 export function NewCommunicationDialog({ 
@@ -43,11 +47,13 @@ export function NewCommunicationDialog({
   prefilledCompanyId,
   prefilledContactId,
   prefilledPreviousContext,
-  prefilledCommunicationType
+  prefilledCommunicationType,
+  defaultMode = 'ai'
 }: NewCommunicationDialogProps) {
   const { toast } = useToast();
   const [internalOpen, setInternalOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
@@ -57,6 +63,7 @@ export function NewCommunicationDialog({
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
 
+  const [inputMode, setInputMode] = useState<InputMode>(defaultMode);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string>('none');
@@ -65,6 +72,11 @@ export function NewCommunicationDialog({
   const [outreachPrompt, setOutreachPrompt] = useState('');
   const [previousContext, setPreviousContext] = useState('');
   const [aiModel, setAiModel] = useState('google/gemini-2.5-flash');
+  
+  // Manual input fields
+  const [manualSubject, setManualSubject] = useState('');
+  const [manualContent, setManualContent] = useState('');
+  const [manualNotes, setManualNotes] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -205,6 +217,69 @@ export function NewCommunicationDialog({
     }
   };
 
+  const handleManualSave = async () => {
+    if (!selectedCompanyId) {
+      toast({
+        title: 'Company Required',
+        description: 'Please select a company',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!manualContent.trim()) {
+      toast({
+        title: 'Content Required',
+        description: 'Please enter the communication content',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('company_communications')
+        .insert({
+          company_id: selectedCompanyId,
+          contact_id: selectedContactIds.length > 0 ? selectedContactIds[0] : null,
+          opportunity_id: selectedOpportunityId && selectedOpportunityId !== 'none' ? selectedOpportunityId : null,
+          communication_type: communicationType,
+          subject: manualSubject || null,
+          content: manualContent,
+          notes: manualNotes || null,
+          user_id: user.id,
+          generated_at: now,
+          sent_at: now,
+          ai_model: null, // Manually created, not AI generated
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Communication Added',
+        description: `${getTypeLabel(communicationType)} saved successfully`,
+      });
+
+      setOpen(false);
+      resetForm();
+      onSuccess?.();
+    } catch (error: any) {
+      console.error('Error saving communication:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save communication',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const resetForm = () => {
     setSelectedCompanyId('');
     setSelectedContactIds([]);
@@ -214,6 +289,10 @@ export function NewCommunicationDialog({
     setOutreachPrompt('');
     setPreviousContext('');
     setAiModel('google/gemini-2.5-flash');
+    setManualSubject('');
+    setManualContent('');
+    setManualNotes('');
+    setInputMode(defaultMode);
   };
 
   const getTypeIcon = (type: string) => {
@@ -242,18 +321,39 @@ export function NewCommunicationDialog({
     }
   };
 
+  const isProcessing = generating || saving;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Generate New Communication</DialogTitle>
+          <DialogTitle>
+            {inputMode === 'ai' ? 'Generate New Communication' : 'Add Communication'}
+          </DialogTitle>
           <DialogDescription>
-            Select a company and contact to generate personalized communication
+            {inputMode === 'ai' 
+              ? 'Select a company and contact to generate personalized communication'
+              : 'Manually add a communication record'
+            }
           </DialogDescription>
         </DialogHeader>
 
+        {/* Mode Toggle */}
+        <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as InputMode)} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="ai" className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Generate with AI
+            </TabsTrigger>
+            <TabsTrigger value="manual" className="flex items-center gap-2">
+              <PenLine className="h-4 w-4" />
+              Manual Input
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="space-y-4 py-4">
-          {/* Company Selection */}
+          {/* Company Selection - Common to both modes */}
           <div className="space-y-2">
             <Label htmlFor="company">Company *</Label>
             <CompanySearchSelect
@@ -262,9 +362,9 @@ export function NewCommunicationDialog({
             />
           </div>
 
-          {/* Contact Selection */}
+          {/* Contact Selection - Common to both modes */}
           <div className="space-y-2">
-            <Label htmlFor="contact">Target Contacts (Optional)</Label>
+            <Label htmlFor="contact">Target Contact{inputMode === 'ai' ? 's' : ''} (Optional)</Label>
             <ContactMultiSelect
               contacts={contacts}
               selectedContactIds={selectedContactIds}
@@ -279,11 +379,14 @@ export function NewCommunicationDialog({
               }
             />
             <p className="text-xs text-muted-foreground">
-              Select specific contacts to personalize the communication, or leave empty for general messaging
+              {inputMode === 'ai' 
+                ? 'Select specific contacts to personalize the communication, or leave empty for general messaging'
+                : 'Select a contact to associate with this communication'
+              }
             </p>
           </div>
 
-          {/* Opportunity Selection */}
+          {/* Opportunity Selection - Common to both modes */}
           <div className="space-y-2">
             <Label htmlFor="opportunity">Link to Opportunity (Optional)</Label>
             <Select 
@@ -309,7 +412,7 @@ export function NewCommunicationDialog({
             </p>
           </div>
 
-          {/* Communication Type */}
+          {/* Communication Type - Common to both modes */}
           <div className="space-y-2">
             <Label htmlFor="type">Communication Type</Label>
             <Select value={communicationType} onValueChange={(value: any) => setCommunicationType(value)}>
@@ -363,88 +466,164 @@ export function NewCommunicationDialog({
             </Select>
           </div>
 
-          {/* Business Context */}
-          <div className="space-y-2">
-            <Label htmlFor="business-context">Your Business Context (Optional but Recommended)</Label>
-            <Textarea
-              id="business-context"
-              placeholder="Example: We are Google Nest Pro representatives offering smart home solutions to builders and contractors. Our goal is to establish partnerships and help integrate Nest products into their projects..."
-              value={businessContext}
-              onChange={(e) => setBusinessContext(e.target.value)}
-              rows={3}
-              className="resize-none"
-            />
-            <p className="text-xs text-muted-foreground">
-              Describe your business, what you offer, and your relationship goals to help the AI generate more accurate communications
-            </p>
-          </div>
+          {/* AI Mode Fields */}
+          {inputMode === 'ai' && (
+            <>
+              {/* Business Context */}
+              <div className="space-y-2">
+                <Label htmlFor="business-context">Your Business Context (Optional but Recommended)</Label>
+                <Textarea
+                  id="business-context"
+                  placeholder="Example: We are Google Nest Pro representatives offering smart home solutions to builders and contractors. Our goal is to establish partnerships and help integrate Nest products into their projects..."
+                  value={businessContext}
+                  onChange={(e) => setBusinessContext(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Describe your business, what you offer, and your relationship goals to help the AI generate more accurate communications
+                </p>
+              </div>
 
-          {/* Outreach Purpose Prompt */}
-          <div className="space-y-2">
-            <Label htmlFor="prompt">What are you reaching out about? *</Label>
-            <Textarea
-              id="prompt"
-              placeholder="Example: Introducing our new smart thermostat installation program for builders, or Following up on our previous conversation about partnership opportunities..."
-              value={outreachPrompt}
-              onChange={(e) => setOutreachPrompt(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
-            <p className="text-xs text-muted-foreground">
-              Describe the purpose and key points of your outreach to generate a focused message
-            </p>
-          </div>
+              {/* Outreach Purpose Prompt */}
+              <div className="space-y-2">
+                <Label htmlFor="prompt">What are you reaching out about? *</Label>
+                <Textarea
+                  id="prompt"
+                  placeholder="Example: Introducing our new smart thermostat installation program for builders, or Following up on our previous conversation about partnership opportunities..."
+                  value={outreachPrompt}
+                  onChange={(e) => setOutreachPrompt(e.target.value)}
+                  rows={4}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Describe the purpose and key points of your outreach to generate a focused message
+                </p>
+              </div>
 
-          {/* AI Model Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="model">AI Model</Label>
-            <Select value={aiModel} onValueChange={setAiModel}>
-              <SelectTrigger id="model">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</SelectItem>
-                <SelectItem value="google/gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</SelectItem>
-                <SelectItem value="openai/gpt-5-mini">GPT-5 Mini</SelectItem>
-                <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              {/* AI Model Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="model">AI Model</Label>
+                <Select value={aiModel} onValueChange={setAiModel}>
+                  <SelectTrigger id="model">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</SelectItem>
+                    <SelectItem value="google/gemini-2.5-pro">Gemini 2.5 Pro (Best Quality)</SelectItem>
+                    <SelectItem value="openai/gpt-5-mini">GPT-5 Mini</SelectItem>
+                    <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Previous Context */}
-          <div className="space-y-2">
-            <Label htmlFor="context">Previous Context (Optional)</Label>
-            <Textarea
-              id="context"
-              placeholder="Add any previous communication context to help personalize the message..."
-              value={previousContext}
-              onChange={(e) => setPreviousContext(e.target.value)}
-              rows={3}
-              className="resize-none"
-            />
-            <p className="text-xs text-muted-foreground">
-              Include any relevant conversation history, notes, or specific requirements
-            </p>
-          </div>
+              {/* Previous Context */}
+              <div className="space-y-2">
+                <Label htmlFor="context">Previous Context (Optional)</Label>
+                <Textarea
+                  id="context"
+                  placeholder="Add any previous communication context to help personalize the message..."
+                  value={previousContext}
+                  onChange={(e) => setPreviousContext(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Include any relevant conversation history, notes, or specific requirements
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* Manual Mode Fields */}
+          {inputMode === 'manual' && (
+            <>
+              {/* Subject */}
+              <div className="space-y-2">
+                <Label htmlFor="manual-subject">Subject</Label>
+                <Input
+                  id="manual-subject"
+                  placeholder="Email subject or communication title..."
+                  value={manualSubject}
+                  onChange={(e) => setManualSubject(e.target.value)}
+                />
+              </div>
+
+              {/* Content */}
+              <div className="space-y-2">
+                <Label htmlFor="manual-content">Content *</Label>
+                <Textarea
+                  id="manual-content"
+                  placeholder="Enter the full content of the communication..."
+                  value={manualContent}
+                  onChange={(e) => setManualContent(e.target.value)}
+                  rows={8}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the complete message, email body, or call notes
+                </p>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="manual-notes">Internal Notes (Optional)</Label>
+                <Textarea
+                  id="manual-notes"
+                  placeholder="Add any internal notes about this communication..."
+                  value={manualNotes}
+                  onChange={(e) => setManualNotes(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Notes visible only to your team, not part of the communication
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={generating}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isProcessing}>
             Cancel
           </Button>
-          <Button onClick={handleGenerate} disabled={generating || !selectedCompanyId || !outreachPrompt.trim()}>
-            {generating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                {getTypeIcon(communicationType)}
-                <span className="ml-2">Generate {getTypeLabel(communicationType)}</span>
-              </>
-            )}
-          </Button>
+          
+          {inputMode === 'ai' ? (
+            <Button 
+              onClick={handleGenerate} 
+              disabled={isProcessing || !selectedCompanyId || !outreachPrompt.trim()}
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate {getTypeLabel(communicationType)}
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleManualSave} 
+              disabled={isProcessing || !selectedCompanyId || !manualContent.trim()}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  {getTypeIcon(communicationType)}
+                  <span className="ml-2">Save {getTypeLabel(communicationType)}</span>
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
