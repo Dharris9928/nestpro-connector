@@ -138,6 +138,54 @@ export function usePipelineAnalytics(
         }
       }
 
+      // Fetch Apollo email activities for additional opened/replied tracking
+      let apolloQuery = supabase
+        .from("apollo_email_activities")
+        .select("id, sent_at, opened_at, replied_at, status, company_id, contact_id")
+        .gte("sent_at", fromDate)
+        .lte("sent_at", toDate);
+      
+      apolloQuery = buildPerspectiveFilter(apolloQuery);
+      const { data: apolloDataRaw } = await apolloQuery;
+      
+      let apolloData = apolloDataRaw || [];
+      if (filterStates && apolloData.length > 0) {
+        const companyIds = [...new Set(apolloData.map(a => a.company_id).filter(Boolean))];
+        if (companyIds.length > 0) {
+          const { data: companies } = await supabase
+            .from("companies")
+            .select("id, state")
+            .in("id", companyIds)
+            .in("state", filterStates);
+          const validCompanyIds = new Set(companies?.map(c => c.id) || []);
+          apolloData = apolloData.filter(a => validCompanyIds.has(a.company_id));
+        }
+      }
+
+      // Fetch previous period Apollo data
+      let prevApolloQuery = supabase
+        .from("apollo_email_activities")
+        .select("id, sent_at, opened_at, replied_at, status, company_id")
+        .gte("sent_at", prevFrom)
+        .lte("sent_at", prevTo);
+      
+      prevApolloQuery = buildPerspectiveFilter(prevApolloQuery);
+      const { data: prevApolloDataRaw } = await prevApolloQuery;
+      
+      let prevApolloData = prevApolloDataRaw || [];
+      if (filterStates && prevApolloData.length > 0) {
+        const companyIds = [...new Set(prevApolloData.map(a => a.company_id).filter(Boolean))];
+        if (companyIds.length > 0) {
+          const { data: companies } = await supabase
+            .from("companies")
+            .select("id, state")
+            .in("id", companyIds)
+            .in("state", filterStates);
+          const validCompanyIds = new Set(companies?.map(c => c.id) || []);
+          prevApolloData = prevApolloData.filter(a => validCompanyIds.has(a.company_id));
+        }
+      }
+
       // Fetch previous period communications
       let prevCommsQuery = supabase
         .from("company_communications")
@@ -364,9 +412,17 @@ export function usePipelineAnalytics(
       }
 
       // Calculate current period metrics
-      const commsSent = commsData.filter(c => c.sent_at).length;
-      const emailsOpened = commsData.filter(c => c.email_opened_at).length;
-      const responsesReceived = commsData.filter(c => c.email_responded_at).length;
+      // Combine comms sent from both company_communications and apollo_email_activities
+      const commsSent = commsData.filter(c => c.sent_at).length + apolloData.filter(a => a.sent_at).length;
+      
+      // Combine opened/responded from both tables (avoid double counting by using unique contacts)
+      const commsOpened = commsData.filter(c => c.email_opened_at).length;
+      const apolloOpened = apolloData.filter(a => a.opened_at || a.status === 'opened' || a.status === 'replied').length;
+      const emailsOpened = commsOpened + apolloOpened;
+      
+      const commsResponded = commsData.filter(c => c.email_responded_at).length;
+      const apolloResponded = apolloData.filter(a => a.replied_at || a.status === 'replied').length;
+      const responsesReceived = commsResponded + apolloResponded;
       
       // Meetings (Scheduled or Completed outcome)
       const meetingsScheduled = meetingsData.filter(m => m.outcome === "Scheduled" || m.outcome === "Completed").length;
@@ -402,10 +458,14 @@ export function usePipelineAnalytics(
       const closedDeals = closedDealsData.length;
       const closedDealValue = closedDealsData.reduce((sum, opp) => sum + (opp.amount || 0), 0);
 
-      // Calculate previous period metrics
-      const prevCommsSent = prevCommsData.filter(c => c.sent_at).length;
-      const prevEmailsOpened = prevCommsData.filter(c => c.email_opened_at).length;
-      const prevResponsesReceived = prevCommsData.filter(c => c.email_responded_at).length;
+      // Calculate previous period metrics (combine both tables)
+      const prevCommsSent = prevCommsData.filter(c => c.sent_at).length + prevApolloData.filter(a => a.sent_at).length;
+      const prevCommsOpened = prevCommsData.filter(c => c.email_opened_at).length;
+      const prevApolloOpened = prevApolloData.filter(a => a.opened_at || a.status === 'opened' || a.status === 'replied').length;
+      const prevEmailsOpened = prevCommsOpened + prevApolloOpened;
+      const prevCommsResponded = prevCommsData.filter(c => c.email_responded_at).length;
+      const prevApolloResponded = prevApolloData.filter(a => a.replied_at || a.status === 'replied').length;
+      const prevResponsesReceived = prevCommsResponded + prevApolloResponded;
       const prevMeetingsScheduled = prevMeetingsData.filter(m => m.outcome === "Scheduled" || m.outcome === "Completed").length;
       const prevMeetingsCompleted = prevMeetingsData.filter(m => m.outcome === "Completed").length;
       const prevDemosScheduled = prevDemosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
