@@ -39,16 +39,20 @@ export interface UpdateResult {
 
 // Common Apollo CSV column name variations - updated for actual Apollo export format
 export const APOLLO_COLUMN_MAPPINGS = {
-  email: ['email', 'contact email', 'contact_email', 'email address', 'recipient email', 'to', 'to email'],
+  // "To Email" is the standard Apollo export column name
+  email: ['to email', 'email', 'contact email', 'contact_email', 'email address', 'recipient email', 'to'],
   subject: ['subject', 'email subject', 'subject line', 'email_subject'],
   openedAt: ['opened at', 'opened_at', 'first opened at', 'first_opened_at', 'open date', 'opened date'],
   openCount: ['open count', 'open_count', 'total opens', 'opens', 'times opened'],
   apolloId: ['message id', 'message_id', 'email id', 'email_id', 'activity id', 'activity_id', 'id'],
-  sentAt: ['sent at', 'sent_at', 'sent date', 'date sent', 'sent', 'sent at (pst)', 'sent at (utc)', 'sent at (est)'],
+  // Prioritize specific timestamp formats over the ambiguous "sent" (which could be boolean)
+  sentAt: ['sent at (pst)', 'sent at (utc)', 'sent at (est)', 'sent at', 'sent_at', 'sent date', 'date sent'],
   // Boolean status columns from Apollo exports
   opened: ['open', 'opened', 'is opened', 'was opened', 'is open'],
   clicked: ['click', 'clicked', 'is clicked', 'was clicked', 'link clicked'],
   replied: ['replied', 'reply', 'is replied', 'was replied', 'has replied'],
+  // "Sent" as boolean (separate from timestamp)
+  sent: ['sent'],
 };
 
 function isBooleanLike(value: string | null | undefined): boolean {
@@ -89,6 +93,7 @@ export function autoDetectColumns(headers: string[]): Record<string, string | nu
     opened: null,
     clicked: null,
     replied: null,
+    sent: null, // Boolean "was email sent" vs sentAt timestamp
   };
 
   // Prefer the most-specific match when multiple headers could match a field.
@@ -274,7 +279,27 @@ export async function matchOpenedEmails(
       }
     }
 
-    // Priority 3: Match by Email only (least precise)
+    // Priority 3: Match by Email + filter candidates by subject (for multi-email contacts)
+    if (!matchedRecord && csvRow.email && csvRow.subject) {
+      const candidates = byEmailOnly.get(csvRow.email.toLowerCase());
+      if (candidates && candidates.length > 1) {
+        // Try to find the one with matching subject
+        const subjectLower = csvRow.subject.toLowerCase();
+        const matchingCandidate = candidates.find(c => 
+          c.subject?.toLowerCase() === subjectLower
+        );
+        if (matchingCandidate) {
+          matchedRecord = {
+            csvRow,
+            dbRecord: matchingCandidate,
+            matchType: 'email_subject',
+            confidence: 75, // Slightly lower than direct map lookup
+          };
+        }
+      }
+    }
+
+    // Priority 4: Match by Email only (least precise) - only when exactly one email to contact
     if (!matchedRecord && csvRow.email) {
       const candidates = byEmailOnly.get(csvRow.email.toLowerCase());
       if (candidates && candidates.length === 1) {
