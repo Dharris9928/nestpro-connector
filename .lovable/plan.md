@@ -1,168 +1,211 @@
 
 
-# Ensure Apollo CSV Import Updates All Dashboards
+# Upload Log - Batch Tracking & Rollback System
 
-## Problem
-When the Apollo opened emails CSV is imported, it updates `apollo_email_activities` and `company_communications` tables. However, the realtime invalidation system only has mappings for `company_communications`, not `apollo_email_activities`. This means some dashboard updates may be missed.
+## Overview
 
-## Current State
+Add an "Upload Log" section to the Settings > Data tab that provides:
+1. Clear visibility into all data uploads/imports with batch tracking
+2. Ability to rollback problematic imports to avoid duplicate data
+3. Prevention of re-upload issues
 
-### Tables Updated by Import
-| Table | Fields Updated |
-|-------|---------------|
-| `apollo_email_activities` | `opened_at`, `open_count`, `status`, `clicked_at`, `replied_at` |
-| `company_communications` | `email_opened_at`, `email_responded_at` |
+## Location in UI
 
-### Current Realtime Mappings
-```text
-company_communications → ["all-communications"], ["communications-funnel"], ["pipeline-analytics"]
-apollo_email_activities → ❌ NOT MAPPED
-```
-
-### Dashboards That Should Refresh
-- **Pipeline Analytics Page** (`/pipeline-analytics`)
-  - `PipelineKPICards` - Shows emails opened, responses received
-  - `PipelineFunnelChart` - Shows funnel conversion rates
-  - `EmailPerformanceCard` - Shows open rate, response rate
-  - `CommunicationsFunnel` - Shows email engagement breakdown
-- **Communications Page** (`/communications`)
-  - Communications list with opened/replied badges
-- **Dashboard** (`/`)
-  - Any email engagement summary cards
-
-## Solution
-
-### Step 1: Add `apollo_email_activities` to Realtime Invalidator
-
-**File:** `src/components/common/RealtimeQueryInvalidator.tsx`
-
-Add the missing table mapping:
+**Settings Page > Data Tab** - New "Upload Log" card positioned after the current admin tools
 
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│  TABLE_TO_QUERY_KEYS additions:                                     │
-│                                                                     │
-│  apollo_email_activities: [                                         │
-│    ["all-communications"],      // Comm list shows engagement      │
-│    ["communications-funnel"],   // Funnel uses engagement data     │
-│    ["pipeline-analytics"],      // KPIs depend on opened emails    │
-│    ["apollo-email-activities"], // Direct table query key          │
-│  ]                                                                  │
-└─────────────────────────────────────────────────────────────────────┘
+Settings > Data Tab Layout:
+┌──────────────────────────────────────────────┐
+│ Database Management Improved                 │
+├──────────────────────────────────────────────┤
+│ Admin Tools (Duplicates, Merge)              │
+├──────────────────────────────────────────────┤
+│ ★ NEW: Upload Log                            │  ← Clearly labeled
+│   - View all import batches with file names  │
+│   - See success/fail/duplicate counts        │
+│   - Rollback button for problematic imports  │
+├──────────────────────────────────────────────┤
+│ Data Warehouse Sync                          │
+└──────────────────────────────────────────────┘
 ```
 
-### Step 2: Add Manual Invalidation After Import
+## Implementation Plan
 
-**File:** `src/components/communications/ApolloEngagementImportDialog.tsx`
+### Phase 1: Database Schema Changes
 
-Currently the dialog only calls `onImportComplete?.()` which triggers `refetch()` for `["all-communications"]`.
+**1.1 Enhance `import_export_logs` table:**
 
-We need to add explicit query invalidation directly in the dialog to ensure all related queries are refreshed immediately after import:
+| New Column | Type | Purpose |
+|------------|------|---------|
+| `batch_id` | UUID | Unique identifier for each import session |
+| `file_name` | TEXT | Original uploaded filename |
+| `rollback_available` | BOOLEAN | Whether rollback is possible (default: true) |
+| `rolled_back_at` | TIMESTAMPTZ | When rollback was performed |
+| `rolled_back_by` | UUID | User who performed rollback |
+| `affected_tables` | TEXT[] | Tables modified by this import |
+
+**1.2 Add tracking columns to data tables:**
+
+Add `import_batch_id` (UUID, nullable) to:
+- `companies`
+- `contacts`
+- `company_communications`
+- `apollo_email_activities`
+
+**1.3 Add rollback support for engagement updates:**
+
+Add `previous_engagement_values` (JSONB) to `apollo_email_activities` to store original field values before updates.
+
+### Phase 2: New Utility Files
+
+**2.1 Create `src/lib/import/batchTracking.ts`:**
 
 ```text
-After successful import:
-  1. queryClient.invalidateQueries({ queryKey: ["pipeline-analytics"] })
-  2. queryClient.invalidateQueries({ queryKey: ["communications-funnel"] })
-  3. queryClient.invalidateQueries({ queryKey: ["all-communications"] })
-  4. queryClient.invalidateQueries({ queryKey: ["apollo-email-activities"] })
-  5. Call onImportComplete?.() as before
+Functions:
+- generateBatchId() → UUID
+- createImportLog(batchId, fileName, tables) → void
+- updateImportLog(batchId, stats) → void
 ```
 
-This ensures that:
-- The user sees immediate updates without waiting for realtime events
-- All dashboards refresh regardless of which page they're on
-- The manual refresh button on Pipeline Analytics isn't needed after import
-
-### Step 3: Add Toast Notification for Dashboard Update
-
-**File:** `src/components/communications/ApolloEngagementImportDialog.tsx`
-
-After invalidating queries, show a toast confirming dashboards will update:
+**2.2 Create `src/lib/import/rollbackImport.ts`:**
 
 ```text
-Toast: "Dashboard metrics will update shortly with the new engagement data"
+Functions:
+- rollbackImport(batchId) → Promise<RollbackResult>
+  ├── Delete created records (WHERE import_batch_id = batchId)
+  ├── Restore updated records from previous_engagement_values
+  ├── Update import_export_logs (rolled_back_at, rolled_back_by)
+  └── Return success/failure stats
 ```
 
----
+### Phase 3: Update Import Dialogs
 
-## Data Flow After Fix
+Each import dialog will be updated to:
+1. Generate a `batch_id` at import start
+2. Pass `import_batch_id` when inserting records
+3. Store filename in import log
+4. For engagement updates: Capture original values before updating
+
+**Files to modify:**
+
+| Import Dialog | Records Created | Changes |
+|---------------|-----------------|---------|
+| `ImportDialog.tsx` (Companies) | companies | Add batch_id |
+| `AIImportDialog.tsx` | companies, contacts | Add logging + batch_id |
+| `ImportContactsDialog.tsx` | contacts, companies | Add batch_id |
+| `ImportContactsDialogEnhanced.tsx` | contacts, companies | Add batch_id |
+| `ApolloContactImportDialog.tsx` | contacts, companies | Add batch_id |
+| `ApolloCSVImportDialog.tsx` | companies, contacts | Pass batch_id to `importApolloData()` |
+| `ApolloEmailImportDialog.tsx` | communications, contacts, companies | Add batch_id |
+| `ApolloEngagementImportDialog.tsx` | (updates) apollo_email_activities | Add logging + capture previous values |
+
+**Also update:**
+- `src/lib/prospecting/importApolloCSV.ts` - Accept batchId parameter
+
+### Phase 4: Create Upload Log Component
+
+**4.1 Create `src/components/settings/UploadLogViewer.tsx`:**
+
+A dedicated component for Settings > Data tab with:
+
+**Features:**
+- Card with title "Upload Log" and Upload icon
+- Search by filename, table, or user
+- Filter by: All, Imports Only, Exports Only
+- Status filter: All, Active, Rolled Back, Failed
+
+**Table Columns:**
+| Column | Description |
+|--------|-------------|
+| Date & Time | When import occurred |
+| File Name | Original uploaded filename (new!) |
+| User | Who performed the import |
+| Type | Import/Export with icon |
+| Table(s) | Which tables were affected |
+| Results | Success/Failed/Duplicates counts |
+| Status | Active / Rolled Back badge |
+| Actions | Rollback button (if available) |
+
+**Rollback Flow:**
+1. User clicks "Rollback" button
+2. Confirmation dialog appears with warning
+3. On confirm: Call `rollbackImport(batchId)`
+4. Show success toast with stats
+5. Refresh the log view
+6. Invalidate related query caches
+
+### Phase 5: Update Settings Page
+
+**5.1 Modify `src/pages/Settings.tsx`:**
+
+Add the UploadLogViewer component to the Data tab:
 
 ```text
-User uploads Apollo CSV
-         │
-         ▼
-Parse and match emails
-         │
-         ▼
-Update apollo_email_activities
-         │
-         ├──────────────────────────────────────────────┐
-         │                                              │
-         ▼                                              ▼
-Update company_communications              Realtime listener detects
-         │                                  apollo_email_activities change
-         │                                              │
-         │                                              ▼
-         │                                  Invalidates: pipeline-analytics,
-         │                                  communications-funnel, etc.
-         │
-         ▼
-Manual invalidation in dialog
-(immediate refresh guarantee)
-         │
-         ▼
-All dashboards show updated metrics
+<TabsContent value="data">
+  {userData?.role === 'admin' && (
+    <>
+      <DatabaseManagementImproved />
+      <Card>Admin Tools...</Card>
+      
+      {/* NEW: Upload Log */}
+      <UploadLogViewer />
+      
+      <DataWarehouseSync />
+    </>
+  )}
+</TabsContent>
 ```
 
----
+**5.2 Remove from Logs tab:**
 
-## Files to Modify
+The `ImportExportLogsViewer` component will be consolidated into the new `UploadLogViewer`, so it can be removed from:
+- Settings > Security tab (line 281)
+- Settings > Logs tab can reference the Data tab for detailed upload logs
 
-| File | Change |
-|------|--------|
-| `src/components/common/RealtimeQueryInvalidator.tsx` | Add `apollo_email_activities` table mapping |
-| `src/components/communications/ApolloEngagementImportDialog.tsx` | Add `useQueryClient` and manual invalidation after successful import |
+## File Summary
 
----
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/lib/import/batchTracking.ts` | Batch ID generation and log management |
+| `src/lib/import/rollbackImport.ts` | Rollback functionality |
+| `src/components/settings/UploadLogViewer.tsx` | Main Upload Log UI component |
 
-## Technical Implementation
+### Modified Files
+| File | Changes |
+|------|---------|
+| Database migration | Add new columns to tables |
+| `src/pages/Settings.tsx` | Add UploadLogViewer to Data tab |
+| `src/components/companies/ImportDialog.tsx` | Add batch tracking |
+| `src/components/companies/AIImportDialog.tsx` | Add batch tracking + logging |
+| `src/components/contacts/ImportContactsDialog.tsx` | Add batch tracking |
+| `src/components/contacts/ImportContactsDialogEnhanced.tsx` | Add batch tracking |
+| `src/components/contacts/ApolloContactImportDialog.tsx` | Add batch tracking |
+| `src/components/prospecting/ApolloCSVImportDialog.tsx` | Add batch tracking |
+| `src/lib/prospecting/importApolloCSV.ts` | Accept batchId param |
+| `src/components/communications/ApolloEmailImportDialog.tsx` | Add batch tracking |
+| `src/components/communications/ApolloEngagementImportDialog.tsx` | Add logging + previous values |
 
-### RealtimeQueryInvalidator.tsx Changes
+## Rollback Behavior
 
-```typescript
-const TABLE_TO_QUERY_KEYS: Record<string, QueryKeyLike[]> = {
-  // ... existing mappings ...
-  
-  // Add apollo_email_activities mapping
-  apollo_email_activities: [
-    ["all-communications"],
-    ["communications-funnel"],
-    ["pipeline-analytics"],
-    ["apollo-email-activities"],
-  ],
-};
-```
+**For Created Records (companies, contacts, communications):**
+- Records with matching `import_batch_id` are deleted
 
-### ApolloEngagementImportDialog.tsx Changes
+**For Updated Records (engagement data):**
+- Original values restored from `previous_engagement_values` JSONB
+- Preserves any changes made after the import
 
-1. Import `useQueryClient` from `@tanstack/react-query`
-2. Get queryClient instance: `const queryClient = useQueryClient()`
-3. After `updateOpenedEmails()` succeeds, call:
-
-```typescript
-// Invalidate all related queries for immediate dashboard refresh
-queryClient.invalidateQueries({ queryKey: ["pipeline-analytics"] });
-queryClient.invalidateQueries({ queryKey: ["communications-funnel"] });
-queryClient.invalidateQueries({ queryKey: ["all-communications"] });
-queryClient.invalidateQueries({ queryKey: ["apollo-email-activities"] });
-```
-
----
+**Constraints:**
+- Rollback available for 30 days after import
+- Admin permission required for rollback
+- Cannot rollback if records have been manually modified (warning shown)
+- Rollback button hidden after rollback is performed
 
 ## Benefits
 
-1. **Immediate Updates** - Dashboards refresh right after import completes
-2. **Consistent Data** - All views show the same engagement metrics
-3. **No Manual Refresh Needed** - Users don't have to click "Refresh" button
-4. **Future-Proofed** - Any new dashboard using these query keys will auto-update
+1. **Complete Visibility**: See every import with filename, user, and results
+2. **Safe Re-uploads**: Rollback problematic imports before re-uploading
+3. **Duplicate Prevention**: Each record linked to its source batch
+4. **Audit Compliance**: Full history with timestamps and user attribution
+5. **Centralized Location**: All upload management in Settings > Data
 
