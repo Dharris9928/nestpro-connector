@@ -142,6 +142,15 @@ export function ApolloEngagementImportDialog({
   // Check if we have a valid open indicator (either boolean or timestamp)
   const hasOpenIndicator = columnMapping.opened || columnMapping.openedAt;
 
+  const sentAtLooksBoolean = useMemo(() => {
+    if (!columnMapping.sentAt || rawData.length === 0) return false;
+    const col = columnMapping.sentAt;
+    const sample = rawData.find(r => (r[col] ?? '').toString().trim().length > 0)?.[col];
+    if (sample === null || sample === undefined) return false;
+    const v = sample.toString().toLowerCase().trim();
+    return v === 'true' || v === 'false' || v === 'yes' || v === 'no' || v === '1' || v === '0';
+  }, [columnMapping.sentAt, rawData]);
+
   // Count rows where Open = true for preview
   const openedRowsCount = useMemo(() => {
     if (!rawData.length) return 0;
@@ -441,6 +450,16 @@ export function ApolloEngagementImportDialog({
                     <p className="text-xs text-muted-foreground mt-1">
                       Used as opened_at timestamp
                     </p>
+
+                    {sentAtLooksBoolean && (
+                      <Alert className="mt-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="text-xs">
+                          The selected “Sent At” column looks like true/false (e.g., “Sent”).
+                          Please choose “Sent At (PST)” so timestamps can be parsed correctly.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </div>
               </div>

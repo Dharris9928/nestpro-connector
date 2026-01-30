@@ -51,6 +51,29 @@ export const APOLLO_COLUMN_MAPPINGS = {
   replied: ['replied', 'reply', 'is replied', 'was replied', 'has replied'],
 };
 
+function isBooleanLike(value: string | null | undefined): boolean {
+  if (value === null || value === undefined) return false;
+  const v = value.toLowerCase().trim();
+  return v === 'true' || v === 'false' || v === 'yes' || v === 'no' || v === '1' || v === '0';
+}
+
+function parseBoolean(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const v = value.toLowerCase().trim();
+  return v === 'true' || v === 'yes' || v === '1';
+}
+
+function firstTimestampCandidate(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    if (!value) continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    if (isBooleanLike(trimmed)) continue;
+    return trimmed;
+  }
+  return null;
+}
+
 /**
  * Auto-detect column mappings from CSV headers
  */
@@ -68,13 +91,26 @@ export function autoDetectColumns(headers: string[]): Record<string, string | nu
     replied: null,
   };
 
+  // Prefer the most-specific match when multiple headers could match a field.
+  // Example: Apollo exports include both "Sent" (boolean) and "Sent At (PST)" (timestamp).
+  // We should prefer the longer/more-specific variation ("sent at (pst)") over "sent".
   for (const [field, variations] of Object.entries(APOLLO_COLUMN_MAPPINGS)) {
+    let bestIndex = -1;
+    let bestScore = -1;
+
     for (const variation of variations) {
       const index = lowerHeaders.indexOf(variation);
-      if (index !== -1) {
-        result[field] = headers[index]; // Use original case
-        break;
+      if (index === -1) continue;
+
+      const score = variation.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
       }
+    }
+
+    if (bestIndex !== -1) {
+      result[field] = headers[bestIndex];
     }
   }
 
@@ -102,17 +138,24 @@ export function parseOpenedEmails(
 
     // Determine if this email was opened
     let isOpened = false;
-    let openedTimestamp: string;
+    let openedTimestamp: string | null = null;
 
     if (openedBooleanValue !== null) {
-      // Boolean column format (Apollo's actual export)
-      isOpened = openedBooleanValue === 'true' || openedBooleanValue === 'yes' || openedBooleanValue === '1';
-      // Use sentAt as fallback since Apollo doesn't provide exact open time
-      openedTimestamp = sentAtValue || new Date().toISOString();
+      // Boolean column format (Apollo export)
+      isOpened = parseBoolean(openedBooleanValue);
+      // Use sentAt (timestamp) if available; otherwise fallback to now.
+      openedTimestamp = firstTimestampCandidate(sentAtValue, openedAtValue) ?? new Date().toISOString();
     } else if (openedAtValue) {
-      // Timestamp column format (legacy support)
-      isOpened = true;
-      openedTimestamp = openedAtValue;
+      if (isBooleanLike(openedAtValue)) {
+        // Some users accidentally map the boolean "Open" column into "Opened At".
+        // Treat it as a boolean open indicator and use sentAt/now for timestamp.
+        isOpened = parseBoolean(openedAtValue);
+        openedTimestamp = firstTimestampCandidate(sentAtValue) ?? new Date().toISOString();
+      } else {
+        // Timestamp column format (legacy support)
+        isOpened = true;
+        openedTimestamp = openedAtValue;
+      }
     } else {
       // No open indicator - skip this row
       continue;
@@ -130,7 +173,7 @@ export function parseOpenedEmails(
     results.push({
       email,
       subject: columnMapping.subject ? row[columnMapping.subject]?.trim() : undefined,
-      openedAt: openedTimestamp,
+      openedAt: openedTimestamp || new Date().toISOString(),
       apolloId: columnMapping.apolloId ? row[columnMapping.apolloId]?.trim() : undefined,
       openCount: columnMapping.openCount ? parseInt(row[columnMapping.openCount], 10) || 1 : 1,
       sentAt: sentAtValue || undefined,
@@ -375,14 +418,22 @@ export async function updateOpenedEmails(
 function parseTimestamp(value: string): Date | null {
   if (!value) return null;
 
+  // Apollo exports often include timezone markers like "(PST)" or "PST".
+  // Strip those before parsing.
+  const cleaned = value
+    .trim()
+    .replace(/\s*\(([^)]+)\)\s*/g, ' ')
+    .replace(/\b(PST|PDT|EST|EDT|UTC)\b/gi, '')
+    .trim();
+
   // Try parsing as ISO date
-  let date = new Date(value);
+  let date = new Date(cleaned);
   if (!isNaN(date.getTime())) {
     return date;
   }
 
   // Try Apollo's format: "January 09, 2026 07:32"
-  const apolloFormatMatch = value.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  const apolloFormatMatch = cleaned.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (apolloFormatMatch) {
     const [, month, day, year, hour, minute, second] = apolloFormatMatch;
     const monthIndex = new Date(`${month} 1, 2000`).getMonth();
@@ -401,6 +452,24 @@ function parseTimestamp(value: string): Date | null {
     }
   }
 
+  // Common Apollo export format: MM/DD/YYYY HH:MM (optionally seconds, optionally AM/PM)
+  const mmddMatch = cleaned.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?)?$/
+  );
+  if (mmddMatch) {
+    const [, mm, dd, yyyy, hh = '0', min = '0', sec = '0', ampm] = mmddMatch;
+    let hours = parseInt(hh, 10);
+    const minutes = parseInt(min, 10);
+    const seconds = parseInt(sec, 10);
+    if (ampm) {
+      const upper = ampm.toUpperCase();
+      if (upper === 'PM' && hours < 12) hours += 12;
+      if (upper === 'AM' && hours === 12) hours = 0;
+    }
+    date = new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, parseInt(dd, 10), hours, minutes, seconds);
+    if (!isNaN(date.getTime())) return date;
+  }
+
   // Try common formats
   const formats = [
     // MM/DD/YYYY HH:MM:SS
@@ -412,10 +481,10 @@ function parseTimestamp(value: string): Date | null {
   ];
 
   for (const format of formats) {
-    const match = value.match(format);
+    const match = cleaned.match(format);
     if (match) {
       // Attempt to parse
-      date = new Date(value);
+      date = new Date(cleaned);
       if (!isNaN(date.getTime())) {
         return date;
       }
@@ -423,7 +492,7 @@ function parseTimestamp(value: string): Date | null {
   }
 
   // Last resort: try Date.parse
-  const parsed = Date.parse(value);
+  const parsed = Date.parse(cleaned);
   if (!isNaN(parsed)) {
     return new Date(parsed);
   }
