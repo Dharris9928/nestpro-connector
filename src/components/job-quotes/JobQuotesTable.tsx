@@ -120,7 +120,7 @@ export function JobQuotesTable({
                       </TooltipContent>
                     </Tooltip>
                   )}
-                  {format(new Date(quote.date_received), "MMM d, yyyy")}
+                  {format(new Date(quote.date_received + "T12:00:00"), "MMM d, yyyy")}
                 </div>
               </TableCell>
               <TableCell className="font-medium">{quote.product || "-"}</TableCell>
@@ -159,7 +159,7 @@ export function JobQuotesTable({
               <TableCell>{getStatusBadge(quote.status)}</TableCell>
               <TableCell>
                 {quote.date_won
-                  ? format(new Date(quote.date_won), "MMM d, yyyy")
+                  ? format(new Date(quote.date_won + "T12:00:00"), "MMM d, yyyy")
                   : "-"}
               </TableCell>
               <TableCell>
