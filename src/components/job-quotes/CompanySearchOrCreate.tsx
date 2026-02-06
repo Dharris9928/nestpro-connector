@@ -103,7 +103,7 @@ export function CompanySearchOrCreate({
         .from("companies")
         .insert({
           company_name: companyName,
-          industry_type: companyType === "Contractor" ? "General Contractor" : "Partner/Other",
+          industry_type: companyType === "Contractor" ? "Contractor" : "Partner/Other",
           industry_specialties: companyType === "Contractor" ? [] : [companyType],
           created_by: currentUser.id,
         })
