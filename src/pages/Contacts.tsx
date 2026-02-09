@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, MapPin } from "lucide-react";
+import { ExternalContactSearchPanel } from "@/components/contacts/ExternalContactSearchPanel";
 import { ContactTable } from "@/components/contacts/ContactTable";
 import { AddContactDialog } from "@/components/contacts/AddContactDialog";
 import { EditContactDialog } from "@/components/contacts/EditContactDialog";
@@ -231,6 +232,13 @@ const Contacts = () => {
           className="pl-10"
         />
       </div>
+
+      {/* External Search Panel */}
+      <ExternalContactSearchPanel
+        searchTerm={searchTerm}
+        localResultsCount={filteredContacts.length}
+        onContactImported={refetch}
+      />
 
       <ContactTable
         contacts={filteredContacts}
