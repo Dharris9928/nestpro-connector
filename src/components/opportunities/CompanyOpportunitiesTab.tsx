@@ -38,6 +38,7 @@ export function CompanyOpportunitiesTab({ companyId }: CompanyOpportunitiesTabPr
         .select(`
           *,
           profiles!opportunities_assigned_to_fkey(first_name, last_name),
+          sales_reps!opportunities_assigned_to_sales_rep_id_fkey(first_name, last_name),
           opportunity_products(*)
         `)
         .eq('company_id', companyId)
@@ -115,7 +116,9 @@ export function CompanyOpportunitiesTab({ companyId }: CompanyOpportunitiesTabPr
                 <TableCell>
                   {opportunity.profiles
                     ? `${opportunity.profiles.first_name} ${opportunity.profiles.last_name}`
-                    : "Unassigned"}
+                    : opportunity.sales_reps
+                      ? `${opportunity.sales_reps.first_name} ${opportunity.sales_reps.last_name}`
+                      : "Unassigned"}
                 </TableCell>
                 <TableCell>
                   {opportunity.expected_close_date
