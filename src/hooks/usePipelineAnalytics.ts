@@ -330,13 +330,15 @@ export function usePipelineAnalytics(
       let oppsQuery = supabase
         .from("opportunities")
         .select(`
-          id, assigned_to, amount, created_at, stage, closed_date, company_id, notes,
+          id, assigned_to, assigned_to_sales_rep_id, amount, created_at, stage, closed_date, company_id, notes,
           companies!opportunities_company_id_fkey(id, company_name),
+          profiles!opportunities_assigned_to_fkey(first_name, last_name),
+          sales_reps!opportunities_assigned_to_sales_rep_id_fkey(first_name, last_name),
           opportunity_name
         `)
         .gte("created_at", fromDate)
         .lte("created_at", toDate)
-        .or("assigned_to.not.is.null,opportunity_name.ilike.Lead from%,opportunity_name.ilike.Handoff:%");
+        .or("assigned_to.not.is.null,assigned_to_sales_rep_id.not.is.null,opportunity_name.ilike.Lead from%,opportunity_name.ilike.Handoff:%");
       
       oppsQuery = buildPerspectiveFilter(oppsQuery);
       const { data: oppsDataRaw, error: oppsError } = await oppsQuery;
@@ -543,8 +545,14 @@ export function usePipelineAnalytics(
 
       const handoffDetails: HandoffDetail[] = oppsData
         .map(o => {
-          // Resolve name: from assigneeMap, or extract from notes ("Handed off to: Name")
-          let name = assigneeMap[o.assigned_to || ""];
+          // Resolve name: from joined profiles, joined sales_reps, assigneeMap, or notes fallback
+          const profileData = (o as any).profiles;
+          const salesRepData = (o as any).sales_reps;
+          let name = profileData 
+            ? `${profileData.first_name} ${profileData.last_name}`.trim()
+            : salesRepData
+              ? `${salesRepData.first_name} ${salesRepData.last_name}`.trim()
+              : assigneeMap[o.assigned_to || ""];
           if (!name && (o as any).notes) {
             const match = ((o as any).notes as string).match(/Handed off to:\s*(.+)/);
             if (match) name = match[1].trim();
