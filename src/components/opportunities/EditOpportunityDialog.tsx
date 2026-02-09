@@ -79,7 +79,11 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity }: EditO
         expected_close_date: opportunity.expected_close_date || "",
         confidence: opportunity.confidence ? String(opportunity.confidence) : "",
         unit_needed_date: opportunity.unit_needed_date || "",
-        assigned_to: opportunity.assigned_to ? `user:${opportunity.assigned_to}` : "unassigned",
+        assigned_to: opportunity.assigned_to 
+          ? `user:${opportunity.assigned_to}` 
+          : opportunity.assigned_to_sales_rep_id 
+            ? `salesrep:${opportunity.assigned_to_sales_rep_id}` 
+            : "unassigned",
         contractor_id: opportunity.contractor_id || "",
         notes: opportunity.notes || "",
       });
@@ -104,6 +108,12 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity }: EditO
         }
       }
 
+      // Parse sales rep ID if applicable
+      let salesRepValue: string | null = null;
+      if (rawAssigned && rawAssigned.startsWith('salesrep:')) {
+        salesRepValue = rawAssigned.replace('salesrep:', '');
+      }
+
       // Update opportunity
       const { error } = await supabase
         .from('opportunities' as any)
@@ -116,6 +126,7 @@ export function EditOpportunityDialog({ open, onOpenChange, opportunity }: EditO
           confidence: formData.confidence ? parseInt(formData.confidence) : null,
           unit_needed_date: formData.unit_needed_date || null,
           assigned_to: assignedToValue,
+          assigned_to_sales_rep_id: salesRepValue,
           contractor_id: formData.contractor_id || null,
           notes: formData.notes || null,
         })

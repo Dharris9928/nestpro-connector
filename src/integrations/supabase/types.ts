@@ -3408,6 +3408,7 @@ export type Database = {
         Row: {
           amount: number | null
           assigned_to: string | null
+          assigned_to_sales_rep_id: string | null
           closed_date: string | null
           company_id: string
           confidence: number | null
@@ -3429,6 +3430,7 @@ export type Database = {
         Insert: {
           amount?: number | null
           assigned_to?: string | null
+          assigned_to_sales_rep_id?: string | null
           closed_date?: string | null
           company_id: string
           confidence?: number | null
@@ -3450,6 +3452,7 @@ export type Database = {
         Update: {
           amount?: number | null
           assigned_to?: string | null
+          assigned_to_sales_rep_id?: string | null
           closed_date?: string | null
           company_id?: string
           confidence?: number | null
@@ -3474,6 +3477,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_assigned_to_sales_rep_id_fkey"
+            columns: ["assigned_to_sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
             referencedColumns: ["id"]
           },
           {
