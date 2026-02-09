@@ -326,16 +326,17 @@ export function usePipelineAnalytics(
         return true;
       });
 
-      // Fetch opportunities (leads assigned) with company and assignee info
+      // Fetch opportunities (leads assigned / handoffs) with company and assignee info
       let oppsQuery = supabase
         .from("opportunities")
         .select(`
           id, assigned_to, amount, created_at, stage, closed_date, company_id,
-          companies!opportunities_company_id_fkey(id, company_name)
+          companies!opportunities_company_id_fkey(id, company_name),
+          opportunity_name
         `)
-        .not("assigned_to", "is", null)
         .gte("created_at", fromDate)
-        .lte("created_at", toDate);
+        .lte("created_at", toDate)
+        .or("assigned_to.not.is.null,opportunity_name.ilike.Lead from%,opportunity_name.ilike.Handoff:%");
       
       oppsQuery = buildPerspectiveFilter(oppsQuery);
       const { data: oppsDataRaw, error: oppsError } = await oppsQuery;
@@ -389,10 +390,10 @@ export function usePipelineAnalytics(
       // Fetch previous period opportunities
       let prevOppsQuery = supabase
         .from("opportunities")
-        .select("id, assigned_to, stage, company_id")
-        .not("assigned_to", "is", null)
+        .select("id, assigned_to, stage, company_id, opportunity_name")
         .gte("created_at", prevFrom)
-        .lte("created_at", prevTo);
+        .lte("created_at", prevTo)
+        .or("assigned_to.not.is.null,opportunity_name.ilike.Lead from%,opportunity_name.ilike.Handoff:%");
       
       prevOppsQuery = buildPerspectiveFilter(prevOppsQuery);
       const { data: prevOppsDataRaw } = await prevOppsQuery;

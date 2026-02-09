@@ -88,14 +88,27 @@ export function HandoffDialog({
         .from('opportunities')
         .select('id')
         .eq('company_id', communication.company_id)
-        .single();
+        .maybeSingle();
 
       if (existingOpportunity) {
-        // Update the existing opportunity's assigned_to
+        if (!isSalesRep) {
+          await supabase
+            .from('opportunities')
+            .update({ assigned_to: actualUserId })
+            .eq('id', existingOpportunity.id);
+        }
+      } else {
+        // Create a new opportunity for tracking the handoff
+        const assignmentData = isSalesRep ? {} : { assigned_to: actualUserId };
         await supabase
           .from('opportunities')
-          .update({ assigned_to: actualUserId })
-          .eq('id', existingOpportunity.id);
+          .insert([{
+            company_id: communication.company_id,
+            ...assignmentData,
+            stage: 'qualification',
+            opportunity_name: `Handoff: ${communication.companies?.company_name || 'Unknown'}`,
+            created_by: user.id,
+          }]);
       }
 
       // Send notification to the assignee

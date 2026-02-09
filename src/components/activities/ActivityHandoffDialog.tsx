@@ -96,19 +96,26 @@ export function ActivityHandoffDialog({
         .eq('company_id', activity.company_id)
         .maybeSingle();
 
+      // Only set assigned_to for profile users (not external sales reps)
+      const assignmentData = isSalesRep
+        ? {} 
+        : { assigned_to: actualUserId };
+
       if (existingOpportunity) {
         // Update the existing opportunity's assigned_to
-        await supabase
-          .from('opportunities')
-          .update({ assigned_to: actualUserId })
-          .eq('id', existingOpportunity.id);
+        if (!isSalesRep) {
+          await supabase
+            .from('opportunities')
+            .update({ assigned_to: actualUserId })
+            .eq('id', existingOpportunity.id);
+        }
       } else {
         // Create a new opportunity for tracking
         await supabase
           .from('opportunities')
           .insert([{
             company_id: activity.company_id,
-            assigned_to: actualUserId,
+            ...assignmentData,
             stage: 'qualification',
             opportunity_name: `Lead from ${activity.activity_type}: ${activity.companies?.company_name || 'Unknown'}`,
             created_by: user.id,
