@@ -38,15 +38,41 @@ serve(async (req) => {
     const rateLimitResponse = await checkRateLimit(supabase, user.id, 'search-contacts-by-name');
     if (rateLimitResponse) return rateLimitResponse;
 
-    const { personName } = await req.json();
-    if (!personName || personName.trim().length < 2) {
+    const { personName, email, phone, linkedinUrl, searchType } = await req.json();
+
+    // Build Apollo search body based on search type
+    const searchBody: Record<string, any> = {
+      api_key: apolloApiKey,
+      page: 1,
+      per_page: 15,
+    };
+
+    if (searchType === 'email' && email) {
+      // Search by email
+      searchBody.q_keywords = email.trim();
+      console.log(`Searching Apollo by email: ${email}`);
+    } else if (searchType === 'phone' && phone) {
+      // Search by phone
+      searchBody.q_keywords = phone.trim();
+      console.log(`Searching Apollo by phone: ${phone}`);
+    } else if (searchType === 'linkedin' && linkedinUrl) {
+      // Search by LinkedIn URL - extract name from URL or use as keyword
+      const linkedinClean = linkedinUrl.trim().replace(/\/$/, '');
+      const linkedinSlug = linkedinClean.split('/').pop() || '';
+      // Convert slug like "john-doe-12345" to search terms
+      const nameFromLinkedin = linkedinSlug.replace(/-\d+$/, '').replace(/-/g, ' ');
+      searchBody.q_keywords = nameFromLinkedin;
+      console.log(`Searching Apollo by LinkedIn: ${linkedinUrl} -> keywords: ${nameFromLinkedin}`);
+    } else if (personName && personName.trim().length >= 2) {
+      // Default: search by name
+      searchBody.q_keywords = personName.trim();
+      console.log(`Searching Apollo by name: ${personName}`);
+    } else {
       return new Response(
-        JSON.stringify({ error: 'Person name must be at least 2 characters' }),
+        JSON.stringify({ error: 'Please provide a search term (name, email, phone, or LinkedIn URL)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log(`Searching Apollo for person: ${personName}`);
 
     const apolloResponse = await fetch('https://api.apollo.io/v1/mixed_people/search', {
       method: 'POST',
@@ -55,12 +81,7 @@ serve(async (req) => {
         'Cache-Control': 'no-cache',
         'X-Api-Key': apolloApiKey,
       },
-      body: JSON.stringify({
-        api_key: apolloApiKey,
-        q_keywords: personName.trim(),
-        page: 1,
-        per_page: 15,
-      }),
+      body: JSON.stringify(searchBody),
     });
 
     if (!apolloResponse.ok) {
@@ -72,19 +93,31 @@ serve(async (req) => {
     const apolloData = await apolloResponse.json();
     console.log(`Found ${apolloData.people?.length || 0} people`);
 
+    // Pull ALL available data from Apollo
     const contacts = apolloData.people?.map((person: any) => ({
-      firstName: person.first_name,
-      lastName: person.last_name,
-      title: person.title,
-      email: person.email,
+      firstName: person.first_name || '',
+      lastName: person.last_name || '',
+      title: person.title || null,
+      email: person.email || null,
       phone: person.phone_numbers?.[0]?.raw_number || null,
-      linkedinUrl: person.linkedin_url,
+      mobile: person.phone_numbers?.[1]?.raw_number || null,
+      linkedinUrl: person.linkedin_url || null,
       organizationName: person.organization?.name || null,
       organizationDomain: person.organization?.primary_domain || null,
-      photoUrl: person.photo_url,
-      city: person.city,
-      state: person.state,
-      country: person.country,
+      organizationWebsite: person.organization?.website_url || null,
+      organizationLinkedin: person.organization?.linkedin_url || null,
+      organizationIndustry: person.organization?.industry || null,
+      organizationEmployees: person.organization?.estimated_num_employees || null,
+      organizationRevenue: person.organization?.annual_revenue_printed || null,
+      organizationCity: person.organization?.city || null,
+      organizationState: person.organization?.state || null,
+      photoUrl: person.photo_url || null,
+      city: person.city || null,
+      state: person.state || null,
+      country: person.country || null,
+      headline: person.headline || null,
+      seniority: person.seniority || null,
+      departments: person.departments || [],
       apolloId: person.id,
       source: 'apollo',
     })) || [];
