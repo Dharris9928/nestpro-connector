@@ -114,19 +114,17 @@ export function ActivityHandoffDialog({
         .eq('company_id', activity.company_id)
         .maybeSingle();
 
-      // Only set assigned_to for profile users (not external sales reps)
+      // Set the correct assignment column based on type
       const assignmentData = isSalesRep
-        ? {} 
-        : { assigned_to: actualUserId };
+        ? { assigned_to: null, assigned_to_sales_rep_id: actualUserId } 
+        : { assigned_to: actualUserId, assigned_to_sales_rep_id: null };
       
       const oppNotes = `Handed off to: ${assigneeName}`;
 
       if (existingOpportunity) {
-        const updateFields: Record<string, any> = { notes: oppNotes };
-        if (!isSalesRep) updateFields.assigned_to = actualUserId;
         await supabase
           .from('opportunities')
-          .update(updateFields)
+          .update({ ...assignmentData, notes: oppNotes })
           .eq('id', existingOpportunity.id);
       } else {
         // Create a new opportunity for tracking
