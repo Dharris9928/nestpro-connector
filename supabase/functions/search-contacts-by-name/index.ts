@@ -42,7 +42,7 @@ serve(async (req) => {
 
     // Handle Apollo profile URL - direct person lookup
     if (searchType === 'apollo' && apolloUrl) {
-      const apolloIdMatch = apolloUrl.match(/people\/([a-f0-9]+)/i);
+      const apolloIdMatch = apolloUrl.match(/people\/([a-zA-Z0-9_-]+)/i);
       if (!apolloIdMatch) {
         return new Response(
           JSON.stringify({ error: 'Invalid Apollo profile URL. Expected format: app.apollo.io/people/...' }),
