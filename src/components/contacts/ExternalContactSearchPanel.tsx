@@ -216,7 +216,14 @@ export function ExternalContactSearchPanel({
       onContactImported();
       setApolloResults((prev) => prev.filter((c) => c.apolloId !== contact.apolloId));
     } catch (error: any) {
-      toast.error(error.message || "Failed to import contact");
+      const errorMsg = error.message || "Failed to import contact";
+      // If the contact already exists, still refresh the list so it shows up
+      if (errorMsg.includes("already exists")) {
+        toast.info(errorMsg);
+        onContactImported();
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setImportingIds((prev) => {
         const next = new Set(prev);
