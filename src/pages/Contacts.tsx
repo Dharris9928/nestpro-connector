@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ import { AIImportDialog } from "@/components/companies/AIImportDialog";
 import { logBulkContactView } from "@/lib/contacts/logContactAccess";
 import { PerspectiveSelector } from "@/components/common/PerspectiveSelector";
 import { usePerspective } from "@/hooks/usePerspective";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useUserRole } from "@/hooks/useUserRole";
 import { RegionalFilterDialog, RegionalFilters } from "@/components/common/RegionalFilterDialog";
 import { Badge } from "@/components/ui/badge";
@@ -32,9 +33,10 @@ const Contacts = () => {
   const [regionalFilters, setRegionalFilters] = useState<RegionalFilters | null>(null);
   const { perspective, setPerspective } = usePerspective('my_records');
   const { data: userRoleData } = useUserRole();
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const { data: contacts, isLoading, refetch } = useQuery({
-    queryKey: ["contacts", perspective, regionalFilters],
+    queryKey: ["contacts", perspective, regionalFilters, debouncedSearch],
     queryFn: async () => {
       // Check for impersonation
       const impersonationData = sessionStorage.getItem('admin-impersonation');
@@ -99,7 +101,13 @@ const Contacts = () => {
         }
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      // Apply server-side search filter when search term exists
+      if (debouncedSearch.trim()) {
+        const term = `%${debouncedSearch.trim()}%`;
+        query = query.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},title.ilike.${term}`);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(1000);
       if (error) throw error;
       
       // Log bulk contact view for audit trail
