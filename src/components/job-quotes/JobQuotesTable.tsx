@@ -96,9 +96,10 @@ export function JobQuotesTable({
             <TableHead>Date Received</TableHead>
             <TableHead>Product</TableHead>
             <TableHead>Qty</TableHead>
-            <TableHead>Price</TableHead>
+            <TableHead>Total Price</TableHead>
             <TableHead>Distributor</TableHead>
             <TableHead>Wholesaler</TableHead>
+            <TableHead>Comments</TableHead>
             <TableHead>Contacts</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date Won</TableHead>
@@ -123,14 +124,19 @@ export function JobQuotesTable({
                   {quote.date_received ? format(new Date(quote.date_received), "MMM d, yyyy") : "-"}
                 </div>
               </TableCell>
-              <TableCell className="font-medium">{quote.product || "-"}</TableCell>
+              <TableCell className="font-medium max-w-[200px] truncate">
+                {quote.product || "-"}
+              </TableCell>
               <TableCell>{quote.quantity || "-"}</TableCell>
-              <TableCell>{formatPrice(quote.price)}</TableCell>
+              <TableCell className="font-medium">{formatPrice(quote.price)}</TableCell>
               <TableCell>
                 {quote.distributor?.company_name || "-"}
               </TableCell>
               <TableCell>
                 {quote.wholesaler?.company_name || "-"}
+              </TableCell>
+              <TableCell className="max-w-[150px] truncate">
+                {quote.comments || "-"}
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1 max-w-[200px]">

@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { CompanySearchOrCreate } from "@/components/job-quotes/CompanySearchOrCreate";
 import { JobQuoteContactsManager } from "@/components/job-quotes/JobQuoteContactsManager";
+import { ProductLineItems, type ProductLineItem } from "@/components/shared/ProductLineItems";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
@@ -40,10 +41,8 @@ const formSchema = z.object({
   distributor_id: z.string().optional(),
   wholesaler_id: z.string().optional(),
   contractor_id: z.string().optional(),
-  product: z.string().optional(),
-  quantity: z.coerce.number().min(1).optional(),
-  price: z.coerce.number().optional(),
   notes: z.string().optional(),
+  comments: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -62,6 +61,7 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [contacts, setContacts] = useState<JobQuoteContact[]>([]);
+  const [products, setProducts] = useState<ProductLineItem[]>([]);
 
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
@@ -76,15 +76,15 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
     defaultValues: {
       date_received: new Date().toISOString().split("T")[0],
       status: "pending",
-      quantity: 1,
     },
   });
+
+  const grandTotal = products.reduce((sum, p) => sum + p.quantity * p.unit_price, 0);
 
   const createMutation = useMutation({
     mutationFn: async (values: FormData) => {
       if (!currentUser) throw new Error("User not authenticated");
 
-      // Create job quote
       const { data: quote, error: quoteError } = await supabase
         .from("job_quotes")
         .insert({
@@ -94,16 +94,32 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
           distributor_id: values.distributor_id || null,
           wholesaler_id: values.wholesaler_id || null,
           contractor_id: values.contractor_id || null,
-          product: values.product || null,
-          quantity: values.quantity || 1,
-          price: values.price || null,
+          product: products.length > 0 ? products.map(p => p.product_name).join(", ") : null,
+          quantity: products.reduce((sum, p) => sum + p.quantity, 0) || 1,
+          price: grandTotal || null,
           notes: values.notes || null,
+          comments: values.comments || null,
           created_by: currentUser.id,
         })
         .select()
         .single();
 
       if (quoteError) throw quoteError;
+
+      // Create product line items
+      if (products.length > 0) {
+        const { error: productsError } = await supabase
+          .from("job_quote_products")
+          .insert(
+            products.map((p) => ({
+              job_quote_id: quote.id,
+              product_name: p.product_name,
+              quantity: p.quantity,
+              unit_price: p.unit_price,
+            }))
+          );
+        if (productsError) throw productsError;
+      }
 
       // Create contact associations
       if (contacts.length > 0) {
@@ -116,7 +132,6 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
               contact_type: c.contact_type,
             }))
           );
-
         if (contactsError) throw contactsError;
       }
 
@@ -127,6 +142,7 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
       toast({ title: "Job quote created successfully" });
       form.reset();
       setContacts([]);
+      setProducts([]);
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -269,54 +285,8 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
               )}
             />
 
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="product"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Product name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input type="number" min="1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price (optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Product Line Items */}
+            <ProductLineItems items={products} setItems={setProducts} />
 
             {/* Contacts Manager */}
             <div className="space-y-2">
@@ -328,6 +298,20 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
                 wholesalerId={form.watch("wholesaler_id")}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="comments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Comments</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Comments about this quote..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

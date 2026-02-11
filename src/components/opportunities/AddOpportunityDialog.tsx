@@ -55,9 +55,9 @@ const opportunitySchema = z.object({
 });
 
 type OpportunityProduct = {
-  product_type: "Thermostat" | "Doorbell" | "Camera";
-  model: string;
+  product_name: string;
   quantity: number;
+  unit_price: number;
 };
 
 interface AddOpportunityDialogProps {
@@ -147,7 +147,10 @@ export function AddOpportunityDialog({ open, onOpenChange, prefilledCompanyId }:
           .insert(
             products.map(p => ({
               opportunity_id: (opportunity as any).id,
-              ...p,
+              product_name: p.product_name,
+              quantity: p.quantity,
+              unit_price: p.unit_price,
+              total_price: p.quantity * p.unit_price,
             }))
           );
 

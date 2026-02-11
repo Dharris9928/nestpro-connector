@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -31,7 +31,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { CompanySearchOrCreate } from "@/components/job-quotes/CompanySearchOrCreate";
 import { JobQuoteContactsManager } from "@/components/job-quotes/JobQuoteContactsManager";
+import { ProductLineItems, type ProductLineItem } from "@/components/shared/ProductLineItems";
 import { Loader2 } from "lucide-react";
+import { getUnitPrice } from "@/lib/products/productCatalog";
 
 const formSchema = z.object({
   date_received: z.string().min(1, "Date received is required"),
@@ -40,10 +42,8 @@ const formSchema = z.object({
   distributor_id: z.string().optional(),
   wholesaler_id: z.string().optional(),
   contractor_id: z.string().optional(),
-  product: z.string().optional(),
-  quantity: z.coerce.number().min(1).optional(),
-  price: z.coerce.number().optional(),
   notes: z.string().optional(),
+  comments: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -63,14 +63,29 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [contacts, setContacts] = useState<JobQuoteContact[]>([]);
+  const [products, setProducts] = useState<ProductLineItem[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date_received: "",
       status: "pending",
-      quantity: 1,
     },
+  });
+
+  // Fetch existing product line items
+  const { data: existingProducts = [] } = useQuery({
+    queryKey: ["job-quote-products", quote?.id],
+    queryFn: async () => {
+      if (!quote?.id) return [];
+      const { data, error } = await supabase
+        .from("job_quote_products")
+        .select("*")
+        .eq("job_quote_id", quote.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!quote?.id && open,
   });
 
   // Populate form when quote changes
@@ -83,13 +98,10 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
         distributor_id: quote.distributor_id || "",
         wholesaler_id: quote.wholesaler_id || "",
         contractor_id: quote.contractor_id || "",
-        product: quote.product || "",
-        quantity: quote.quantity || 1,
-        price: quote.price || undefined,
         notes: quote.notes || "",
+        comments: quote.comments || "",
       });
 
-      // Load existing contacts
       const existingContacts = quote.job_quote_contacts?.map((jqc: any) => ({
         contact_id: jqc.contact?.id || jqc.contact_id,
         contact_type: jqc.contact_type,
@@ -98,9 +110,28 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
     }
   }, [quote, form]);
 
+  // Load existing products
+  useEffect(() => {
+    if (existingProducts.length > 0) {
+      setProducts(
+        existingProducts.map((p: any) => ({
+          product_name: p.product_name,
+          quantity: p.quantity,
+          unit_price: Number(p.unit_price),
+        }))
+      );
+    } else if (quote && !existingProducts.length) {
+      // Legacy: if quote has single product field but no line items
+      if (quote.product && existingProducts.length === 0) {
+        setProducts([]);
+      }
+    }
+  }, [existingProducts, quote]);
+
+  const grandTotal = products.reduce((sum, p) => sum + p.quantity * p.unit_price, 0);
+
   const updateMutation = useMutation({
     mutationFn: async (values: FormData) => {
-      // Update job quote
       const { error: quoteError } = await supabase
         .from("job_quotes")
         .update({
@@ -110,20 +141,35 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
           distributor_id: values.distributor_id || null,
           wholesaler_id: values.wholesaler_id || null,
           contractor_id: values.contractor_id || null,
-          product: values.product || null,
-          quantity: values.quantity || 1,
-          price: values.price || null,
+          product: products.length > 0 ? products.map(p => p.product_name).join(", ") : null,
+          quantity: products.reduce((sum, p) => sum + p.quantity, 0) || 1,
+          price: grandTotal || null,
           notes: values.notes || null,
+          comments: values.comments || null,
         })
         .eq("id", quote.id);
 
       if (quoteError) throw quoteError;
 
+      // Delete existing products and re-add
+      await supabase.from("job_quote_products").delete().eq("job_quote_id", quote.id);
+
+      if (products.length > 0) {
+        const { error: productsError } = await supabase
+          .from("job_quote_products")
+          .insert(
+            products.map((p) => ({
+              job_quote_id: quote.id,
+              product_name: p.product_name,
+              quantity: p.quantity,
+              unit_price: p.unit_price,
+            }))
+          );
+        if (productsError) throw productsError;
+      }
+
       // Delete existing contacts and re-add
-      await supabase
-        .from("job_quote_contacts")
-        .delete()
-        .eq("job_quote_id", quote.id);
+      await supabase.from("job_quote_contacts").delete().eq("job_quote_id", quote.id);
 
       if (contacts.length > 0) {
         const { error: contactsError } = await supabase
@@ -135,7 +181,6 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
               contact_type: c.contact_type,
             }))
           );
-
         if (contactsError) throw contactsError;
       }
     },
@@ -188,10 +233,7 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -284,54 +326,8 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
               )}
             />
 
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="product"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Product name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input type="number" min="1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price (optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Product Line Items */}
+            <ProductLineItems items={products} setItems={setProducts} />
 
             {/* Contacts Manager */}
             <div className="space-y-2">
@@ -343,6 +339,20 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
                 wholesalerId={form.watch("wholesaler_id")}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="comments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Comments</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Comments about this quote..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

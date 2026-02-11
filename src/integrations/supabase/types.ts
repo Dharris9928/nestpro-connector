@@ -3148,8 +3148,47 @@ export type Database = {
           },
         ]
       }
+      job_quote_products: {
+        Row: {
+          created_at: string | null
+          id: string
+          job_quote_id: string
+          product_name: string
+          quantity: number
+          total_price: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          job_quote_id: string
+          product_name: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          job_quote_id?: string
+          product_name?: string
+          quantity?: number
+          total_price?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_quote_products_job_quote_id_fkey"
+            columns: ["job_quote_id"]
+            isOneToOne: false
+            referencedRelation: "job_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_quotes: {
         Row: {
+          comments: string | null
           contractor_id: string | null
           created_at: string
           created_by: string
@@ -3167,6 +3206,7 @@ export type Database = {
           wholesaler_id: string | null
         }
         Insert: {
+          comments?: string | null
           contractor_id?: string | null
           created_at?: string
           created_by: string
@@ -3184,6 +3224,7 @@ export type Database = {
           wholesaler_id?: string | null
         }
         Update: {
+          comments?: string | null
           contractor_id?: string | null
           created_at?: string
           created_by?: string
