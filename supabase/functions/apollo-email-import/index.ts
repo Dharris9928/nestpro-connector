@@ -572,8 +572,21 @@ serve(async (req) => {
           return 'not_opened';
         }
 
-        // Pre-send states
-        if (status === 'scheduled' || status === 'queued' || status === 'paused') return 'scheduled';
+        // Pre-send states — but only if completed_at is NOT set.
+        // Apollo sometimes keeps status as "scheduled" even after the email was sent.
+        // If completed_at exists AND is in the past, treat it as delivered (not_opened).
+        if (status === 'scheduled' || status === 'queued' || status === 'paused') {
+          // Double-check: if completed_at is set and in the past, it was actually sent
+          if (email.completed_at) {
+            try {
+              const completedDate = new Date(email.completed_at);
+              if (completedDate.getTime() <= Date.now()) {
+                return 'not_opened';
+              }
+            } catch { /* ignore parse errors */ }
+          }
+          return 'scheduled';
+        }
         if (status === 'draft' || status === 'pending' || status === 'not_sent') return 'draft';
 
         // Default to draft if nothing else matches (no send timestamp)
@@ -696,13 +709,16 @@ serve(async (req) => {
         return status !== 'draft' && status !== 'scheduled';
       });
 
-      console.log(`Filtered to ${sentEmails.length} sent emails (excluded ${transformedEmails.length - sentEmails.length} draft/scheduled)`);
+      const excludedCount = transformedEmails.length - sentEmails.length;
+      console.log(`Filtered to ${sentEmails.length} sent emails (excluded ${excludedCount} draft/scheduled)`);
 
       return new Response(
         JSON.stringify({
           success: true,
           emails: sentEmails,
           totalCount: sentEmails.length,
+          excludedCount,
+          totalFetched: transformedEmails.length,
           pagination: {
             page: startingPage,
             per_page: perPage,

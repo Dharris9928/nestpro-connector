@@ -265,15 +265,21 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
       if (error) throw error;
       
       const fetchedEmails: ApolloEmail[] = data.emails || [];
+      const excludedCount = data.excludedCount || 0;
+      const totalFetched = data.totalFetched || fetchedEmails.length;
       
       // Check which emails have already been imported using apollo_email_activities table
       const apolloIds = fetchedEmails.map(e => e.apolloId).filter(Boolean);
-      const { data: existingActivities } = await supabase
-        .from('apollo_email_activities')
-        .select('apollo_activity_id')
-        .in('apollo_activity_id', apolloIds);
       
-      const importedIds = new Set((existingActivities || []).map(a => a.apollo_activity_id));
+      let importedIds = new Set<string>();
+      if (apolloIds.length > 0) {
+        const { data: existingActivities } = await supabase
+          .from('apollo_email_activities')
+          .select('apollo_activity_id')
+          .in('apollo_activity_id', apolloIds);
+        
+        importedIds = new Set((existingActivities || []).map(a => a.apollo_activity_id));
+      }
       setAlreadyImportedIds(importedIds);
       
       setEmails(fetchedEmails);
@@ -285,7 +291,19 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
         .map(e => e.apolloId);
       setSelectedEmails(new Set(newEmailIds));
       
-      setStep('preview');
+      if (fetchedEmails.length === 0 && excludedCount > 0) {
+        toast({
+          title: 'No Sent Emails Found',
+          description: `Found ${totalFetched} emails from Apollo, but all ${excludedCount} were drafts or scheduled. Only sent emails can be imported. Try adjusting the date range.`,
+        });
+      } else if (fetchedEmails.length > 0) {
+        setStep('preview');
+      } else {
+        toast({
+          title: 'No Emails Found',
+          description: 'No emails were found in Apollo for the selected date range and sequence.',
+        });
+      }
     } catch (error) {
       console.error('Error fetching emails:', error);
       toast({
