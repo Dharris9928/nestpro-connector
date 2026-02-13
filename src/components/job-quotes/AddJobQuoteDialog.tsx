@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CompanySearchOrCreate } from "@/components/job-quotes/CompanySearchOrCreate";
 import { JobQuoteContactsManager } from "@/components/job-quotes/JobQuoteContactsManager";
 import { ProductLineItems, type ProductLineItem } from "@/components/shared/ProductLineItems";
+import { UnifiedAssignmentSelect } from "@/components/companies/UnifiedAssignmentSelect";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
@@ -62,6 +63,7 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
   const queryClient = useQueryClient();
   const [contacts, setContacts] = useState<JobQuoteContact[]>([]);
   const [products, setProducts] = useState<ProductLineItem[]>([]);
+  const [assignee, setAssignee] = useState<string>("");
 
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
@@ -100,6 +102,8 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
           notes: values.notes || null,
           comments: values.comments || null,
           created_by: currentUser.id,
+          assigned_to: assignee?.startsWith("user:") ? assignee.replace("user:", "") : (assignee && assignee !== "unassigned" && !assignee.startsWith("salesrep:") ? assignee : null),
+          assigned_to_sales_rep_id: assignee?.startsWith("salesrep:") ? assignee.replace("salesrep:", "") : null,
         })
         .select()
         .single();
@@ -143,6 +147,7 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
       form.reset();
       setContacts([]);
       setProducts([]);
+      setAssignee("");
       onOpenChange(false);
     },
     onError: (error: any) => {
@@ -263,6 +268,16 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+            </div>
+
+            {/* Assignee */}
+            <div className="space-y-2">
+              <FormLabel>Assignee</FormLabel>
+              <UnifiedAssignmentSelect
+                value={assignee}
+                onValueChange={setAssignee}
+                placeholder="Select assignee..."
               />
             </div>
 

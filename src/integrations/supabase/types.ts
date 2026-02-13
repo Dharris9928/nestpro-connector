@@ -3188,6 +3188,8 @@ export type Database = {
       }
       job_quotes: {
         Row: {
+          assigned_to: string | null
+          assigned_to_sales_rep_id: string | null
           comments: string | null
           contractor_id: string | null
           created_at: string
@@ -3206,6 +3208,8 @@ export type Database = {
           wholesaler_id: string | null
         }
         Insert: {
+          assigned_to?: string | null
+          assigned_to_sales_rep_id?: string | null
           comments?: string | null
           contractor_id?: string | null
           created_at?: string
@@ -3224,6 +3228,8 @@ export type Database = {
           wholesaler_id?: string | null
         }
         Update: {
+          assigned_to?: string | null
+          assigned_to_sales_rep_id?: string | null
           comments?: string | null
           contractor_id?: string | null
           created_at?: string
@@ -3242,6 +3248,13 @@ export type Database = {
           wholesaler_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "job_quotes_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_quotes_contractor_id_fkey"
             columns: ["contractor_id"]

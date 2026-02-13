@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CompanySearchOrCreate } from "@/components/job-quotes/CompanySearchOrCreate";
 import { JobQuoteContactsManager } from "@/components/job-quotes/JobQuoteContactsManager";
 import { ProductLineItems, type ProductLineItem } from "@/components/shared/ProductLineItems";
+import { UnifiedAssignmentSelect } from "@/components/companies/UnifiedAssignmentSelect";
 import { Loader2 } from "lucide-react";
 import { getUnitPrice } from "@/lib/products/productCatalog";
 
@@ -64,6 +65,7 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
   const queryClient = useQueryClient();
   const [contacts, setContacts] = useState<JobQuoteContact[]>([]);
   const [products, setProducts] = useState<ProductLineItem[]>([]);
+  const [assignee, setAssignee] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -107,6 +109,15 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
         contact_type: jqc.contact_type,
       })) || [];
       setContacts(existingContacts);
+
+      // Set assignee
+      if (quote.assigned_to) {
+        setAssignee(`user:${quote.assigned_to}`);
+      } else if (quote.assigned_to_sales_rep_id) {
+        setAssignee(`salesrep:${quote.assigned_to_sales_rep_id}`);
+      } else {
+        setAssignee("");
+      }
     }
   }, [quote, form]);
 
@@ -146,6 +157,8 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
           price: grandTotal || null,
           notes: values.notes || null,
           comments: values.comments || null,
+          assigned_to: assignee?.startsWith("user:") ? assignee.replace("user:", "") : (assignee && assignee !== "unassigned" && !assignee.startsWith("salesrep:") ? assignee : null),
+          assigned_to_sales_rep_id: assignee?.startsWith("salesrep:") ? assignee.replace("salesrep:", "") : null,
         })
         .eq("id", quote.id);
 
@@ -304,6 +317,16 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+            </div>
+
+            {/* Assignee */}
+            <div className="space-y-2">
+              <FormLabel>Assignee</FormLabel>
+              <UnifiedAssignmentSelect
+                value={assignee}
+                onValueChange={setAssignee}
+                placeholder="Select assignee..."
               />
             </div>
 

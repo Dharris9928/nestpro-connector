@@ -99,6 +99,7 @@ export function JobQuotesTable({
             <TableHead>Total Price</TableHead>
             <TableHead>Distributor</TableHead>
             <TableHead>Wholesaler</TableHead>
+            <TableHead>Assignee</TableHead>
             <TableHead>Comments</TableHead>
             <TableHead>Contacts</TableHead>
             <TableHead>Status</TableHead>
@@ -134,6 +135,13 @@ export function JobQuotesTable({
               </TableCell>
               <TableCell>
                 {quote.wholesaler?.company_name || "-"}
+              </TableCell>
+              <TableCell>
+                {quote.assignee_profile
+                  ? `${quote.assignee_profile.first_name} ${quote.assignee_profile.last_name}`
+                  : quote.assignee_sales_rep
+                  ? `${quote.assignee_sales_rep.first_name} ${quote.assignee_sales_rep.last_name}`
+                  : "-"}
               </TableCell>
               <TableCell className="max-w-[150px] truncate">
                 {quote.comments || "-"}

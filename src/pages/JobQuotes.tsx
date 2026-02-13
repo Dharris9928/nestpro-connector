@@ -43,6 +43,7 @@ export default function JobQuotes() {
           distributor:companies!job_quotes_distributor_id_fkey(id, company_name),
           wholesaler:companies!job_quotes_wholesaler_id_fkey(id, company_name),
           contractor:companies!job_quotes_contractor_id_fkey(id, company_name),
+          assignee_profile:profiles!job_quotes_assigned_to_fkey(id, first_name, last_name),
           job_quote_contacts(
             id,
             contact_type,
@@ -58,7 +59,24 @@ export default function JobQuotes() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Enrich with sales rep names for those assigned to external reps
+      const repIds = (data || []).map((q: any) => q.assigned_to_sales_rep_id).filter(Boolean);
+      let repMap: Record<string, any> = {};
+      if (repIds.length > 0) {
+        const { data: reps } = await supabase
+          .from("sales_reps" as any)
+          .select("id, first_name, last_name")
+          .in("id", repIds);
+        for (const rep of (reps || []) as any[]) {
+          repMap[rep.id] = rep;
+        }
+      }
+      
+      return (data || []).map((q: any) => ({
+        ...q,
+        assignee_sales_rep: q.assigned_to_sales_rep_id ? repMap[q.assigned_to_sales_rep_id] || null : null,
+      }));
     },
     enabled: !!currentUser,
   });
