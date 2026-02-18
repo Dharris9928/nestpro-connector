@@ -40,12 +40,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { contactSchema, type ContactFormData } from "@/lib/validation/schemas";
 import { createContact } from "@/lib/contacts/createContact";
 import { useDebounce } from "@/hooks/useDebounce";
+import { Label } from "@/components/ui/label";
 
 interface AddContactDialogProps {
   open: boolean;
@@ -63,6 +64,12 @@ export function AddContactDialog({ open, onOpenChange, onSuccess, onAdded, compa
   const [companies, setCompanies] = useState<{ id: string; company_name: string }[]>([]);
   const [companySearch, setCompanySearch] = useState("");
   const [openCombobox, setOpenCombobox] = useState(false);
+  const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [newCompanyIndustry, setNewCompanyIndustry] = useState("Contractor");
+  const [newCompanyCity, setNewCompanyCity] = useState("");
+  const [newCompanyState, setNewCompanyState] = useState("");
+  const [creatingCompany, setCreatingCompany] = useState(false);
   const debouncedSearch = useDebounce(companySearch, 300);
 
   const form = useForm<ContactFormData>({
@@ -224,14 +231,31 @@ export function AddContactDialog({ open, onOpenChange, onSuccess, onAdded, compa
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0" align="start">
-                        <Command>
+                        <Command shouldFilter={false}>
                           <CommandInput 
                             placeholder="Search companies..." 
                             value={companySearch}
                             onValueChange={setCompanySearch}
                           />
                           <CommandList>
-                            <CommandEmpty>No company found.</CommandEmpty>
+                            <CommandEmpty>
+                              <div className="p-2 text-center">
+                                <p className="text-sm text-muted-foreground mb-2">No company found.</p>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => {
+                                    setNewCompanyName(companySearch);
+                                    setShowCreateCompany(true);
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Create "{companySearch || 'New Company'}"
+                                </Button>
+                              </div>
+                            </CommandEmpty>
                             <CommandGroup>
                               {companies.map((company) => (
                                 <CommandItem
@@ -254,11 +278,127 @@ export function AddContactDialog({ open, onOpenChange, onSuccess, onAdded, compa
                                   {company.company_name}
                                 </CommandItem>
                               ))}
+                              {companies.length > 0 && companySearch && (
+                                <CommandItem
+                                  value={`__create_${companySearch}`}
+                                  onSelect={() => {
+                                    setNewCompanyName(companySearch);
+                                    setShowCreateCompany(true);
+                                  }}
+                                  className="text-primary"
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Create new company "{companySearch}"
+                                </CommandItem>
+                              )}
                             </CommandGroup>
                           </CommandList>
                         </Command>
                       </PopoverContent>
                     </Popover>
+
+                    {/* Inline Create Company Form */}
+                    {showCreateCompany && (
+                      <div className="mt-2 p-3 border rounded-lg bg-muted/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Create New Company</Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowCreateCompany(false)}
+                            className="h-6 px-2 text-xs"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Company Name *"
+                            value={newCompanyName}
+                            onChange={(e) => setNewCompanyName(e.target.value)}
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select value={newCompanyIndustry} onValueChange={setNewCompanyIndustry}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Industry" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Builder">Builder</SelectItem>
+                                <SelectItem value="Contractor">Contractor</SelectItem>
+                                <SelectItem value="Energy">Energy</SelectItem>
+                                <SelectItem value="Engineer">Engineer</SelectItem>
+                                <SelectItem value="Partner">Partner</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              placeholder="City"
+                              value={newCompanyCity}
+                              onChange={(e) => setNewCompanyCity(e.target.value)}
+                            />
+                          </div>
+                          <Input
+                            placeholder="State (e.g. TX)"
+                            value={newCompanyState}
+                            onChange={(e) => setNewCompanyState(e.target.value)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={!newCompanyName.trim() || creatingCompany}
+                          onClick={async () => {
+                            setCreatingCompany(true);
+                            try {
+                              const companyData: any = {
+                                company_name: newCompanyName.trim(),
+                                industry_type: newCompanyIndustry,
+                                status: 'Lead',
+                              };
+                              if (newCompanyCity.trim()) companyData.city = newCompanyCity.trim();
+                              if (newCompanyState.trim()) companyData.state = newCompanyState.trim();
+
+                              const { data: newCompany, error } = await supabase
+                                .from('companies')
+                                .insert(companyData)
+                                .select('id, company_name')
+                                .single();
+
+                              if (error) throw error;
+
+                              // Set the new company as selected
+                              form.setValue("company_id", newCompany.id);
+                              setCompanySearch(newCompany.company_name);
+                              setCompanies(prev => [newCompany, ...prev]);
+                              setShowCreateCompany(false);
+                              setNewCompanyName("");
+                              setNewCompanyCity("");
+                              setNewCompanyState("");
+                              setOpenCombobox(false);
+                              toast.success(`Company "${newCompany.company_name}" created!`);
+                            } catch (err: any) {
+                              toast.error(err.message || "Failed to create company");
+                            } finally {
+                              setCreatingCompany(false);
+                            }
+                          }}
+                          className="w-full"
+                        >
+                          {creatingCompany ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Creating...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-3 w-3 mr-1" />
+                              Create Company
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+
                     <FormMessage />
                   </FormItem>
                 )}
