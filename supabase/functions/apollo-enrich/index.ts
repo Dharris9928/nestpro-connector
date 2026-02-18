@@ -172,6 +172,10 @@ serve(async (req) => {
     // Location data
     if (org.city) companyUpdates.city = org.city;
     if (org.state) companyUpdates.state = org.state;
+    if (org.street_address) companyUpdates.address_line1 = org.street_address;
+    if (org.postal_code) companyUpdates.zip = org.postal_code;
+    if (org.phone) companyUpdates.primary_phone = org.phone;
+    if (org.primary_phone?.number) companyUpdates.primary_phone = org.primary_phone.number;
 
     // Industry type and specialty detection based on keywords and industry
     const keywords = (org.keywords || []).map((k: string) => k.toLowerCase()).join(' ');

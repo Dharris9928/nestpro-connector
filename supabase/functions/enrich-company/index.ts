@@ -649,16 +649,27 @@ function identifyMissingFields(company: any, updates: any): string[] {
     'website_url',
     'linkedin_company_url',
     'primary_phone',
+    'primary_email',
     'total_employees',
     'total_employees_range',
     'annual_revenue_range',
     'years_in_business',
     'city',
     'state',
+    'address_line1',
+    'zip',
+    'owner_name',
+    'contractor_specialty',
+    'service_area_type',
     'facebook_url',
     'instagram_url',
     'technology_adoption_level',
-    'online_review_rating'
+    'online_review_rating',
+    'online_review_count_range',
+    'website_quality',
+    'social_media_presence',
+    'linkedin_followers_range',
+    'linkedin_activity_level'
   ];
 
   const missing: string[] = [];
@@ -688,16 +699,27 @@ async function enrichWithPerplexity(company: any, missingFields: string[]): Prom
     website_url: 'official company website URL',
     linkedin_company_url: 'LinkedIn company page URL',
     primary_phone: 'main business phone number',
+    primary_email: 'main business email address',
     total_employees: 'number of employees',
     total_employees_range: 'employee count range (1-5, 6-10, 11-25, 26-50, 51-100, 101-250, 251-500, 500+)',
     annual_revenue_range: 'annual revenue range (<$500K, $500K-$999K, $1M-$2.9M, $3M-$5.9M, $6M-$10M, $10M+)',
     years_in_business: 'years the company has been operating',
     city: 'city where company is headquartered',
     state: 'state where company is headquartered (2-letter code)',
+    address_line1: 'street address of company headquarters',
+    zip: 'ZIP/postal code of company headquarters',
+    owner_name: 'owner or CEO name',
+    contractor_specialty: 'primary specialty (HVAC, Plumbing, Electrical, General, etc.)',
+    service_area_type: 'service area scope (Local, Regional, Statewide, Multi-State, National)',
     facebook_url: 'Facebook page URL',
     instagram_url: 'Instagram profile URL',
     technology_adoption_level: 'technology adoption level (Traditional, Late Adopter, Mainstream, Early Adopter, Industry Leader)',
-    online_review_rating: 'average online review rating (0-5 scale)'
+    online_review_rating: 'average online review rating (0-5 scale)',
+    online_review_count_range: 'number of online reviews (None, <10, 10-24, 25-49, 50-99, 100+)',
+    website_quality: 'website quality (None, Poor, Basic, Good, Professional)',
+    social_media_presence: 'social media activity level (None, Limited, Moderate, Active, Very Active)',
+    linkedin_followers_range: 'LinkedIn followers (No page, <500, 500-1K, 1K-5K, 5K-10K, 10K+)',
+    linkedin_activity_level: 'LinkedIn activity level (None, Low, Moderate, Active, Very Active)'
   };
 
   const searchableFields = missingFields.filter(f => fieldDescriptions[f]);
@@ -828,12 +850,40 @@ Return ONLY factual information you can verify. If you cannot find accurate info
 
   // Extract city and state
   if (missingFields.includes('city') || missingFields.includes('state')) {
-    const locationRegex = /(?:location|headquarter|based in|located)[:\s]*([A-Za-z\s]+),\s*([A-Z]{2})/i;
+    const locationRegex = /(?:location|headquarter|based in|located|address)[:\s]*([A-Za-z\s]+),\s*([A-Z]{2})/i;
     const match = content.match(locationRegex);
     if (match) {
       if (missingFields.includes('city')) enrichedData.city = match[1].trim();
       if (missingFields.includes('state')) enrichedData.state = match[2].trim();
     }
+  }
+
+  // Extract street address
+  if (missingFields.includes('address_line1')) {
+    const addressRegex = /(?:address|located at|headquarters)[:\s]*(\d+[^,\n]+)/i;
+    const match = content.match(addressRegex);
+    if (match) enrichedData.address_line1 = match[1].trim();
+  }
+
+  // Extract ZIP code
+  if (missingFields.includes('zip')) {
+    const zipRegex = /(?:zip|postal|zip code)[:\s]*(\d{5}(?:-\d{4})?)/i;
+    const match = content.match(zipRegex);
+    if (match) enrichedData.zip = match[1].trim();
+  }
+
+  // Extract owner name
+  if (missingFields.includes('owner_name')) {
+    const ownerRegex = /(?:owner|ceo|president|founder)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i;
+    const match = content.match(ownerRegex);
+    if (match) enrichedData.owner_name = match[1].trim();
+  }
+
+  // Extract email
+  if (missingFields.includes('primary_email')) {
+    const emailRegex = /[\w.+-]+@[\w-]+\.[\w.]+/;
+    const match = content.match(emailRegex);
+    if (match) enrichedData.primary_email = match[0].trim();
   }
 
   // Extract rating
@@ -960,6 +1010,16 @@ Research the company thoroughly using the website and LinkedIn URLs provided. Be
               online_review_rating: { type: 'number', description: 'Average online review rating (0-5)' },
               online_review_count_range: { type: 'string', enum: ['None', '<10', '10-24', '25-49', '50-99', '100+'] },
               
+              // Location & Contact
+              city: { type: 'string', description: 'City where company is headquartered' },
+              state: { type: 'string', description: 'State abbreviation (2-letter code, e.g. TX, CA)' },
+              address_line1: { type: 'string', description: 'Street address of headquarters' },
+              zip: { type: 'string', description: 'ZIP/postal code' },
+              owner_name: { type: 'string', description: 'Owner or CEO name' },
+              primary_phone: { type: 'string', description: 'Main business phone number' },
+              primary_email: { type: 'string', description: 'Main business email address' },
+              contractor_specialty: { type: 'string', enum: ['HVAC', 'Plumbing', 'Electrical', 'General', 'Mechanical', 'Solar', 'Roofing'], description: 'Primary contractor specialty' },
+              service_area_type: { type: 'string', enum: ['Local', 'Regional', 'Statewide', 'Multi-State', 'National'], description: 'Geographic service coverage' },
               // AI Insights
               market_positioning: { type: 'string', description: 'How company positions itself in market' },
               competitive_advantages: { type: 'array', items: { type: 'string' } },
@@ -1037,6 +1097,17 @@ Research the company thoroughly using the website and LinkedIn URLs provided. Be
   if (enrichedData.has_google_business_profile !== undefined) companyUpdates.has_google_business_profile = enrichedData.has_google_business_profile;
   if (enrichedData.online_review_rating) companyUpdates.online_review_rating = enrichedData.online_review_rating;
   if (enrichedData.online_review_count_range) companyUpdates.online_review_count_range = enrichedData.online_review_count_range;
+
+  // Location & Contact
+  if (enrichedData.city) companyUpdates.city = enrichedData.city;
+  if (enrichedData.state) companyUpdates.state = enrichedData.state;
+  if (enrichedData.address_line1) companyUpdates.address_line1 = enrichedData.address_line1;
+  if (enrichedData.zip) companyUpdates.zip = enrichedData.zip;
+  if (enrichedData.owner_name) companyUpdates.owner_name = enrichedData.owner_name;
+  if (enrichedData.primary_phone) companyUpdates.primary_phone = enrichedData.primary_phone;
+  if (enrichedData.primary_email) companyUpdates.primary_email = enrichedData.primary_email;
+  if (enrichedData.contractor_specialty) companyUpdates.contractor_specialty = enrichedData.contractor_specialty;
+  if (enrichedData.service_area_type) companyUpdates.service_area_type = enrichedData.service_area_type;
 
   return {
     companyUpdates,
@@ -1181,6 +1252,17 @@ Fill as many fields as possible with accurate data.`;
             online_review_rating: { type: 'number' },
             online_review_count_range: { type: 'string', enum: ['None', '<10', '10-24', '25-49', '50-99', '100+'] },
             
+            // Location & Contact
+            city: { type: 'string', description: 'City where company is headquartered' },
+            state: { type: 'string', description: 'State abbreviation (2-letter code)' },
+            address_line1: { type: 'string', description: 'Street address of headquarters' },
+            zip: { type: 'string', description: 'ZIP/postal code' },
+            owner_name: { type: 'string', description: 'Owner or CEO name' },
+            primary_phone: { type: 'string', description: 'Main business phone number' },
+            primary_email: { type: 'string', description: 'Main business email address' },
+            contractor_specialty: { type: 'string', enum: ['HVAC', 'Plumbing', 'Electrical', 'General', 'Mechanical', 'Solar', 'Roofing'], description: 'Primary contractor specialty' },
+            service_area_type: { type: 'string', enum: ['Local', 'Regional', 'Statewide', 'Multi-State', 'National'], description: 'Geographic service coverage' },
+            
             // AI Insights
             market_positioning: { type: 'string' },
             competitive_advantages: { type: 'array', items: { type: 'string' } },
@@ -1258,6 +1340,17 @@ Fill as many fields as possible with accurate data.`;
   if (enrichedData.has_google_business_profile !== undefined) companyUpdates.has_google_business_profile = enrichedData.has_google_business_profile;
   if (enrichedData.online_review_rating) companyUpdates.online_review_rating = enrichedData.online_review_rating;
   if (enrichedData.online_review_count_range) companyUpdates.online_review_count_range = enrichedData.online_review_count_range;
+
+  // Location & Contact
+  if (enrichedData.city) companyUpdates.city = enrichedData.city;
+  if (enrichedData.state) companyUpdates.state = enrichedData.state;
+  if (enrichedData.address_line1) companyUpdates.address_line1 = enrichedData.address_line1;
+  if (enrichedData.zip) companyUpdates.zip = enrichedData.zip;
+  if (enrichedData.owner_name) companyUpdates.owner_name = enrichedData.owner_name;
+  if (enrichedData.primary_phone) companyUpdates.primary_phone = enrichedData.primary_phone;
+  if (enrichedData.primary_email) companyUpdates.primary_email = enrichedData.primary_email;
+  if (enrichedData.contractor_specialty) companyUpdates.contractor_specialty = enrichedData.contractor_specialty;
+  if (enrichedData.service_area_type) companyUpdates.service_area_type = enrichedData.service_area_type;
 
   return {
     companyUpdates,

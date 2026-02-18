@@ -137,6 +137,17 @@ Fill as many fields as possible with accurate data.`;
               online_review_rating: { type: 'number' },
               online_review_count_range: { type: 'string', enum: ['None', '<10', '10-24', '25-49', '50-99', '100+'] },
               
+              // Location & Contact
+              city: { type: 'string', description: 'City where company is headquartered' },
+              state: { type: 'string', description: 'State abbreviation (2-letter code)' },
+              address_line1: { type: 'string', description: 'Street address of headquarters' },
+              zip: { type: 'string', description: 'ZIP/postal code' },
+              owner_name: { type: 'string', description: 'Owner or CEO name' },
+              primary_phone: { type: 'string', description: 'Main business phone number' },
+              primary_email: { type: 'string', description: 'Main business email address' },
+              contractor_specialty: { type: 'string', enum: ['HVAC', 'Plumbing', 'Electrical', 'General', 'Mechanical', 'Solar', 'Roofing'], description: 'Primary contractor specialty' },
+              service_area_type: { type: 'string', enum: ['Local', 'Regional', 'Statewide', 'Multi-State', 'National'], description: 'Geographic service coverage' },
+              
               // AI Insights
               market_positioning: { type: 'string' },
               competitive_advantages: { type: 'array', items: { type: 'string' } },
@@ -230,6 +241,17 @@ Fill as many fields as possible with accurate data.`;
   if (enrichedData.has_google_business_profile !== undefined) companyUpdates.has_google_business_profile = enrichedData.has_google_business_profile;
   if (enrichedData.online_review_rating) companyUpdates.online_review_rating = enrichedData.online_review_rating;
   if (enrichedData.online_review_count_range) companyUpdates.online_review_count_range = enrichedData.online_review_count_range;
+
+  // Location & Contact
+  if (enrichedData.city) companyUpdates.city = enrichedData.city;
+  if (enrichedData.state) companyUpdates.state = enrichedData.state;
+  if (enrichedData.address_line1) companyUpdates.address_line1 = enrichedData.address_line1;
+  if (enrichedData.zip) companyUpdates.zip = enrichedData.zip;
+  if (enrichedData.owner_name) companyUpdates.owner_name = enrichedData.owner_name;
+  if (enrichedData.primary_phone) companyUpdates.primary_phone = enrichedData.primary_phone;
+  if (enrichedData.primary_email) companyUpdates.primary_email = enrichedData.primary_email;
+  if (enrichedData.contractor_specialty) companyUpdates.contractor_specialty = enrichedData.contractor_specialty;
+  if (enrichedData.service_area_type) companyUpdates.service_area_type = enrichedData.service_area_type;
 
   return {
     companyUpdates,
