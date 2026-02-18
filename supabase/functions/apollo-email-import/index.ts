@@ -563,9 +563,8 @@ serve(async (req) => {
         if (hasClick) return 'clicked';
         if (hasOpen) return 'opened';
 
-        // Check if email was delivered/sent
-        // Apollo uses many status values: 'sent', 'delivered', 'active', 'finished', 'complete', etc.
-        // If completed_at is set and in the past, the email was sent regardless of status string
+        // Check if email was delivered/sent using multiple signals
+        // Signal 1: completed_at timestamp exists and is in the past
         if (email.completed_at) {
           try {
             const completedDate = new Date(email.completed_at);
@@ -575,22 +574,35 @@ serve(async (req) => {
           } catch { /* ignore */ }
         }
         
+        // Signal 2: sent_at timestamp
         if (email.sent_at) return 'not_opened';
         
-        // Check status strings for sent indicators
+        // Signal 3: provider_message_id means the email was handed to the mail server
+        if (email.provider_message_id) return 'not_opened';
+        
+        // Signal 4: due_at is in the past and status is scheduled = likely sent but Apollo didn't update status
+        if (email.due_at && (status === 'scheduled' || status === '')) {
+          try {
+            const dueDate = new Date(email.due_at);
+            if (dueDate.getTime() <= Date.now()) {
+              return 'not_opened';
+            }
+          } catch { /* ignore */ }
+        }
+        
+        // Signal 5: Check status strings for sent indicators
         if (status === 'sent' || status === 'delivered' || status === 'active' || 
             status === 'finished' || status === 'complete' || status === 'completed') {
           return 'not_opened';
         }
 
-        // Pre-send states — only if no completed_at timestamp exists
+        // Pre-send states
         if (status === 'scheduled' || status === 'queued' || status === 'paused') {
           return 'scheduled';
         }
         if (status === 'draft' || status === 'pending' || status === 'not_sent') return 'draft';
 
-        // Default: if we have NO evidence of sending, mark as scheduled (not draft)
-        // to be more permissive — the filter will decide what to include
+        // Default: scheduled (permissive)
         return 'scheduled';
       };
 
@@ -605,7 +617,12 @@ serve(async (req) => {
       // Log completed_at presence
       const withCompletedAt = allEmails.filter(e => !!e.completed_at).length;
       const withSentAt = allEmails.filter(e => !!e.sent_at).length;
-      console.log(`Emails with completed_at: ${withCompletedAt}, with sent_at: ${withSentAt}`);
+      const withProviderMsgId = allEmails.filter(e => !!e.provider_message_id).length;
+      const withPastDueAt = allEmails.filter(e => {
+        if (!e.due_at) return false;
+        try { return new Date(e.due_at).getTime() <= Date.now(); } catch { return false; }
+      }).length;
+      console.log(`Send signals - completed_at: ${withCompletedAt}, sent_at: ${withSentAt}, provider_message_id: ${withProviderMsgId}, past_due_at: ${withPastDueAt}`);
 
       const transformedEmails = allEmails.map((email) => {
         const contact = email.contact_id ? contactMap.get(email.contact_id) : null;
