@@ -413,46 +413,59 @@ export function AddActivityDialog({
             </div>
           )}
 
-          {/* Show activity date only for non-meeting types */}
+          {/* Show date fields based on activity type */}
           {formData.activity_type !== "Meeting" && formData.activity_type !== "Demo" && (
-            <div>
-              <Label htmlFor="completed_date">Date *</Label>
-              <Input
-                id="completed_date"
-                type="date"
-                value={formData.completed_date}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, completed_date: e.target.value }))
-                }
-              />
-            </div>
+            formData.activity_type === "Phone" ? (
+              <div>
+                <Label htmlFor="completed_date">Date *</Label>
+                <Input
+                  id="completed_date"
+                  type="date"
+                  value={formData.completed_date}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, completed_date: e.target.value }))
+                  }
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="completed_date">Sent Date *</Label>
+                  <Input
+                    id="completed_date"
+                    type="datetime-local"
+                    value={formData.completed_date}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, completed_date: e.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email_opened_at">Opened Date</Label>
+                  <Input
+                    id="email_opened_at"
+                    type="datetime-local"
+                    value={formData.email_opened_at}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, email_opened_at: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+            )
           )}
 
           {formData.activity_type === "Email" && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="email_opened_at">Email Opened Date</Label>
-                <Input
-                  id="email_opened_at"
-                  type="datetime-local"
-                  value={formData.email_opened_at}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, email_opened_at: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="email_responded_at">Email Responded Date</Label>
-                <Input
-                  id="email_responded_at"
-                  type="datetime-local"
-                  value={formData.email_responded_at}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, email_responded_at: e.target.value }))
-                  }
-                />
-              </div>
+            <div>
+              <Label htmlFor="email_responded_at">Responded Date</Label>
+              <Input
+                id="email_responded_at"
+                type="datetime-local"
+                value={formData.email_responded_at}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email_responded_at: e.target.value }))
+                }
+              />
             </div>
           )}
 
