@@ -20,6 +20,8 @@ import { usePerspective } from "@/hooks/usePerspective";
 import { useUserRole } from "@/hooks/useUserRole";
 import { RegionalFilterDialog, RegionalFilters } from "@/components/common/RegionalFilterDialog";
 import { WEST_STATES, EAST_STATES } from "@/lib/regions/regionConstants";
+import { getQuarterOptions } from "@/lib/dates/quarterUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Opportunities() {
   const { toast } = useToast();
@@ -30,6 +32,7 @@ export default function Opportunities() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null);
   const [currentView, setCurrentView] = useState<ViewType>('grid');
   const [regionalFilters, setRegionalFilters] = useState<RegionalFilters | null>(null);
+  const [quarterFilter, setQuarterFilter] = useState<string>("all");
   const { perspective, setPerspective } = usePerspective('my_records');
   const { data: userRoleData } = useUserRole();
 
@@ -66,8 +69,10 @@ export default function Opportunities() {
     }
   }, [oppFromUrl, oppIdFromUrl, setSearchParams]);
 
+  const quarterOptions = getQuarterOptions();
+
   const { data: opportunities, isLoading, refetch } = useQuery({
-    queryKey: ['opportunities', perspective, regionalFilters, userRoleData?.hasElevatedAccess ?? 'unknown'],
+    queryKey: ['opportunities', perspective, regionalFilters, quarterFilter, userRoleData?.hasElevatedAccess ?? 'unknown'],
     queryFn: async () => {
       // Check for impersonation
       const impersonationData = sessionStorage.getItem('admin-impersonation');
@@ -129,6 +134,14 @@ export default function Opportunities() {
         }
         if (regionalFilters.metros && regionalFilters.metros.length > 0) {
           query = query.in('companies.city', regionalFilters.metros);
+        }
+      }
+
+      // Apply quarter filter
+      if (quarterFilter !== "all") {
+        const selectedQ = quarterOptions.find(q => q.value === quarterFilter);
+        if (selectedQ) {
+          query = query.gte('created_at', selectedQ.from.toISOString()).lte('created_at', selectedQ.to.toISOString());
         }
       }
 
@@ -257,6 +270,17 @@ export default function Opportunities() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Select value={quarterFilter} onValueChange={setQuarterFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Quarter" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              {quarterOptions.map(q => (
+                <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <PerspectiveSelector value={perspective} onChange={setPerspective} />
           <Button 
             variant="outline"

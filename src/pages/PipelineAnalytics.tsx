@@ -20,8 +20,9 @@ import { CommunicationsFunnel } from "@/components/communications/Communications
 import { RegionComparisonCard } from "@/components/pipeline/RegionComparisonCard";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { getQuarterOptions } from "@/lib/dates/quarterUtils";
 
-type DatePreset = "this_week" | "this_month" | "last_30" | "last_90" | "custom";
+type DatePreset = "this_week" | "this_month" | "last_30" | "last_90" | "custom" | string;
 type ViewTab = "analytics" | "comparison";
 
 export default function PipelineAnalytics() {
@@ -55,8 +56,15 @@ export default function PipelineAnalytics() {
   };
   const handlePresetChange = (preset: DatePreset) => {
     if (preset !== "custom") {
-      setDatePreset(preset);
-      setDateRange(getDatePreset(preset));
+      // Check if it's a quarter preset
+      const quarterMatch = quarterOptions.find(q => q.value === preset);
+      if (quarterMatch) {
+        setDatePreset(preset);
+        setDateRange({ from: quarterMatch.from, to: quarterMatch.to });
+      } else {
+        setDatePreset(preset);
+        setDateRange(getDatePreset(preset as any));
+      }
     } else {
       setDatePreset("custom");
     }
@@ -72,11 +80,14 @@ export default function PipelineAnalytics() {
     }
   };
 
+  const quarterOptions = getQuarterOptions();
+
   const presets: { label: string; value: DatePreset }[] = [
     { label: "This Week", value: "this_week" },
     { label: "This Month", value: "this_month" },
     { label: "Last 30 Days", value: "last_30" },
     { label: "Last 90 Days", value: "last_90" },
+    ...quarterOptions.map(q => ({ label: q.label, value: q.value })),
   ];
 
   const getRegionLabel = () => {

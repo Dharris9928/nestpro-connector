@@ -20,6 +20,7 @@ import { AddCommunicationDialog } from '@/components/communications/AddCommunica
 import { MarkAsRepliedDialog } from '@/components/communications/MarkAsRepliedDialog';
 import { HandoffDialog } from '@/components/communications/HandoffDialog';
 import { ScheduleMeetingDialog } from '@/components/communications/ScheduleMeetingDialog';
+import { getQuarterOptions } from '@/lib/dates/quarterUtils';
 
 export default function Communications() {
   const { toast } = useToast();
@@ -47,6 +48,8 @@ export default function Communications() {
   const [openHandoffDialog, setOpenHandoffDialog] = useState(false);
   const [meetingDialogComm, setMeetingDialogComm] = useState<any>(null);
   const [openMeetingDialog, setOpenMeetingDialog] = useState(false);
+  const [quarterFilter, setQuarterFilter] = useState<string>("all");
+  const quarterOptions = getQuarterOptions();
 
   // Handle URL query param to auto-open communication by ID
   const commIdFromUrl = searchParams.get('id');
@@ -163,6 +166,17 @@ export default function Communications() {
             return true;
         }
       });
+    }
+
+    // Quarter filter
+    if (quarterFilter !== 'all') {
+      const selectedQ = quarterOptions.find(q => q.value === quarterFilter);
+      if (selectedQ) {
+        filtered = filtered.filter((comm) => {
+          const createdAt = new Date(comm.created_at);
+          return createdAt >= selectedQ.from && createdAt <= selectedQ.to;
+        });
+      }
     }
 
     // Conversation status filter
@@ -424,9 +438,10 @@ export default function Communications() {
     setCommunicationTypeFilter('all');
     setEmailStatusFilter('all');
     setConversationStatusFilter('active');
+    setQuarterFilter('all');
   };
 
-  const hasActiveFilters = searchQuery || industryTypeFilter !== 'all' || statusFilter !== 'all' || communicationTypeFilter !== 'all' || emailStatusFilter !== 'all';
+  const hasActiveFilters = searchQuery || industryTypeFilter !== 'all' || statusFilter !== 'all' || communicationTypeFilter !== 'all' || emailStatusFilter !== 'all' || quarterFilter !== 'all';
 
   return (
     <div className="flex flex-col h-screen">
@@ -495,7 +510,7 @@ export default function Communications() {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-6 gap-4">
+        <div className="grid grid-cols-7 gap-4">
           <div className="col-span-2">
             <Label>Search</Label>
             <div className="relative">
@@ -581,6 +596,21 @@ export default function Communications() {
                 <SelectItem value="sent">Sent</SelectItem>
                 <SelectItem value="opened">Opened</SelectItem>
                 <SelectItem value="responded">Responded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Quarter</Label>
+            <Select value={quarterFilter} onValueChange={setQuarterFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                {quarterOptions.map(q => (
+                  <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
