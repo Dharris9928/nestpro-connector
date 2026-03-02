@@ -10,8 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { useState, useMemo } from "react";
+import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface Opportunity {
@@ -46,10 +46,51 @@ const statusColors: Record<string, string> = {
   closed_lost: "bg-red-600 !text-white",
 };
 
+const DEFAULT_WIDTHS: Record<string, number> = {
+  name: 200,
+  company: 160,
+  stage: 130,
+  products: 180,
+  amount: 120,
+  assigned: 150,
+  close_date: 140,
+  notes: 220,
+};
+
 export function OpportunitiesTable({ opportunities, isLoading, onSelectOpportunity }: OpportunitiesTableProps) {
   const navigate = useNavigate();
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(DEFAULT_WIDTHS);
+  const resizingRef = useRef<{ col: string; startX: number; startWidth: number } | null>(null);
+
+  const handleMouseDown = useCallback((col: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[col] || DEFAULT_WIDTHS[col];
+    resizingRef.current = { col, startX, startWidth };
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const diff = ev.clientX - resizingRef.current.startX;
+      const newWidth = Math.max(80, resizingRef.current.startWidth + diff);
+      setColumnWidths(prev => ({ ...prev, [resizingRef.current!.col]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      resizingRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [columnWidths]);
 
   const getAssigneeName = (opportunity: Opportunity) => {
     if (opportunity.profiles) {
@@ -118,22 +159,34 @@ export function OpportunitiesTable({ opportunities, isLoading, onSelectOpportuni
   }, [opportunities, sortField, sortDirection]);
 
   const renderSortIcon = (field: string) => {
-    if (sortField !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    if (sortField !== field) return <ArrowUpDown className="ml-1 h-3 w-3 shrink-0" />;
     return sortDirection === 'asc' ? 
-      <ArrowUp className="ml-2 h-4 w-4" /> : 
-      <ArrowDown className="ml-2 h-4 w-4" />;
+      <ArrowUp className="ml-1 h-3 w-3 shrink-0" /> : 
+      <ArrowDown className="ml-1 h-3 w-3 shrink-0" />;
   };
 
-  const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
-    <TableHead>
-      <Button
-        variant="ghost"
-        onClick={() => handleSort(field)}
-        className="h-auto p-0 hover:bg-transparent font-semibold"
-      >
-        {children}
-        {renderSortIcon(field)}
-      </Button>
+  const ResizableHeader = ({ field, sortable = true, children }: { field: string; sortable?: boolean; children: React.ReactNode }) => (
+    <TableHead style={{ width: columnWidths[field], minWidth: 80, maxWidth: columnWidths[field], position: 'relative' }} className="group">
+      <div className="flex items-center justify-between pr-2">
+        {sortable ? (
+          <Button
+            variant="ghost"
+            onClick={() => handleSort(field)}
+            className="h-auto p-0 hover:bg-transparent font-semibold text-xs truncate"
+          >
+            {children}
+            {renderSortIcon(field)}
+          </Button>
+        ) : (
+          <span className="font-semibold text-xs truncate">{children}</span>
+        )}
+        <div
+          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize opacity-0 group-hover:opacity-100 hover:opacity-100 flex items-center justify-center z-10"
+          onMouseDown={(e) => handleMouseDown(field, e)}
+        >
+          <div className="w-0.5 h-4 bg-border rounded-full" />
+        </div>
+      </div>
     </TableHead>
   );
 
@@ -160,93 +213,95 @@ export function OpportunitiesTable({ opportunities, isLoading, onSelectOpportuni
 
   return (
     <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <SortableHeader field="name">Opportunity Name</SortableHeader>
-            <SortableHeader field="company">Company</SortableHeader>
-            <SortableHeader field="stage">Stage</SortableHeader>
-            <TableHead>Products</TableHead>
-            <SortableHeader field="amount">Amount</SortableHeader>
-            <TableHead>Assigned To</TableHead>
-            <SortableHeader field="close_date">Expected Close</SortableHeader>
-            <TableHead>Notes</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedOpportunities.map((opportunity) => (
-            <TableRow 
-              key={opportunity.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => onSelectOpportunity?.(opportunity)}
-            >
-              <TableCell className="font-medium">
-                {opportunity.opportunity_name}
-              </TableCell>
-              <TableCell>
-                {opportunity.companies?.company_name ? (
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/companies', { state: { editCompanyId: opportunity.company_id } });
-                    }}
-                  >
-                    {opportunity.companies.company_name}
-                  </Button>
-                ) : (
-                  "N/A"
-                )}
-              </TableCell>
-              <TableCell>
-                <Badge 
-                  className={statusColors[opportunity.stage] || "bg-muted"}
-                  style={{ color: '#22c55e' }}
-                >
-                  {opportunity.stage}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {opportunity.opportunity_products?.length ? (
-                  <div className="text-sm">
-                    {opportunity.opportunity_products?.map((p, i) => (
-                      <div key={i}>
-                        {p.quantity}x {p.product_type}
-                        {p.model && ` (${p.model})`}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground">No products</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {opportunity.amount !== null && opportunity.amount !== undefined
-                  ? `$${Number(opportunity.amount).toLocaleString()}`
-                  : "—"}
-              </TableCell>
-              <TableCell>
-                {getAssigneeName(opportunity)}
-              </TableCell>
-              <TableCell>
-                {opportunity.expected_close_date
-                  ? format(new Date(opportunity.expected_close_date), "MMM d, yyyy")
-                  : "—"}
-              </TableCell>
-              <TableCell className="max-w-xs">
-                {opportunity.notes ? (
-                  <span className="text-sm text-muted-foreground truncate block">
-                    {opportunity.notes}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </TableCell>
+      <div className="overflow-x-auto">
+        <Table style={{ tableLayout: 'fixed', width: Object.values(columnWidths).reduce((a, b) => a + b, 0) }}>
+          <TableHeader>
+            <TableRow>
+              <ResizableHeader field="name">Opportunity Name</ResizableHeader>
+              <ResizableHeader field="company">Company</ResizableHeader>
+              <ResizableHeader field="stage">Stage</ResizableHeader>
+              <ResizableHeader field="products" sortable={false}>Products</ResizableHeader>
+              <ResizableHeader field="amount">Amount</ResizableHeader>
+              <ResizableHeader field="assigned" sortable={false}>Assigned To</ResizableHeader>
+              <ResizableHeader field="close_date">Expected Close</ResizableHeader>
+              <ResizableHeader field="notes" sortable={false}>Notes</ResizableHeader>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {sortedOpportunities.map((opportunity) => (
+              <TableRow 
+                key={opportunity.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => onSelectOpportunity?.(opportunity)}
+              >
+                <TableCell style={{ width: columnWidths.name, maxWidth: columnWidths.name }} className="font-medium">
+                  <div className="truncate" title={opportunity.opportunity_name}>{opportunity.opportunity_name}</div>
+                </TableCell>
+                <TableCell style={{ width: columnWidths.company, maxWidth: columnWidths.company }}>
+                  {opportunity.companies?.company_name ? (
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-sm truncate max-w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/companies', { state: { editCompanyId: opportunity.company_id } });
+                      }}
+                      title={opportunity.companies.company_name}
+                    >
+                      {opportunity.companies.company_name}
+                    </Button>
+                  ) : (
+                    "N/A"
+                  )}
+                </TableCell>
+                <TableCell style={{ width: columnWidths.stage, maxWidth: columnWidths.stage }}>
+                  <Badge 
+                    className={statusColors[opportunity.stage] || "bg-muted"}
+                  >
+                    {opportunity.stage}
+                  </Badge>
+                </TableCell>
+                <TableCell style={{ width: columnWidths.products, maxWidth: columnWidths.products }}>
+                  {opportunity.opportunity_products?.length ? (
+                    <div className="text-sm">
+                      {opportunity.opportunity_products?.map((p, i) => (
+                        <div key={i} className="truncate" title={`${p.quantity}x ${p.product_type}${p.model ? ` (${p.model})` : ''}`}>
+                          {p.quantity}x {p.product_type}
+                          {p.model && ` (${p.model})`}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">No products</span>
+                  )}
+                </TableCell>
+                <TableCell style={{ width: columnWidths.amount, maxWidth: columnWidths.amount }}>
+                  {opportunity.amount !== null && opportunity.amount !== undefined
+                    ? `$${Number(opportunity.amount).toLocaleString()}`
+                    : "—"}
+                </TableCell>
+                <TableCell style={{ width: columnWidths.assigned, maxWidth: columnWidths.assigned }}>
+                  <div className="truncate" title={getAssigneeName(opportunity)}>{getAssigneeName(opportunity)}</div>
+                </TableCell>
+                <TableCell style={{ width: columnWidths.close_date, maxWidth: columnWidths.close_date }}>
+                  {opportunity.expected_close_date
+                    ? format(new Date(opportunity.expected_close_date), "MMM d, yyyy")
+                    : "—"}
+                </TableCell>
+                <TableCell style={{ width: columnWidths.notes, maxWidth: columnWidths.notes }}>
+                  {opportunity.notes ? (
+                    <span className="text-sm text-muted-foreground truncate block" title={opportunity.notes}>
+                      {opportunity.notes}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
