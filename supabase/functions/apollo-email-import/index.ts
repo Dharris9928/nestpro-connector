@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface ApolloEmailActivity {
@@ -437,11 +437,31 @@ serve(async (req) => {
       console.log(`Successfully fetched ${contactMap.size} contact details`);
 
       // Fetch engagement data for emails (opens/clicks/replies) from individual email endpoints
-      // This is optional and can be skipped for faster initial load
+      // Capped at 200 to avoid edge function timeout (~5s per 200 emails)
+      const MAX_ENGAGEMENT_FETCHES = 200;
       let engagementMap = new Map<string, EmailEngagement>();
       if (!skipEngagementFetch) {
-        const emailIds = allEmails.map(e => e.id);
-        engagementMap = await fetchEmailActivities(emailIds);
+        // Prioritize emails that lack stats-based engagement data
+        const emailsWithoutStats = allEmails.filter(e => {
+          const stats = e.emailer_message_stats;
+          const recipients = e.recipients;
+          const hasStats = (stats && Array.isArray(stats) && stats.length > 0) ||
+                           (recipients && Array.isArray(recipients) && recipients.length > 0);
+          return !hasStats;
+        });
+        const emailsWithStats = allEmails.filter(e => {
+          const stats = e.emailer_message_stats;
+          const recipients = e.recipients;
+          return (stats && Array.isArray(stats) && stats.length > 0) ||
+                 (recipients && Array.isArray(recipients) && recipients.length > 0);
+        });
+        
+        // Take emails without stats first, then fill remaining slots with stats-having emails
+        const prioritizedEmails = [...emailsWithoutStats, ...emailsWithStats];
+        const emailIdsToFetch = prioritizedEmails.slice(0, MAX_ENGAGEMENT_FETCHES).map(e => e.id);
+        
+        console.log(`Fetching engagement for ${emailIdsToFetch.length} of ${allEmails.length} emails (cap: ${MAX_ENGAGEMENT_FETCHES})`);
+        engagementMap = await fetchEmailActivities(emailIdsToFetch);
         console.log(`Successfully fetched engagement for ${engagementMap.size} emails`);
       } else {
         console.log("Skipping engagement fetch for faster response");
