@@ -318,6 +318,7 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
       });
     } finally {
       setLoading(false);
+      resumeTimeout();
     }
   };
 
