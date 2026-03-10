@@ -28,6 +28,11 @@ export function ImportContactsDialog({ onSuccess }: { onSuccess?: () => void }) 
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
 
+  useEffect(() => {
+    if (importing) pauseTimeout();
+    else resumeTimeout();
+  }, [importing]);
+
   const handleDownloadTemplate = () => {
     const template = `first_name,last_name,title,email,phone,mobile,linkedin_url,company_name,industry_type,city,state,website_url,annual_revenue_range
 John,Smith,CEO,john@company.com,555-1234,555-5678,https://linkedin.com/in/johnsmith,ABC Builders,Builder,Austin,TX,https://abcbuilders.com,$10M-$50M

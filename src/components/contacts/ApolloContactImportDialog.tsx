@@ -50,6 +50,11 @@ export function ApolloContactImportDialog({ onSuccess }: { onSuccess?: () => voi
   const [result, setResult] = useState<ImportResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
+  useEffect(() => {
+    if (importing) pauseTimeout();
+    else resumeTimeout();
+  }, [importing]);
+
   const cleanPhoneNumber = (phone: string): string => {
     if (!phone) return '';
     // Remove quotes, +1, spaces, and non-digits, then format
