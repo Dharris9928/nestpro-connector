@@ -67,7 +67,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 
   const extractPlainText = useCallback((html: string): string => {
     // Sanitize first to strip any injected content
-    const sanitized = DOMPurify.sanitize(html, SANITIZE_CONFIG);
+    const sanitized = DOMPurify.sanitize(html, SANITIZE_CONFIG) as string;
     
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = sanitized;
