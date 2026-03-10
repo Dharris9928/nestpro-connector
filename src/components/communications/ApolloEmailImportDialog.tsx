@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSessionTimeout } from '@/contexts/SessionTimeoutContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';

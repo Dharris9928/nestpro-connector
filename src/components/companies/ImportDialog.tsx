@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSessionTimeout } from '@/contexts/SessionTimeoutContext';
 import {
   Dialog,
   DialogContent,

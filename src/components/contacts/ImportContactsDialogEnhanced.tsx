@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useSessionTimeout } from '@/contexts/SessionTimeoutContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
