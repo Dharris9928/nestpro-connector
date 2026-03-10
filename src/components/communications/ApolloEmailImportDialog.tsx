@@ -253,6 +253,7 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
 
   const fetchEmails = async () => {
     setLoading(true);
+    pauseTimeout();
     try {
       const { data, error } = await supabase.functions.invoke('apollo-email-import', {
         body: {
