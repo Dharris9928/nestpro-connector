@@ -126,7 +126,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <>
+    <SessionTimeoutContext.Provider value={{ pauseTimeout, resumeTimeout, isPaused }}>
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-background">
           <AppSidebar />
@@ -148,6 +148,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         onExtend={extendSession}
         onTimeout={handleTimeout}
       />
-    </>
+    </SessionTimeoutContext.Provider>
   );
 }
