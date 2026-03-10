@@ -1,14 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "Nest Pro <info@nestproconnector.com>";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 interface NotificationPayload {
   notification_id: string;
@@ -20,6 +15,8 @@ interface NotificationPayload {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -31,6 +28,29 @@ serve(async (req) => {
 
     const payload: NotificationPayload = await req.json();
     const { notification_id, user_id, type, title, message, link_url } = payload;
+
+    if (!notification_id || !user_id) {
+      return new Response(
+        JSON.stringify({ error: "Missing notification_id or user_id" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate that the notification actually exists, belongs to the user, and hasn't been sent yet
+    const { data: notification, error: notifError } = await supabase
+      .from("notifications")
+      .select("id, user_id, read")
+      .eq("id", notification_id)
+      .eq("user_id", user_id)
+      .single();
+
+    if (notifError || !notification) {
+      console.error("Notification validation failed:", notifError);
+      return new Response(
+        JSON.stringify({ error: "Invalid or already processed notification" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Get user preferences
     const { data: preferences, error: prefError } = await supabase
@@ -69,7 +89,7 @@ serve(async (req) => {
         emailEnabled = preferences.appeal_submitted;
         break;
       default:
-        emailEnabled = true; // Default to enabled for unknown types
+        emailEnabled = true;
     }
 
     if (!shouldSendEmail || !emailEnabled) {
@@ -125,6 +145,12 @@ serve(async (req) => {
         const emailData = await resendResponse.json();
         console.log(`Email sent to ${userEmail} for notification ${notification_id}`);
 
+        // Mark notification as read to prevent re-sending
+        await supabase
+          .from("notifications")
+          .update({ read: true })
+          .eq("id", notification_id);
+
         // Log the email
         await supabase.rpc('log_email', {
           p_recipient_email: userEmail,
@@ -138,7 +164,6 @@ serve(async (req) => {
       } catch (error: any) {
         console.error("Error sending or logging email:", error);
         
-        // Log failed email attempt
         try {
           await supabase.rpc('log_email', {
             p_recipient_email: userEmail,
@@ -164,9 +189,8 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error sending notification:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Failed to process notification" }),
       { 
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }

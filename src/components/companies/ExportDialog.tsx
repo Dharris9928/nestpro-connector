@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import * as XLSX from "@e965/xlsx";
 import { Download, FileText, Table } from "lucide-react";
 import { logContactExport } from "@/lib/contacts/logContactAccess";
 import { useExportQuota } from "@/hooks/useExportQuota";

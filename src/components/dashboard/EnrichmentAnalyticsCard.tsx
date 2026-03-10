@@ -1,44 +1,65 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, TrendingUp, Target, AlertCircle } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePerspective } from '@/hooks/usePerspective';
 
 export function EnrichmentAnalyticsCard() {
+  const { perspective } = usePerspective('my_records', 'companies');
+
   const enrichmentStats = useQuery({
-    queryKey: ['enrichment-analytics'],
+    queryKey: ['enrichment-analytics', perspective],
     queryFn: async () => {
-      // Get total enriched companies
-      const { data: enrichedCompanies, error: enrichedError } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Build enrichment logs query with perspective filter
+      let enrichedQuery = supabase
         .from('enrichment_logs')
-        .select('company_id', { count: 'exact' })
+        .select('company_id')
         .eq('status', 'success');
 
+      if (perspective === 'my_records') {
+        enrichedQuery = enrichedQuery.eq('created_by', user.id);
+      }
+      // 'assigned_to_me' and 'all_records' show broader data for elevated users
+
+      const { data: enrichedCompanies, error: enrichedError } = await enrichedQuery;
       if (enrichedError) throw enrichedError;
 
-      // Get unique companies enriched
       const uniqueCompanies = new Set(enrichedCompanies?.map(e => e.company_id) || []);
 
-      // Get average confidence score
-      const { data: confidenceData, error: confidenceError } = await supabase
+      // Confidence score query
+      let confidenceQuery = supabase
         .from('enrichment_logs')
         .select('confidence_score')
         .eq('status', 'success');
 
+      if (perspective === 'my_records') {
+        confidenceQuery = confidenceQuery.eq('created_by', user.id);
+      }
+
+      const { data: confidenceData, error: confidenceError } = await confidenceQuery;
       if (confidenceError) throw confidenceError;
 
       const avgConfidence = confidenceData && confidenceData.length > 0
         ? Math.round(confidenceData.reduce((sum, log) => sum + (log.confidence_score || 0), 0) / confidenceData.length)
         : 0;
 
-      // Get most enriched fields
-      const { data: fieldsData, error: fieldsError } = await supabase
+      // Fields enriched query
+      let fieldsQuery = supabase
         .from('enrichment_logs')
         .select('fields_enriched')
         .eq('status', 'success');
 
+      if (perspective === 'my_records') {
+        fieldsQuery = fieldsQuery.eq('created_by', user.id);
+      }
+
+      const { data: fieldsData, error: fieldsError } = await fieldsQuery;
       if (fieldsError) throw fieldsError;
 
       const fieldCounts: Record<string, number> = {};
@@ -54,11 +75,18 @@ export function EnrichmentAnalyticsCard() {
         .slice(0, 5)
         .map(([field, count]) => ({ field, count }));
 
-      // Get total companies
-      const { count: totalCompanies, error: totalError } = await supabase
+      // Total companies with perspective
+      let companiesQuery = supabase
         .from('companies')
         .select('*', { count: 'exact', head: true });
 
+      if (perspective === 'my_records') {
+        companiesQuery = companiesQuery.eq('created_by', user.id);
+      } else if (perspective === 'assigned_to_me') {
+        companiesQuery = companiesQuery.eq('assigned_to_sales_rep_id', user.id);
+      }
+
+      const { count: totalCompanies, error: totalError } = await companiesQuery;
       if (totalError) throw totalError;
 
       return {

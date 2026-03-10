@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, Search, ShieldAlert, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 
 export function BlockedSignupsViewer() {
   const [searchTerm, setSearchTerm] = useState("");

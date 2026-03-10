@@ -5,6 +5,14 @@ import { Bold, Italic, List, ListOrdered, Heading1, Heading2, Heading3, Undo, Re
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'ul', 'ol', 'li', 'br', 'strong', 'em', 'b', 'i'],
+  ALLOWED_ATTR: [],
+  KEEP_CONTENT: true,
+  RETURN_DOM: false,
+  RETURN_DOM_FRAGMENT: false,
+};
+
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -16,12 +24,10 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  // Increase limit to 500KB for plain text (after HTML is stripped)
   const MAX_PLAIN_TEXT_LENGTH = 500000;
 
   useEffect(() => {
     if (editorRef.current && !editorRef.current.innerHTML && value) {
-      // Escape HTML entities to prevent XSS
       const escapeHtml = (text: string) => {
         return text
           .replace(/&/g, '&amp;')
@@ -31,7 +37,6 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
           .replace(/'/g, '&#039;');
       };
       
-      // Convert plain text to HTML with basic formatting
       const htmlContent = value
         .split('\n')
         .map(line => {
@@ -54,28 +59,16 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         })
         .join('');
       
-      // Sanitize HTML before rendering to prevent XSS
-      const sanitized = DOMPurify.sanitize(htmlContent, {
-        ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'ul', 'ol', 'li', 'br', 'strong', 'em', 'b', 'i'],
-        ALLOWED_ATTR: [],
-        KEEP_CONTENT: true,
-        RETURN_DOM: false,
-        RETURN_DOM_FRAGMENT: false
-      });
-      
+      // Sanitize before setting innerHTML
+      const sanitized = DOMPurify.sanitize(htmlContent, SANITIZE_CONFIG) as string;
       editorRef.current.innerHTML = sanitized;
     }
   }, [value]);
 
   const extractPlainText = useCallback((html: string): string => {
-    // Sanitize first
-    const sanitized = DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'ul', 'ol', 'li', 'br', 'strong', 'em', 'b', 'i', 'div', 'span'],
-      ALLOWED_ATTR: [],
-      KEEP_CONTENT: true
-    });
+    // Sanitize first to strip any injected content
+    const sanitized = DOMPurify.sanitize(html, SANITIZE_CONFIG) as string;
     
-    // Convert to plain text
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = sanitized;
     return tempDiv.innerText || tempDiv.textContent || '';
@@ -85,10 +78,17 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
       
-      // Extract plain text first
-      const plainText = extractPlainText(htmlContent);
+      // Re-sanitize the editor content on every input to strip anything
+      // the browser may have injected (e.g. via paste, drag-drop, etc.)
+      const sanitized = DOMPurify.sanitize(htmlContent, SANITIZE_CONFIG) as string;
+      if (sanitized !== htmlContent) {
+        const hadFocus = document.activeElement === editorRef.current;
+        editorRef.current.innerHTML = sanitized;
+        if (hadFocus) editorRef.current.focus();
+      }
+
+      const plainText = extractPlainText(sanitized);
       
-      // Check plain text length (more reasonable limit)
       if (plainText.length > MAX_PLAIN_TEXT_LENGTH) {
         toast({
           title: 'Content too long',
@@ -102,31 +102,25 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
     }
   }, [onChange, extractPlainText, toast]);
 
-  // Handle paste to strip formatting from rich text
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
     
-    // Get plain text from clipboard
     const text = e.clipboardData.getData('text/plain');
     
-    // Insert plain text at cursor position
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       range.deleteContents();
       
-      // Create text node for plain text
       const textNode = document.createTextNode(text);
       range.insertNode(textNode);
       
-      // Move cursor to end of inserted text
       range.setStartAfter(textNode);
       range.setEndAfter(textNode);
       selection.removeAllRanges();
       selection.addRange(range);
     }
     
-    // Trigger input handler
     handleInput();
   }, [handleInput]);
 
@@ -167,7 +161,6 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 
   return (
     <div className={cn('border rounded-lg overflow-hidden', className)}>
-      {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b bg-muted/50">
         {formatButtons.map((button, index) => (
           <Button
@@ -184,7 +177,6 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
         ))}
       </div>
 
-      {/* Editor */}
       <div
         ref={editorRef}
         contentEditable

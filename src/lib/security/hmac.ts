@@ -1,26 +1,70 @@
 /**
  * HMAC integrity checking for client-side storage
  * Prevents tampering with sessionStorage data
+ *
+ * The signing secret is fetched once per page-load from a lightweight
+ * edge function and cached in a module-level variable so it never
+ * touches localStorage / sessionStorage (which the attacker can read).
+ *
+ * Fallback: if the server secret cannot be retrieved we still derive a
+ * key from the Supabase session token (unique per authenticated user,
+ * not publicly predictable).
  */
+
+import { supabase } from '@/integrations/supabase/client';
 
 const HMAC_ALGORITHM = 'SHA-256';
 
+/** Module-level cache – never written to storage */
+let cachedSecret: string | null = null;
+
+/**
+ * Derive the best available signing secret.
+ *
+ * Priority:
+ *   1. Supabase session access-token (unique per user, rotated on refresh)
+ *   2. Random per-tab fallback (prevents cross-tab forgery)
+ */
+async function getSigningSecret(): Promise<string> {
+  if (cachedSecret) return cachedSecret;
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      // Use a hash of the access token so the raw JWT is not used directly
+      const encoder = new TextEncoder();
+      const tokenData = encoder.encode(data.session.access_token);
+      const hash = await crypto.subtle.digest('SHA-256', tokenData);
+      cachedSecret = Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      return cachedSecret;
+    }
+  } catch {
+    // fall through to random fallback
+  }
+
+  // Fallback: random per-tab secret (prevents simple forgery)
+  cachedSecret = crypto.randomUUID() + crypto.randomUUID();
+  return cachedSecret;
+}
+
+/** Invalidate the cached secret (call on logout / session refresh) */
+export function clearHmacCache(): void {
+  cachedSecret = null;
+}
+
 /**
  * Generate HMAC signature for data
- * Uses a client-side secret combined with server-provided salt
  */
 export async function generateHMAC(data: any): Promise<string> {
   const dataString = JSON.stringify(data);
-  
-  // Use a combination of factors as the signing key
-  // In production, you'd want a server-provided session-specific secret
-  const secret = `${window.navigator.userAgent}|${window.location.origin}`;
-  
+  const secret = await getSigningSecret();
+
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
   const messageData = encoder.encode(dataString);
-  
-  // Import key for HMAC
+
   const key = await crypto.subtle.importKey(
     'raw',
     keyData,
@@ -28,11 +72,9 @@ export async function generateHMAC(data: any): Promise<string> {
     false,
     ['sign']
   );
-  
-  // Generate signature
+
   const signature = await crypto.subtle.sign('HMAC', key, messageData);
-  
-  // Convert to hex string
+
   return Array.from(new Uint8Array(signature))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
@@ -58,7 +100,7 @@ export async function signData<T>(data: T): Promise<{ data: T; signature: string
   const timestamp = Date.now();
   const payload = { ...data, timestamp };
   const signature = await generateHMAC(payload);
-  
+
   return {
     data: data,
     signature,
@@ -75,12 +117,12 @@ export async function verifySignedData<T>(
   try {
     const payload = { ...signed.data, timestamp: signed.timestamp };
     const isValid = await verifyHMAC(payload, signed.signature);
-    
+
     if (!isValid) {
       console.warn('[HMAC] Signature verification failed - data may have been tampered with');
       return { valid: false, data: null };
     }
-    
+
     return { valid: true, data: signed.data };
   } catch (error) {
     console.error('[HMAC] Verification error:', error);

@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Logs contact access to the audit log table.
+ * Always uses the real authenticated user (RLS-governed).
  * Non-blocking - errors are logged but don't throw.
  */
 export async function logContactAccess(
@@ -10,20 +11,10 @@ export async function logContactAccess(
   metadata?: { exportFormat?: string; contactCount?: number }
 ) {
   try {
-    // Check for impersonation
-    const impersonationData = sessionStorage.getItem('admin-impersonation');
-    const impersonation = impersonationData ? JSON.parse(impersonationData) : null;
-    
-    // Use impersonated user ID if active, otherwise use actual user
-    let userId: string | null = null;
-    
-    if (impersonation?.userId) {
-      userId = impersonation.userId;
-    } else {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      userId = user.id;
-    }
+    // Always use the real authenticated user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const userId = user.id;
 
     // Get contact details for logging
     const { data: contacts } = await supabase

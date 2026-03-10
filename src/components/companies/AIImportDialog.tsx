@@ -10,7 +10,7 @@ import { Sparkles, Upload, CheckCircle2, AlertCircle, Loader2, FileSpreadsheet }
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 import { AIImportReviewStep } from './AIImportReviewStep';
 import { createCompany } from '@/lib/companies/createCompany';
 import { createContact } from '@/lib/contacts/createContact';

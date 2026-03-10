@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import * as XLSX from "@e965/xlsx";
 import { Upload, Download, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { generateBatchId } from "@/lib/import/batchTracking";
