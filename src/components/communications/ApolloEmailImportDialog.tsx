@@ -640,6 +640,7 @@ export function ApolloEmailImportDialog({ open, onOpenChange, onImportComplete }
 
     setImportResult(result);
     setStep('results');
+    resumeTimeout();
 
     if (result.communicationsCreated > 0) {
       onImportComplete?.();
