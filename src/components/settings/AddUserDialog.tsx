@@ -52,8 +52,16 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
 
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
       // Call edge function to create user (requires admin privileges)
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: {
           email: form.email,
           firstName: form.firstName,
