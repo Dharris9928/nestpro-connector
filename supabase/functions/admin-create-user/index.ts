@@ -18,7 +18,11 @@ const createUserSchema = z.object({
   email: z.string().email().max(255),
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
-  password: z.string().min(8).max(128).optional(),
+  password: z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? undefined : trimmed;
+  }, z.string().min(8).max(128).optional()),
   role: z.enum(['admin', 'sales_manager', 'sales_rep', 'read_only']),
   useTemporaryPassword: z.boolean(),
 });

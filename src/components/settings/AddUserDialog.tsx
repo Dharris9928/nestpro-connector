@@ -61,7 +61,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
         email: form.email,
         firstName: form.firstName,
         lastName: form.lastName,
-        password: form.password,
+        password: form.useTemporaryPassword ? undefined : form.password,
         role: form.role,
         useTemporaryPassword: form.useTemporaryPassword,
       };
