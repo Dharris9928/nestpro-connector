@@ -17,6 +17,7 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     return {
       'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
       'Access-Control-Allow-Credentials': 'true',
       'Vary': 'Origin',
@@ -27,6 +28,7 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   if (!origin) {
     return {
       'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
     };
   }
@@ -34,6 +36,7 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   // Unknown browser origin – deny
   return {
     'Access-Control-Allow-Origin': 'null',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   };
 }
@@ -41,5 +44,6 @@ export function getCorsHeaders(req: Request): Record<string, string> {
 /** @deprecated Use getCorsHeaders(req) instead */
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
