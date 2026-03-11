@@ -1,6 +1,8 @@
 const ALLOWED_ORIGINS = [
   'https://nestproconnector.lovable.app',
   'https://id-preview--fecf655d-278f-48e9-a0cd-40927fe3377c.lovable.app',
+  'https://nestproconnector.com',
+  'https://www.nestproconnector.com',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
