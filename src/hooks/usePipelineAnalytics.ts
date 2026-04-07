@@ -406,16 +406,17 @@ export function usePipelineAnalytics(
         }
       }
 
-      // Fetch previous period opportunities
-      let prevOppsQuery = supabase
-        .from("opportunities")
-        .select("id, assigned_to, stage, company_id, opportunity_name")
-        .gte("created_at", prevFrom)
-        .lte("created_at", prevTo)
-        .or("assigned_to.not.is.null,opportunity_name.ilike.Lead from%,opportunity_name.ilike.Handoff:%");
-      
-      prevOppsQuery = buildPerspectiveFilter(prevOppsQuery);
-      const { data: prevOppsDataRaw } = await prevOppsQuery;
+      // Fetch previous period opportunities (paginated)
+      const buildPrevOppsQuery = () => {
+        let q = supabase
+          .from("opportunities")
+          .select("id, assigned_to, stage, company_id, opportunity_name")
+          .gte("created_at", prevFrom)
+          .lte("created_at", prevTo)
+          .or("assigned_to.not.is.null,opportunity_name.ilike.Lead from%,opportunity_name.ilike.Handoff:%");
+        return buildPerspectiveFilter(q);
+      };
+      const prevOppsDataRaw = await paginatedFetch(buildPrevOppsQuery);
       
       let prevOppsData = prevOppsDataRaw || [];
       if (filterStates && prevOppsData.length > 0) {
