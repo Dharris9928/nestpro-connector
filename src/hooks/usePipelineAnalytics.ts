@@ -230,16 +230,15 @@ export function usePipelineAnalytics(
         }
       }
 
-      // Fetch all activities (Meeting, Demo, Phone) - include upcoming regardless of date range
-      let activitiesQuery = supabase
-        .from("outreach_activities")
-        .select("id, activity_type, outcome, scheduled_date, completed_date, created_at, company_id")
-        .in("activity_type", ["Meeting", "Demo", "Phone"]);
-      
-      activitiesQuery = buildPerspectiveFilter(activitiesQuery);
-      const { data: activitiesDataRaw, error: activitiesError } = await activitiesQuery;
-      
-      if (activitiesError) throw activitiesError;
+      // Fetch all activities (Meeting, Demo, Phone) - paginated
+      const buildActivitiesQuery = () => {
+        let q = supabase
+          .from("outreach_activities")
+          .select("id, activity_type, outcome, scheduled_date, completed_date, created_at, company_id")
+          .in("activity_type", ["Meeting", "Demo", "Phone"]);
+        return buildPerspectiveFilter(q);
+      };
+      const activitiesDataRaw = await paginatedFetch(buildActivitiesQuery);
 
       let activitiesData = activitiesDataRaw || [];
       const currentDate = new Date();
