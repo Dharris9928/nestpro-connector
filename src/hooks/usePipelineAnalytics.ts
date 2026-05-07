@@ -215,9 +215,12 @@ export function usePipelineAnalytics(
         }
       }
 
-      const apolloSentFilter = "sent_at.not.is.null,status.in.(sent,not_opened,opened,replied,bounced)";
-      const apolloOpenedFilter = "opened_at.not.is.null,open_count.gt.0,status.in.(opened,replied)";
-      const apolloRespondedFilter = "replied_at.not.is.null,reply_count.gt.0,status.eq.replied";
+      // Strict filters — match what Apollo's UI reports.
+      // 'sent' = the email was actually delivered (sent_at populated).
+      // Loose status-based filters were inflating counts ~2.5x due to draft/queued rows.
+      const apolloSentFilter = "sent_at.not.is.null";
+      const apolloOpenedFilter = "opened_at.not.is.null";
+      const apolloRespondedFilter = "replied_at.not.is.null";
 
       const [apolloMetrics, prevApolloMetrics]: [ApolloMetrics, ApolloMetrics] = await Promise.all([
         Promise.all([
@@ -462,19 +465,17 @@ export function usePipelineAnalytics(
       }
 
       // Calculate current period metrics
-      // Combine comms sent from both company_communications and apollo_email_activities
-      // Count Apollo records as sent if they have sent_at OR a sent/not_opened/opened/bounced status
-      const commsSent = commsData.filter(c => c.sent_at).length + 
-        apolloMetrics.sent;
-      
-      // Combine opened/responded from both tables
-      const commsOpened = commsData.filter(c => c.email_opened_at).length;
-      const apolloOpened = apolloMetrics.opened;
-      const emailsOpened = commsOpened + apolloOpened;
-      
-      const commsResponded = commsData.filter(c => c.email_responded_at).length;
-      const apolloResponded = apolloMetrics.responded;
-      const responsesReceived = commsResponded + apolloResponded;
+      // IMPORTANT: company_communications email rows are mirrors of Apollo imports (same company+sent_at).
+      // To avoid double-counting, only count non-email comms here; Apollo is the source of truth for emails.
+      const commsEmailRows = commsData.filter(c => c.communication_type === "email");
+      const commsSent = apolloMetrics.sent;
+
+      const commsOpened = commsEmailRows.filter(c => c.email_opened_at).length;
+      // Use max() instead of sum to avoid double-counting opens that exist in both tables
+      const emailsOpened = Math.max(commsOpened, apolloMetrics.opened);
+
+      const commsResponded = commsEmailRows.filter(c => c.email_responded_at).length;
+      const responsesReceived = Math.max(commsResponded, apolloMetrics.responded);
       
       // Meetings (Scheduled or Completed outcome)
       const meetingsScheduled = meetingsData.filter(m => m.outcome === "Scheduled" || m.outcome === "Completed").length;
@@ -512,15 +513,13 @@ export function usePipelineAnalytics(
       const closedDeals = closedDealsData.length;
       const closedDealValue = closedDealsData.reduce((sum, opp) => sum + (opp.amount || 0), 0);
 
-      // Calculate previous period metrics (combine both tables)
-      const prevCommsSent = prevCommsData.filter(c => c.sent_at).length + 
-        prevApolloMetrics.sent;
-      const prevCommsOpened = prevCommsData.filter(c => c.email_opened_at).length;
-      const prevApolloOpened = prevApolloMetrics.opened;
-      const prevEmailsOpened = prevCommsOpened + prevApolloOpened;
-      const prevCommsResponded = prevCommsData.filter(c => c.email_responded_at).length;
-      const prevApolloResponded = prevApolloMetrics.responded;
-      const prevResponsesReceived = prevCommsResponded + prevApolloResponded;
+      // Calculate previous period metrics (Apollo is source of truth for emails)
+      const prevCommsEmailRows = prevCommsData.filter((c: any) => c.communication_type === "email");
+      const prevCommsSent = prevApolloMetrics.sent;
+      const prevCommsOpened = prevCommsEmailRows.filter((c: any) => c.email_opened_at).length;
+      const prevEmailsOpened = Math.max(prevCommsOpened, prevApolloMetrics.opened);
+      const prevCommsResponded = prevCommsEmailRows.filter((c: any) => c.email_responded_at).length;
+      const prevResponsesReceived = Math.max(prevCommsResponded, prevApolloMetrics.responded);
       const prevMeetingsScheduled = prevMeetingsData.filter(m => m.outcome === "Scheduled" || m.outcome === "Completed").length;
       const prevMeetingsCompleted = prevMeetingsData.filter(m => m.outcome === "Completed").length;
       const prevDemosScheduled = prevDemosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
