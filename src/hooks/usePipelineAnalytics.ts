@@ -509,7 +509,8 @@ export function usePipelineAnalytics(
       const prevMeetingsCompleted = prevMeetingsData.filter(m => m.outcome === "Completed").length;
       const prevDemosScheduled = prevDemosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
       const prevDemosCompleted = prevDemosData.filter(d => d.outcome === "Completed").length;
-      const prevPhoneCalls = prevPhoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
+      const prevPhoneCalls = prevPhoneData.filter(p => p.outcome === "Completed" || p.completed_date).length +
+                            prevCommsData.filter((c: any) => c.communication_type === "call_script").length;
       const prevUpcomingMeetings = prevUpcomingMeetingsData.length;
       const prevMeetingsConducted = prevMeetingsData.filter(m => m.outcome === "Completed" || m.completed_date).length +
                                     prevDemosData.filter(d => d.outcome === "Completed" || d.completed_date).length;
