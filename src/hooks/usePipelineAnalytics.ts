@@ -479,23 +479,22 @@ export function usePipelineAnalytics(
       // Calculate total pipeline value
       const totalPipelineValue = oppsData.reduce((sum, opp) => sum + (opp.amount || 0), 0);
 
-      // Build detailed lists
-      const emailedCompanies: EmailedCompany[] = commsData
-        .filter(c => c.sent_at)
-        .map(c => ({
+      // Build detailed lists (already ordered DESC and limited by DB)
+      const emailedCompanies: EmailedCompany[] = emailedDetails
+        .filter((c: any) => c.sent_at)
+        .map((c: any) => ({
           id: c.id,
           company_name: (c.companies as any)?.company_name || "Unknown Company",
           sent_at: c.sent_at!,
         }))
-        .sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime())
-        .slice(0, 10); // Limit to 10 most recent
+        .slice(0, 10);
 
-      const responseDetails: ResponseDetail[] = commsData
-        .filter(c => c.email_responded_at)
-        .map(c => {
+      const responseDetails: ResponseDetail[] = responseDetailsRows
+        .filter((c: any) => c.email_responded_at)
+        .map((c: any) => {
           const contact = c.contacts as any;
-          const contactName = contact 
-            ? [contact.first_name, contact.last_name].filter(Boolean).join(" ") 
+          const contactName = contact
+            ? [contact.first_name, contact.last_name].filter(Boolean).join(" ")
             : null;
           return {
             id: c.id,
@@ -504,7 +503,6 @@ export function usePipelineAnalytics(
             responded_at: c.email_responded_at!,
           };
         })
-        .sort((a, b) => new Date(b.responded_at).getTime() - new Date(a.responded_at).getTime())
         .slice(0, 10);
 
       const handoffDetails: HandoffDetail[] = oppsData
