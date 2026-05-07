@@ -215,9 +215,12 @@ export function usePipelineAnalytics(
         }
       }
 
-      const apolloSentFilter = "sent_at.not.is.null,status.in.(sent,not_opened,opened,replied,bounced)";
-      const apolloOpenedFilter = "opened_at.not.is.null,open_count.gt.0,status.in.(opened,replied)";
-      const apolloRespondedFilter = "replied_at.not.is.null,reply_count.gt.0,status.eq.replied";
+      // Strict filters — match what Apollo's UI reports.
+      // 'sent' = the email was actually delivered (sent_at populated).
+      // Loose status-based filters were inflating counts ~2.5x due to draft/queued rows.
+      const apolloSentFilter = "sent_at.not.is.null";
+      const apolloOpenedFilter = "opened_at.not.is.null";
+      const apolloRespondedFilter = "replied_at.not.is.null";
 
       const [apolloMetrics, prevApolloMetrics]: [ApolloMetrics, ApolloMetrics] = await Promise.all([
         Promise.all([
