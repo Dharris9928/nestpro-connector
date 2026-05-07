@@ -413,7 +413,7 @@ export function usePipelineAnalytics(
       // AND a company_communications row (call_script) at the same timestamp.
       // Use the max to avoid double-counting (in case one side is missing for older records).
       const phoneCallsFromActivities = phoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
-      const phoneCallsFromComms = commsData.filter((c: any) => c.communication_type === "call_script").length;
+      const phoneCallsFromComms = commsMetrics.curCallScripts;
       const phoneCalls = Math.max(phoneCallsFromActivities, phoneCallsFromComms);
       
       // Upcoming meetings count (scheduled for future)
