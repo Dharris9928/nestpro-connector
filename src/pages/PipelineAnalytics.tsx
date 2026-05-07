@@ -209,6 +209,7 @@ export default function PipelineAnalytics() {
             perspective={perspective}
             userId={userId}
             regionFilter={regionFilter}
+            metrics={metrics}
           />
         </>
       ) : (

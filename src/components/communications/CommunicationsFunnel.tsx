@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RegionFilter, getFilterStates } from "@/lib/regions/regionConstants";
 import { Perspective } from "@/components/common/PerspectiveSelector";
+import type { PipelineMetrics } from "@/hooks/usePipelineAnalytics";
 
 interface FunnelStage {
   label: string;
@@ -17,13 +18,15 @@ interface CommunicationsFunnelProps {
   perspective?: Perspective;
   userId?: string;
   regionFilter?: RegionFilter;
+  metrics?: PipelineMetrics;
 }
 
 export function CommunicationsFunnel({ 
   dateRange, 
   perspective = "all_records", 
   userId,
-  regionFilter = "all" 
+  regionFilter = "all",
+  metrics,
 }: CommunicationsFunnelProps) {
   const { data: funnelData, isLoading } = useQuery({
     queryKey: ["communications-funnel", dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), perspective, userId, regionFilter],
@@ -109,9 +112,20 @@ export function CommunicationsFunnel({
         handoffs,
       };
     },
+    enabled: !metrics,
   });
 
-  if (isLoading) {
+  const resolvedFunnelData = metrics ? {
+    emailsSent: metrics.commsSent,
+    emailsOpened: metrics.emailsOpened,
+    emailsReplied: metrics.responsesReceived,
+    callsMade: metrics.phoneCalls,
+    meetingsBooked: metrics.meetingsScheduled + metrics.demosScheduled,
+    meetingsConducted: metrics.meetingsConducted,
+    handoffs: metrics.leadsAssigned,
+  } : funnelData;
+
+  if (!metrics && isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -128,7 +142,7 @@ export function CommunicationsFunnel({
     );
   }
 
-  const baseCount = funnelData?.emailsSent || 1;
+  const baseCount = resolvedFunnelData?.emailsSent || 1;
 
   // Helper to calculate percentage with 1 decimal place
   const calcPercentage = (count: number) => {
@@ -139,44 +153,44 @@ export function CommunicationsFunnel({
   const stages: FunnelStage[] = [
     {
       label: "Emails Sent",
-      count: funnelData?.emailsSent || 0,
+      count: resolvedFunnelData?.emailsSent || 0,
       percentage: 100,
       color: "hsl(var(--primary))",
     },
     {
       label: "Emails Opened",
-      count: funnelData?.emailsOpened || 0,
-      percentage: calcPercentage(funnelData?.emailsOpened || 0),
+      count: resolvedFunnelData?.emailsOpened || 0,
+      percentage: calcPercentage(resolvedFunnelData?.emailsOpened || 0),
       color: "hsl(217, 91%, 60%)", // blue-500
     },
     {
       label: "Emails Replied",
-      count: funnelData?.emailsReplied || 0,
-      percentage: calcPercentage(funnelData?.emailsReplied || 0),
+      count: resolvedFunnelData?.emailsReplied || 0,
+      percentage: calcPercentage(resolvedFunnelData?.emailsReplied || 0),
       color: "hsl(217, 91%, 70%)", // blue-400
     },
     {
       label: "Calls Made",
-      count: funnelData?.callsMade || 0,
-      percentage: calcPercentage(funnelData?.callsMade || 0),
+      count: resolvedFunnelData?.callsMade || 0,
+      percentage: calcPercentage(resolvedFunnelData?.callsMade || 0),
       color: "hsl(217, 91%, 80%)", // blue-300
     },
     {
       label: "Meetings Booked",
-      count: funnelData?.meetingsBooked || 0,
-      percentage: calcPercentage(funnelData?.meetingsBooked || 0),
+      count: resolvedFunnelData?.meetingsBooked || 0,
+      percentage: calcPercentage(resolvedFunnelData?.meetingsBooked || 0),
       color: "hsl(142, 76%, 45%)", // green-500
     },
     {
       label: "Meetings Conducted",
-      count: funnelData?.meetingsConducted || 0,
-      percentage: calcPercentage(funnelData?.meetingsConducted || 0),
+      count: resolvedFunnelData?.meetingsConducted || 0,
+      percentage: calcPercentage(resolvedFunnelData?.meetingsConducted || 0),
       color: "hsl(142, 76%, 36%)", // green-600
     },
     {
       label: "Handoffs",
-      count: funnelData?.handoffs || 0,
-      percentage: calcPercentage(funnelData?.handoffs || 0),
+      count: resolvedFunnelData?.handoffs || 0,
+      percentage: calcPercentage(resolvedFunnelData?.handoffs || 0),
       color: "hsl(270, 70%, 70%)", // purple
     },
   ];

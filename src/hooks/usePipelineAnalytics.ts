@@ -136,42 +136,27 @@ export function usePipelineAnalytics(
         return count || 0;
       };
 
-      const runApolloCount = async (from: string, to: string, filter: string, companyIds?: string[]) => {
-        // Fetch IDs and dedupe by apollo_activity_id to avoid inflation from re-imports
-        const buildQuery = (ids?: string[]) => {
-          let q = supabase
-            .from("apollo_email_activities")
-            .select("apollo_activity_id, id")
-            .gte("activity_date", from)
-            .lte("activity_date", to)
-            .or(filter);
-          if (ids) q = q.in("company_id", ids);
-          return buildPerspectiveFilter(q);
-        };
-
-        const dedupe = (rows: any[]) => {
-          const seen = new Set<string>();
-          for (const r of rows) {
-            const key = r.apollo_activity_id || `row_${r.id}`;
-            seen.add(key);
-          }
-          return seen.size;
-        };
-
-        if (!companyIds) {
-          const rows = await paginatedFetch(() => buildQuery());
-          return dedupe(rows);
+      const fetchApolloMetrics = async (from: string, to: string, companyIds?: string[]): Promise<ApolloMetrics> => {
+        if (companyIds && companyIds.length === 0) {
+          return { sent: 0, opened: 0, responded: 0 };
         }
-        if (companyIds.length === 0) return 0;
 
-        const seen = new Set<string>();
-        for (let i = 0; i < companyIds.length; i += 200) {
-          const rows = await paginatedFetch(() => buildQuery(companyIds.slice(i, i + 200)));
-          for (const r of rows) {
-            seen.add(r.apollo_activity_id || `row_${r.id}`);
-          }
-        }
-        return seen.size;
+        const { data, error } = await (supabase as any).rpc("get_apollo_email_metrics", {
+          _from: from,
+          _to: to,
+          _perspective: perspective,
+          _user_id: userId || null,
+          _company_ids: companyIds || null,
+        });
+
+        if (error) throw error;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        return {
+          sent: Number(row?.sent || 0),
+          opened: Number(row?.opened || 0),
+          responded: Number(row?.responded || 0),
+        };
       };
 
       let regionalCompanyIds: string[] | undefined;
@@ -254,11 +239,6 @@ export function usePipelineAnalytics(
         return buildPerspectiveFilter(q);
       };
 
-      // Strict filters — match what Apollo's UI reports.
-      const apolloSentFilter = "sent_at.not.is.null";
-      const apolloOpenedFilter = "opened_at.not.is.null";
-      const apolloRespondedFilter = "replied_at.not.is.null";
-
       // Run all major fetches in parallel
       const [
         commsDataRaw,
@@ -276,16 +256,8 @@ export function usePipelineAnalytics(
         paginatedFetch(buildPrevActivitiesQuery),
         paginatedFetch(buildOppsQuery),
         paginatedFetch(buildPrevOppsQuery),
-        Promise.all([
-          runApolloCount(fromDate, toDate, apolloSentFilter, regionalCompanyIds),
-          runApolloCount(fromDate, toDate, apolloOpenedFilter, regionalCompanyIds),
-          runApolloCount(fromDate, toDate, apolloRespondedFilter, regionalCompanyIds),
-        ]).then(([sent, opened, responded]): ApolloMetrics => ({ sent, opened, responded })),
-        Promise.all([
-          runApolloCount(prevFrom, prevTo, apolloSentFilter, regionalCompanyIds),
-          runApolloCount(prevFrom, prevTo, apolloOpenedFilter, regionalCompanyIds),
-          runApolloCount(prevFrom, prevTo, apolloRespondedFilter, regionalCompanyIds),
-        ]).then(([sent, opened, responded]): ApolloMetrics => ({ sent, opened, responded })),
+        fetchApolloMetrics(fromDate, toDate, regionalCompanyIds),
+        fetchApolloMetrics(prevFrom, prevTo, regionalCompanyIds),
       ]);
 
       // Region filter helper — reuse preloaded regionalCompanyIds (no extra queries)

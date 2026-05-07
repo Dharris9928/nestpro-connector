@@ -6245,6 +6245,20 @@ export type Database = {
           similarity_score: number
         }[]
       }
+      get_apollo_email_metrics: {
+        Args: {
+          _company_ids?: string[]
+          _from: string
+          _perspective?: string
+          _to: string
+          _user_id?: string
+        }
+        Returns: {
+          opened: number
+          responded: number
+          sent: number
+        }[]
+      }
       get_company_hierarchy: {
         Args: never
         Returns: {
