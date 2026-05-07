@@ -473,21 +473,8 @@ export function usePipelineAnalytics(
       const handoffRate = totalCompleted > 0 ? (leadsAssigned / totalCompleted) * 100 : 0;
       const closeRate = leadsAssigned > 0 ? (closedDeals / leadsAssigned) * 100 : 0;
 
-      // Calculate average response time
-      let totalResponseTime = 0;
-      let responseCount = 0;
-      commsData.forEach(c => {
-        if (c.sent_at && c.email_responded_at) {
-          const sentDate = new Date(c.sent_at);
-          const respondedDate = new Date(c.email_responded_at);
-          const diffDays = (respondedDate.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24);
-          if (diffDays >= 0) {
-            totalResponseTime += diffDays;
-            responseCount++;
-          }
-        }
-      });
-      const avgResponseTimeDays = responseCount > 0 ? totalResponseTime / responseCount : 0;
+      // Average response time — computed in DB
+      const avgResponseTimeDays = commsMetrics.curAvgResponseDays;
 
       // Calculate total pipeline value
       const totalPipelineValue = oppsData.reduce((sum, opp) => sum + (opp.amount || 0), 0);
