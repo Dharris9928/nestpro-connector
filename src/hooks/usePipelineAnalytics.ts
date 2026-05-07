@@ -30,6 +30,12 @@ interface HandoffDetail {
   amount: number | null;
 }
 
+interface ApolloMetrics {
+  sent: number;
+  opened: number;
+  responded: number;
+}
+
 interface PipelineMetrics {
   commsSent: number;
   emailsOpened: number;
@@ -100,7 +106,8 @@ export function usePipelineAnalytics(
   dateRange: DateRange,
   perspective: Perspective,
   userId?: string,
-  regionFilter: RegionFilter = "all"
+  regionFilter: RegionFilter = "all",
+  enabled: boolean = true
 ) {
   return useQuery({
     queryKey: ["pipeline-analytics", dateRange.from, dateRange.to, perspective, userId, regionFilter],
@@ -122,6 +129,45 @@ export function usePipelineAnalytics(
         }
         return query;
       };
+
+      const countRows = async (query: any) => {
+        const { count, error } = await query;
+        if (error) throw error;
+        return count || 0;
+      };
+
+      const runApolloCount = async (from: string, to: string, filter: string, companyIds?: string[]) => {
+        const buildCountQuery = (ids?: string[]) => {
+          let q = supabase
+            .from("apollo_email_activities")
+            .select("id", { count: "exact", head: true })
+            .gte("activity_date", from)
+            .lte("activity_date", to)
+            .or(filter);
+          if (ids) q = q.in("company_id", ids);
+          return buildPerspectiveFilter(q);
+        };
+
+        if (!companyIds) return countRows(buildCountQuery());
+        if (companyIds.length === 0) return 0;
+
+        let total = 0;
+        for (let i = 0; i < companyIds.length; i += 200) {
+          total += await countRows(buildCountQuery(companyIds.slice(i, i + 200)));
+        }
+        return total;
+      };
+
+      let regionalCompanyIds: string[] | undefined;
+      if (filterStates) {
+        const companies = await paginatedFetch(() =>
+          supabase
+            .from("companies")
+            .select("id")
+            .in("state", filterStates)
+        );
+        regionalCompanyIds = companies.map((company: any) => company.id);
+      }
 
       // Fetch communications data with contact info (paginated)
       const buildCommsQuery = () => {
@@ -153,55 +199,22 @@ export function usePipelineAnalytics(
         }
       }
 
-      // Fetch Apollo email activities (paginated)
-      const buildApolloQuery = () => {
-        let q = supabase
-          .from("apollo_email_activities")
-          .select("id, sent_at, opened_at, replied_at, status, company_id, contact_id, open_count, click_count, reply_count, activity_date")
-          .gte("activity_date", fromDate)
-          .lte("activity_date", toDate);
-        return buildPerspectiveFilter(q);
-      };
-      const apolloDataRaw = await paginatedFetch(buildApolloQuery);
-      
-      let apolloData = apolloDataRaw || [];
-      if (filterStates && apolloData.length > 0) {
-        const companyIds = [...new Set(apolloData.map((a: any) => a.company_id).filter(Boolean))];
-        if (companyIds.length > 0) {
-          const { data: companies } = await supabase
-            .from("companies")
-            .select("id, state")
-            .in("id", companyIds)
-            .in("state", filterStates);
-          const validCompanyIds = new Set(companies?.map(c => c.id) || []);
-          apolloData = apolloData.filter((a: any) => validCompanyIds.has(a.company_id));
-        }
-      }
+      const apolloSentFilter = "sent_at.not.is.null,status.in.(sent,not_opened,opened,replied,bounced)";
+      const apolloOpenedFilter = "opened_at.not.is.null,open_count.gt.0,status.in.(opened,replied)";
+      const apolloRespondedFilter = "replied_at.not.is.null,reply_count.gt.0,status.eq.replied";
 
-      // Fetch previous period Apollo data (paginated)
-      const buildPrevApolloQuery = () => {
-        let q = supabase
-          .from("apollo_email_activities")
-          .select("id, sent_at, opened_at, replied_at, status, company_id, open_count, click_count, reply_count, activity_date")
-          .gte("activity_date", prevFrom)
-          .lte("activity_date", prevTo);
-        return buildPerspectiveFilter(q);
-      };
-      const prevApolloDataRaw = await paginatedFetch(buildPrevApolloQuery);
-      
-      let prevApolloData = prevApolloDataRaw || [];
-      if (filterStates && prevApolloData.length > 0) {
-        const companyIds = [...new Set(prevApolloData.map((a: any) => a.company_id).filter(Boolean))];
-        if (companyIds.length > 0) {
-          const { data: companies } = await supabase
-            .from("companies")
-            .select("id, state")
-            .in("id", companyIds)
-            .in("state", filterStates);
-          const validCompanyIds = new Set(companies?.map(c => c.id) || []);
-          prevApolloData = prevApolloData.filter((a: any) => validCompanyIds.has(a.company_id));
-        }
-      }
+      const [apolloMetrics, prevApolloMetrics]: [ApolloMetrics, ApolloMetrics] = await Promise.all([
+        Promise.all([
+          runApolloCount(fromDate, toDate, apolloSentFilter, regionalCompanyIds),
+          runApolloCount(fromDate, toDate, apolloOpenedFilter, regionalCompanyIds),
+          runApolloCount(fromDate, toDate, apolloRespondedFilter, regionalCompanyIds),
+        ]).then(([sent, opened, responded]) => ({ sent, opened, responded })),
+        Promise.all([
+          runApolloCount(prevFrom, prevTo, apolloSentFilter, regionalCompanyIds),
+          runApolloCount(prevFrom, prevTo, apolloOpenedFilter, regionalCompanyIds),
+          runApolloCount(prevFrom, prevTo, apolloRespondedFilter, regionalCompanyIds),
+        ]).then(([sent, opened, responded]) => ({ sent, opened, responded })),
+      ]);
 
       // Fetch previous period communications (paginated)
       const buildPrevCommsQuery = () => {
@@ -233,7 +246,9 @@ export function usePipelineAnalytics(
         let q = supabase
           .from("outreach_activities")
           .select("id, activity_type, outcome, scheduled_date, completed_date, created_at, company_id")
-          .in("activity_type", ["Meeting", "Demo", "Phone"]);
+          .in("activity_type", ["Meeting", "Demo", "Phone"])
+          .or(`created_at.gte.${fromDate},completed_date.gte.${fromDate},scheduled_date.gte.${fromDate}`)
+          .or(`created_at.lte.${toDate},completed_date.lte.${toDate},scheduled_date.lte.${toDate}`);
         return buildPerspectiveFilter(q);
       };
       const activitiesDataRaw = await paginatedFetch(buildActivitiesQuery);
@@ -433,21 +448,16 @@ export function usePipelineAnalytics(
       // Calculate current period metrics
       // Combine comms sent from both company_communications and apollo_email_activities
       // Count Apollo records as sent if they have sent_at OR a sent/not_opened/opened/bounced status
-      const apolloSentStatuses = ['sent', 'not_opened', 'opened', 'replied', 'bounced'];
       const commsSent = commsData.filter(c => c.sent_at).length + 
-        apolloData.filter(a => a.sent_at || apolloSentStatuses.includes(a.status || '')).length;
+        apolloMetrics.sent;
       
       // Combine opened/responded from both tables
       const commsOpened = commsData.filter(c => c.email_opened_at).length;
-      const apolloOpened = apolloData.filter(a => 
-        a.opened_at || (a.open_count && a.open_count > 0) || a.status === 'opened' || a.status === 'replied'
-      ).length;
+      const apolloOpened = apolloMetrics.opened;
       const emailsOpened = commsOpened + apolloOpened;
       
       const commsResponded = commsData.filter(c => c.email_responded_at).length;
-      const apolloResponded = apolloData.filter(a => 
-        a.replied_at || (a.reply_count && a.reply_count > 0) || a.status === 'replied'
-      ).length;
+      const apolloResponded = apolloMetrics.responded;
       const responsesReceived = commsResponded + apolloResponded;
       
       // Meetings (Scheduled or Completed outcome)
@@ -486,16 +496,12 @@ export function usePipelineAnalytics(
 
       // Calculate previous period metrics (combine both tables)
       const prevCommsSent = prevCommsData.filter(c => c.sent_at).length + 
-        prevApolloData.filter(a => a.sent_at || apolloSentStatuses.includes(a.status || '')).length;
+        prevApolloMetrics.sent;
       const prevCommsOpened = prevCommsData.filter(c => c.email_opened_at).length;
-      const prevApolloOpened = prevApolloData.filter(a => 
-        a.opened_at || (a.open_count && a.open_count > 0) || a.status === 'opened' || a.status === 'replied'
-      ).length;
+      const prevApolloOpened = prevApolloMetrics.opened;
       const prevEmailsOpened = prevCommsOpened + prevApolloOpened;
       const prevCommsResponded = prevCommsData.filter(c => c.email_responded_at).length;
-      const prevApolloResponded = prevApolloData.filter(a => 
-        a.replied_at || (a.reply_count && a.reply_count > 0) || a.status === 'replied'
-      ).length;
+      const prevApolloResponded = prevApolloMetrics.responded;
       const prevResponsesReceived = prevCommsResponded + prevApolloResponded;
       const prevMeetingsScheduled = prevMeetingsData.filter(m => m.outcome === "Scheduled" || m.outcome === "Completed").length;
       const prevMeetingsCompleted = prevMeetingsData.filter(m => m.outcome === "Completed").length;
@@ -639,7 +645,7 @@ export function usePipelineAnalytics(
         },
       };
     },
-    enabled: !!dateRange.from && !!dateRange.to,
+    enabled: enabled && !!dateRange.from && !!dateRange.to,
   });
 }
 

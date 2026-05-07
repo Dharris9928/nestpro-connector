@@ -43,11 +43,11 @@ export default function PipelineAnalytics() {
     });
   }, []);
 
-  const { data: metrics, isLoading } = usePipelineAnalytics(dateRange, perspective, userId, regionFilter);
+  const { data: metrics, isLoading } = usePipelineAnalytics(dateRange, perspective, userId, regionFilter, viewTab === "analytics");
   
   // Fetch both regions for comparison tab
-  const { data: westMetrics, isLoading: isLoadingWest } = usePipelineAnalytics(dateRange, perspective, userId, "west");
-  const { data: eastMetrics, isLoading: isLoadingEast } = usePipelineAnalytics(dateRange, perspective, userId, "east");
+  const { data: westMetrics, isLoading: isLoadingWest } = usePipelineAnalytics(dateRange, perspective, userId, "west", viewTab === "comparison");
+  const { data: eastMetrics, isLoading: isLoadingEast } = usePipelineAnalytics(dateRange, perspective, userId, "east", viewTab === "comparison");
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
