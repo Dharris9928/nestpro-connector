@@ -185,7 +185,7 @@ export function usePipelineAnalytics(
         regionalCompanyIds = companies.map((company: any) => company.id);
       }
 
-      // Fetch communications data with contact info (paginated)
+      // Build all the main fetch queries
       const buildCommsQuery = () => {
         let q = supabase
           .from("company_communications")
@@ -198,7 +198,6 @@ export function usePipelineAnalytics(
           .lte("sent_at", toDate);
         return buildPerspectiveFilter(q, "user_id");
       };
-      const commsDataRaw = await paginatedFetch(buildCommsQuery);
 
       // Filter by region if needed
       let commsData = commsDataRaw || [];
