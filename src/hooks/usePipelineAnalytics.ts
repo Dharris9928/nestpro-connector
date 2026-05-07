@@ -174,7 +174,7 @@ export function usePipelineAnalytics(
         let q = supabase
           .from("company_communications")
           .select(`
-            id, sent_at, email_opened_at, email_responded_at, company_id, contact_id,
+            id, sent_at, email_opened_at, email_responded_at, company_id, contact_id, communication_type,
             companies!company_communications_company_id_fkey(id, company_name),
             contacts(id, first_name, last_name)
           `)
@@ -220,7 +220,7 @@ export function usePipelineAnalytics(
       const buildPrevCommsQuery = () => {
         let q = supabase
           .from("company_communications")
-          .select("id, sent_at, email_opened_at, email_responded_at, company_id")
+          .select("id, sent_at, email_opened_at, email_responded_at, company_id, communication_type")
           .gte("sent_at", prevFrom)
           .lte("sent_at", prevTo);
         return buildPerspectiveFilter(q, "user_id");
@@ -468,8 +468,10 @@ export function usePipelineAnalytics(
       const demosScheduled = demosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
       const demosCompleted = demosData.filter(d => d.outcome === "Completed").length;
       
-      // Phone calls (count all completed phone activities)
-      const phoneCalls = phoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
+      // Phone calls — combine outreach_activities (Phone) + company_communications (call_script)
+      const phoneCallsFromActivities = phoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
+      const phoneCallsFromComms = commsData.filter((c: any) => c.communication_type === "call_script").length;
+      const phoneCalls = phoneCallsFromActivities + phoneCallsFromComms;
       
       // Upcoming meetings count (scheduled for future)
       const upcomingMeetings = upcomingMeetingsData.length;
@@ -507,7 +509,8 @@ export function usePipelineAnalytics(
       const prevMeetingsCompleted = prevMeetingsData.filter(m => m.outcome === "Completed").length;
       const prevDemosScheduled = prevDemosData.filter(d => d.outcome === "Scheduled" || d.outcome === "Completed").length;
       const prevDemosCompleted = prevDemosData.filter(d => d.outcome === "Completed").length;
-      const prevPhoneCalls = prevPhoneData.filter(p => p.outcome === "Completed" || p.completed_date).length;
+      const prevPhoneCalls = prevPhoneData.filter(p => p.outcome === "Completed" || p.completed_date).length +
+                            prevCommsData.filter((c: any) => c.communication_type === "call_script").length;
       const prevUpcomingMeetings = prevUpcomingMeetingsData.length;
       const prevMeetingsConducted = prevMeetingsData.filter(m => m.outcome === "Completed" || m.completed_date).length +
                                     prevDemosData.filter(d => d.outcome === "Completed" || d.completed_date).length;
