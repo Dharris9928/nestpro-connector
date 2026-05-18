@@ -11,6 +11,7 @@ import { AddJobQuoteDialog } from "@/components/job-quotes/AddJobQuoteDialog";
 import { EditJobQuoteDialog } from "@/components/job-quotes/EditJobQuoteDialog";
 import { ImportJobQuotesDialog } from "@/components/job-quotes/ImportJobQuotesDialog";
 import { JobQuotesTable } from "@/components/job-quotes/JobQuotesTable";
+import { JobQuotesTrends } from "@/components/job-quotes/JobQuotesTrends";
 import {
   Select,
   SelectContent,
@@ -309,6 +310,9 @@ export default function JobQuotes() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Submission Trends */}
+      <JobQuotesTrends />
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
