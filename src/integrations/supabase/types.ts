@@ -4616,11 +4616,13 @@ export type Database = {
       sales_reps: {
         Row: {
           active: boolean
+          covered_states: string[] | null
           created_at: string
           created_by: string
           email: string
           first_name: string
           id: string
+          is_firm: boolean
           last_name: string
           notes: string | null
           phone: string | null
@@ -4629,11 +4631,13 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          covered_states?: string[] | null
           created_at?: string
           created_by: string
           email: string
           first_name: string
           id?: string
+          is_firm?: boolean
           last_name: string
           notes?: string | null
           phone?: string | null
@@ -4642,11 +4646,13 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          covered_states?: string[] | null
           created_at?: string
           created_by?: string
           email?: string
           first_name?: string
           id?: string
+          is_firm?: boolean
           last_name?: string
           notes?: string | null
           phone?: string | null
