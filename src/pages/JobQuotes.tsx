@@ -311,6 +311,9 @@ export default function JobQuotes() {
         </Card>
       </div>
 
+      {/* Submission Trends */}
+      <JobQuotesTrends />
+
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
