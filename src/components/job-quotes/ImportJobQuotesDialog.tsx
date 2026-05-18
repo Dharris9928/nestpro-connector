@@ -193,11 +193,11 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
     const key = mapped.wholesaler_name.trim().toLowerCase();
     if (cache.has(key)) return cache.get(key)!;
 
+    // Match by name (case-insensitive) — any existing company can be used as a wholesaler
     const { data: existing } = await supabase
       .from("companies")
       .select("id")
       .ilike("company_name", mapped.wholesaler_name.trim())
-      .eq("industry_type", "wholesaler")
       .limit(1)
       .maybeSingle();
 
@@ -206,11 +206,13 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
       return existing.id;
     }
 
+    // Wholesalers live under industry_type='Partner/Other' with 'Wholesaler' in industry_specialties
     const { data: created, error } = await supabase
       .from("companies")
       .insert({
         company_name: mapped.wholesaler_name.trim(),
-        industry_type: "wholesaler",
+        industry_type: "Partner/Other",
+        industry_specialties: ["Wholesaler"],
         city: mapped.wholesaler_city,
         state: mapped.wholesaler_state,
         zip: mapped.wholesaler_zip,
