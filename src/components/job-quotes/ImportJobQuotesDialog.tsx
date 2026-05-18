@@ -52,6 +52,27 @@ const toInt = (s: string): number => {
   return isNaN(n) ? 0 : n;
 };
 
+const parseCityStateZip = (s: string): { city: string | null; state: string | null; zip: string | null } => {
+  if (!s) return { city: null, state: null, zip: null };
+  // e.g. "NAMPA, ID" or "Jacksonville, FL 32256"
+  const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return { city: null, state: null, zip: null };
+  const city = parts[0] || null;
+  let state: string | null = null;
+  let zip: string | null = null;
+  if (parts.length >= 2) {
+    const sz = parts[1].split(/\s+/).filter(Boolean);
+    state = sz[0] || null;
+    zip = sz[1] || null;
+  }
+  return { city, state, zip };
+};
+
+interface ProductLine {
+  product_name: string;
+  quantity: number;
+}
+
 interface RowResult {
   quote_number: string | null;
   date_received: string;
@@ -60,6 +81,13 @@ interface RowResult {
   notes: string | null;
   comments: string | null;
   status: string;
+  wholesaler_name: string | null;
+  wholesaler_city: string | null;
+  wholesaler_state: string | null;
+  wholesaler_zip: string | null;
+  wholesaler_email: string | null;
+  wholesaler_phone: string | null;
+  products: ProductLine[];
 }
 
 function mapRow(row: ParsedRow): RowResult {
@@ -68,32 +96,37 @@ function mapRow(row: ParsedRow): RowResult {
     parseDate(get(row, "Created")) ||
     new Date().toISOString().split("T")[0];
 
-  const p1 = get(row, "Product #1", "Product 1", "Product");
-  const p2 = get(row, "Product #2", "Product 2");
-  const product = [p1, p2].filter(Boolean).join(", ") || null;
+  const p1Name = get(row, "Product #1", "Product 1", "Product");
+  const p1Qty = toInt(get(row, "Quantity"));
+  const p2Name = get(row, "Product #2", "Product 2");
+  const p2Qty = toInt(get(row, "Quantity (Product #2)", "Quantity 2"));
 
-  const qty =
-    toInt(get(row, "Quantity")) +
-    toInt(get(row, "Quantity (Product #2)", "Quantity 2"));
+  const products: ProductLine[] = [];
+  if (p1Name) products.push({ product_name: p1Name, quantity: p1Qty > 0 ? p1Qty : 1 });
+  if (p2Name) products.push({ product_name: p2Name, quantity: p2Qty > 0 ? p2Qty : 1 });
+
+  const product = products.map((p) => p.product_name).join(", ") || null;
+  const qty = products.reduce((s, p) => s + p.quantity, 0);
 
   const quoteNumber = get(row, "TSM Quote #", "TSM Quote#", "Quote #", "Quote Number") || null;
   const notes = get(row, "Notes") || null;
 
+  const wholesalerName = get(row, "Name") || null;
+  const { city, state, zip } = parseCityStateZip(get(row, "City, State, Zip"));
+
   const fields: Array<[string, string]> = [
-    ["Submitter", get(row, "Name")],
+    ["Submitter Contact", get(row, "Your First & Last Name")],
     ["Project", get(row, "Project Name")],
     ["Job Type", get(row, "Job Type")],
-    ["Location", get(row, "City, State, Zip")],
-    ["Contact", get(row, "Your First & Last Name")],
-    ["Phone", get(row, "Best Contact Phone Number")],
-    ["Email", get(row, "Your Company Email Address")],
-    ["TSM Rep", get(row, "My Google Nest Pro Rep")],
+    ["Developer", get(row, "Developer")],
     ["Job Start", get(row, "Job Start Date")],
     ["Job End", get(row, "Job End Date")],
     ["Material Delivery", get(row, "Expected Material Delivery Date")],
     ["Nest Spec'd", get(row, "Is Google Nest Spec'd For This Project?")],
+    ["TSM Rep", get(row, "My Google Nest Pro Rep")],
     ["TSM Account #", get(row, "Your TSM Account #")],
-    ["Developer", get(row, "Developer")],
+    ["Competing Product", get(row, "Competing Product")],
+    ["Competing Price", get(row, "Competing Product Price Point")],
   ];
   const comments =
     fields
@@ -112,6 +145,13 @@ function mapRow(row: ParsedRow): RowResult {
     notes,
     comments,
     status,
+    wholesaler_name: wholesalerName,
+    wholesaler_city: city,
+    wholesaler_state: state,
+    wholesaler_zip: zip,
+    wholesaler_email: get(row, "Your Company Email Address") || null,
+    wholesaler_phone: get(row, "Best Contact Phone Number") || null,
+    products,
   };
 }
 
@@ -124,7 +164,8 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
   const [result, setResult] = useState<{
     inserted: number;
     updated: number;
-    skippedNoQuote: number;
+    companiesCreated: number;
+    productsAdded: number;
     failed: number;
   } | null>(null);
 
@@ -139,6 +180,54 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
     if (isImporting) return;
     if (!next) reset();
     onOpenChange(next);
+  };
+
+  // Find an existing wholesaler company (case-insensitive name match), or create one
+  const resolveWholesaler = async (
+    mapped: RowResult,
+    userId: string,
+    cache: Map<string, string>,
+    counters: { companiesCreated: number }
+  ): Promise<string | null> => {
+    if (!mapped.wholesaler_name) return null;
+    const key = mapped.wholesaler_name.trim().toLowerCase();
+    if (cache.has(key)) return cache.get(key)!;
+
+    const { data: existing } = await supabase
+      .from("companies")
+      .select("id")
+      .ilike("company_name", mapped.wholesaler_name.trim())
+      .eq("industry_type", "wholesaler")
+      .limit(1)
+      .maybeSingle();
+
+    if (existing?.id) {
+      cache.set(key, existing.id);
+      return existing.id;
+    }
+
+    const { data: created, error } = await supabase
+      .from("companies")
+      .insert({
+        company_name: mapped.wholesaler_name.trim(),
+        industry_type: "wholesaler",
+        city: mapped.wholesaler_city,
+        state: mapped.wholesaler_state,
+        zip: mapped.wholesaler_zip,
+        primary_email: mapped.wholesaler_email,
+        primary_phone: mapped.wholesaler_phone,
+        created_by: userId,
+      })
+      .select("id")
+      .single();
+
+    if (error || !created) {
+      console.error("Failed to create wholesaler:", error);
+      return null;
+    }
+    counters.companiesCreated++;
+    cache.set(key, created.id);
+    return created.id;
   };
 
   const handleImport = async () => {
@@ -169,49 +258,70 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
         if (q.quote_number) existingMap.set(q.quote_number.trim().toLowerCase(), q.id);
       });
 
+      const companyCache = new Map<string, string>();
+      const counters = { companiesCreated: 0 };
       let inserted = 0;
       let updated = 0;
-      let skippedNoQuote = 0;
+      let productsAdded = 0;
       let failed = 0;
+
+      const insertProducts = async (quoteId: string, products: ProductLine[]) => {
+        if (products.length === 0) return;
+        // Clear existing products for this quote (in case of update)
+        await supabase.from("job_quote_products").delete().eq("job_quote_id", quoteId);
+        const { error } = await supabase.from("job_quote_products").insert(
+          products.map((p) => ({
+            job_quote_id: quoteId,
+            product_name: p.product_name,
+            quantity: p.quantity,
+            unit_price: 0,
+          }))
+        );
+        if (error) throw error;
+        productsAdded += products.length;
+      };
 
       for (let i = 0; i < rows.length; i++) {
         setProgress({ current: i + 1, total: rows.length });
         try {
           const mapped = mapRow(rows[i]);
+          const wholesalerId = await resolveWholesaler(mapped, user.id, companyCache, counters);
 
-          if (mapped.quote_number) {
-            const existingId = existingMap.get(mapped.quote_number.trim().toLowerCase());
-            if (existingId) {
-              const { error } = await supabase
-                .from("job_quotes")
-                .update({
-                  date_received: mapped.date_received,
-                  product: mapped.product,
-                  quantity: mapped.quantity,
-                  notes: mapped.notes,
-                  comments: mapped.comments,
-                  status: mapped.status,
-                })
-                .eq("id", existingId);
-              if (error) throw error;
-              updated++;
-              continue;
-            }
-          } else {
-            skippedNoQuote++;
-          }
-
-          const { error } = await supabase.from("job_quotes").insert({
-            quote_number: mapped.quote_number,
+          const payload = {
             date_received: mapped.date_received,
             product: mapped.product,
             quantity: mapped.quantity,
             notes: mapped.notes,
             comments: mapped.comments,
             status: mapped.status,
-            created_by: user.id,
-          });
+            wholesaler_id: wholesalerId,
+          };
+
+          if (mapped.quote_number) {
+            const existingId = existingMap.get(mapped.quote_number.trim().toLowerCase());
+            if (existingId) {
+              const { error } = await supabase
+                .from("job_quotes")
+                .update(payload)
+                .eq("id", existingId);
+              if (error) throw error;
+              await insertProducts(existingId, mapped.products);
+              updated++;
+              continue;
+            }
+          }
+
+          const { data: newQuote, error } = await supabase
+            .from("job_quotes")
+            .insert({
+              ...payload,
+              quote_number: mapped.quote_number,
+              created_by: user.id,
+            })
+            .select("id")
+            .single();
           if (error) throw error;
+          if (newQuote?.id) await insertProducts(newQuote.id, mapped.products);
           inserted++;
         } catch (err: any) {
           console.error("Row import failed:", err, rows[i]);
@@ -219,8 +329,15 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
         }
       }
 
-      setResult({ inserted, updated, skippedNoQuote, failed });
+      setResult({
+        inserted,
+        updated,
+        companiesCreated: counters.companiesCreated,
+        productsAdded,
+        failed,
+      });
       queryClient.invalidateQueries({ queryKey: ["job-quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
       toast({
         title: "Import complete",
         description: `${inserted} added, ${updated} updated${failed ? `, ${failed} failed` : ""}.`,
@@ -237,10 +354,7 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={handleClose}
-    >
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className="max-w-xl"
         onInteractOutside={(e) => isImporting && e.preventDefault()}
@@ -249,8 +363,8 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
         <DialogHeader>
           <DialogTitle>Import Job Quotes from CSV</DialogTitle>
           <DialogDescription>
-            Rows with a matching <strong>TSM Quote #</strong> will update existing quotes.
-            Rows without a quote number, or with new numbers, will be added.
+            Rows are mapped into the proper form fields. Matching{" "}
+            <strong>TSM Quote #</strong> updates existing quotes.
           </DialogDescription>
         </DialogHeader>
 
@@ -274,10 +388,15 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
           </div>
 
           <Alert>
-            <AlertDescription className="text-xs">
-              Expected columns: Name, Date, TSM Quote #, Product #1, Quantity,
-              Product #2, Quantity (Product #2), Status, Notes, Job Type, Project Name,
-              City/State/Zip, contact details, etc. Unknown columns are ignored.
+            <AlertDescription className="text-xs space-y-1">
+              <div className="font-medium">Column mapping:</div>
+              <div>• <strong>Name</strong> → Wholesaler company (matched or created with City/State/Zip + email/phone)</div>
+              <div>• <strong>Date</strong> → Date Received</div>
+              <div>• <strong>TSM Quote #</strong> → Quote # (used for de-duplication)</div>
+              <div>• <strong>Product #1/#2 + Quantity</strong> → Product line items</div>
+              <div>• <strong>Status</strong> → Status (Open → Pending)</div>
+              <div>• <strong>Notes</strong> → Notes</div>
+              <div>• Project, Job Type, Developer, Dates, TSM Rep, Account #, Competing Product → Comments</div>
             </AlertDescription>
           </Alert>
 
@@ -293,13 +412,10 @@ export function ImportJobQuotesDialog({ open, onOpenChange }: ImportJobQuotesDia
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
                 <div className="space-y-1 text-sm">
-                  <div>✓ Added: <strong>{result.inserted}</strong></div>
-                  <div>↻ Updated existing: <strong>{result.updated}</strong></div>
-                  {result.skippedNoQuote > 0 && (
-                    <div className="text-muted-foreground">
-                      ⓘ {result.skippedNoQuote} row(s) had no TSM Quote # — added as new.
-                    </div>
-                  )}
+                  <div>✓ Quotes added: <strong>{result.inserted}</strong></div>
+                  <div>↻ Quotes updated: <strong>{result.updated}</strong></div>
+                  <div>🏢 Wholesaler companies created: <strong>{result.companiesCreated}</strong></div>
+                  <div>📦 Product line items added: <strong>{result.productsAdded}</strong></div>
                   {result.failed > 0 && (
                     <div className="text-destructive flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" />
