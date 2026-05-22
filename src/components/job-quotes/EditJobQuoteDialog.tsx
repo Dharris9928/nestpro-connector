@@ -320,7 +320,24 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
             {status === "won" && (
               <div className="space-y-2">
                 <FormLabel>PO Document (optional)</FormLabel>
-                <PoFileUpload value={poFileUrl} onChange={setPoFileUrl} quoteId={quote?.id} />
+                <PoFileUpload
+                  value={poFileUrl}
+                  onChange={setPoFileUrl}
+                  quoteId={quote?.id}
+                  onExtracted={(data) => {
+                    if (data.po_number) form.setValue("po_number", data.po_number);
+                    if (data.po_date && !form.getValues("date_won")) {
+                      form.setValue("date_won", data.po_date);
+                    }
+                    if (data.notes) {
+                      const existing = form.getValues("notes") || "";
+                      form.setValue(
+                        "notes",
+                        existing ? `${existing}\n\nFrom PO: ${data.notes}` : `From PO: ${data.notes}`
+                      );
+                    }
+                  }}
+                />
               </div>
             )}
 
