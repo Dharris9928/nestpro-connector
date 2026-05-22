@@ -68,6 +68,7 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
   const [contacts, setContacts] = useState<JobQuoteContact[]>([]);
   const [products, setProducts] = useState<ProductLineItem[]>([]);
   const [assignee, setAssignee] = useState<string>("");
+  const [poFileUrl, setPoFileUrl] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
