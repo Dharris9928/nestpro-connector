@@ -90,6 +90,7 @@ const accessors: Record<string, (q: any) => any> = {
       .join(", "),
   status: (q) => q.status || "",
   date_won: (q) => (q.date_won ? new Date(q.date_won).getTime() : 0),
+  po_number: (q) => q.po_number || "",
 };
 
 export function JobQuotesTable({
