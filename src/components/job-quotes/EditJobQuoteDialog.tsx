@@ -98,6 +98,7 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
         date_received: quote.date_received?.split("T")[0] || "",
         date_won: quote.date_won?.split("T")[0] || "",
         status: quote.status || "pending",
+        po_number: quote.po_number || "",
         distributor_id: quote.distributor_id || "",
         wholesaler_id: quote.wholesaler_id || "",
         contractor_id: quote.contractor_id || "",
