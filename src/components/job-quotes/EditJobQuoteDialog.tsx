@@ -165,6 +165,7 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
           product: products.length > 0 ? products.map(p => p.product_name).join(", ") : null,
           quantity: products.reduce((sum, p) => sum + p.quantity, 0) || 1,
           price: grandTotal || null,
+          purchase_price: purchaseGrandTotal || null,
           notes: values.notes || null,
           comments: values.comments || null,
           assigned_to: assignee?.startsWith("user:") ? assignee.replace("user:", "") : (assignee && assignee !== "unassigned" && !assignee.startsWith("salesrep:") ? assignee : null),
@@ -186,6 +187,10 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
               product_name: p.product_name,
               quantity: p.quantity,
               unit_price: p.unit_price,
+              purchase_unit_price:
+                p.purchase_unit_price != null && !isNaN(p.purchase_unit_price)
+                  ? p.purchase_unit_price
+                  : null,
             }))
           );
         if (productsError) throw productsError;
