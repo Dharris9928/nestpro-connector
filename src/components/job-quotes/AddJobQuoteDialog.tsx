@@ -39,6 +39,7 @@ const formSchema = z.object({
   date_received: z.string().min(1, "Date received is required"),
   date_won: z.string().optional(),
   status: z.enum(["pending", "won", "lost"]),
+  po_number: z.string().optional(),
   distributor_id: z.string().optional(),
   wholesaler_id: z.string().optional(),
   contractor_id: z.string().optional(),
