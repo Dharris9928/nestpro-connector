@@ -129,10 +129,11 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
           product_name: p.product_name,
           quantity: p.quantity,
           unit_price: Number(p.unit_price),
+          purchase_unit_price:
+            p.purchase_unit_price != null ? Number(p.purchase_unit_price) : null,
         }))
       );
     } else if (quote && !existingProducts.length) {
-      // Legacy: if quote has single product field but no line items
       if (quote.product && existingProducts.length === 0) {
         setProducts([]);
       }
@@ -140,6 +141,15 @@ export function EditJobQuoteDialog({ open, onOpenChange, quote }: EditJobQuoteDi
   }, [existingProducts, quote]);
 
   const grandTotal = products.reduce((sum, p) => sum + p.quantity * p.unit_price, 0);
+  const purchaseGrandTotal = products.reduce(
+    (sum, p) =>
+      sum +
+      p.quantity *
+        (p.purchase_unit_price != null && !isNaN(p.purchase_unit_price)
+          ? p.purchase_unit_price
+          : p.unit_price),
+    0
+  );
 
   const updateMutation = useMutation({
     mutationFn: async (values: FormData) => {
