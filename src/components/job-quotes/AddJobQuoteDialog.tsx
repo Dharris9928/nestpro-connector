@@ -103,6 +103,7 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
           date_received: values.date_received,
           date_won: values.status === "won" && values.date_won ? values.date_won : null,
           status: values.status,
+          po_number: values.status === "won" && values.po_number ? values.po_number : null,
           distributor_id: values.distributor_id || null,
           wholesaler_id: values.wholesaler_id || null,
           contractor_id: values.contractor_id || null,
