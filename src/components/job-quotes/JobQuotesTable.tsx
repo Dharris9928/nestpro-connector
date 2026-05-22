@@ -62,6 +62,7 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   contacts: 160,
   status: 100,
   date_won: 120,
+  po_number: 130,
   actions: 60,
 };
 
