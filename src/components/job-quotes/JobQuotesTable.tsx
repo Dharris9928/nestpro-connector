@@ -62,12 +62,12 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   contacts: 160,
   status: 100,
   date_won: 120,
+  po_number: 130,
   actions: 60,
 };
 
 type SortDir = "asc" | "desc" | null;
 
-// Accessor for each sortable/filterable field
 const accessors: Record<string, (q: any) => any> = {
   date_received: (q) => (q.date_received ? new Date(q.date_received).getTime() : 0),
   product: (q) => q.product || "",
@@ -89,6 +89,7 @@ const accessors: Record<string, (q: any) => any> = {
       .join(", "),
   status: (q) => q.status || "",
   date_won: (q) => (q.date_won ? new Date(q.date_won).getTime() : 0),
+  po_number: (q) => q.po_number || "",
 };
 
 export function JobQuotesTable({
@@ -120,7 +121,6 @@ export function JobQuotesTable({
   const processed = useMemo(() => {
     let rows = [...quotes];
 
-    // Filter
     for (const [field, value] of Object.entries(filters)) {
       if (!value) continue;
       const accessor = accessors[field];
@@ -129,7 +129,6 @@ export function JobQuotesTable({
       rows = rows.filter((r) => String(accessor(r) ?? "").toLowerCase().includes(needle));
     }
 
-    // Sort
     if (sortField && sortDir) {
       const accessor = accessors[sortField];
       rows.sort((a, b) => {
@@ -311,6 +310,7 @@ export function JobQuotesTable({
                 <ResizableHeader field="contacts">Contacts</ResizableHeader>
                 <ResizableHeader field="status">Status</ResizableHeader>
                 <ResizableHeader field="date_won">Date Won</ResizableHeader>
+                <ResizableHeader field="po_number">PO Number</ResizableHeader>
                 <ResizableHeader field="actions" sortable={false} filterable={false}></ResizableHeader>
               </TableRow>
             </TableHeader>
@@ -396,7 +396,15 @@ export function JobQuotesTable({
                         : "-"}
                     </div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.actions, maxWidth: columnWidths.actions }} onClick={(e) => e.stopPropagation()}>
+                  <TableCell style={{ width: columnWidths.po_number, maxWidth: columnWidths.po_number }}>
+                    <div className="truncate font-medium" title={quote.po_number || ''}>
+                      {quote.po_number || "-"}
+                    </div>
+                  </TableCell>
+                  <TableCell
+                    style={{ width: columnWidths.actions, maxWidth: columnWidths.actions }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">

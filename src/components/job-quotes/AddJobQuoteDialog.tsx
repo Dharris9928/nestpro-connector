@@ -39,6 +39,7 @@ const formSchema = z.object({
   date_received: z.string().min(1, "Date received is required"),
   date_won: z.string().optional(),
   status: z.enum(["pending", "won", "lost"]),
+  po_number: z.string().optional(),
   distributor_id: z.string().optional(),
   wholesaler_id: z.string().optional(),
   contractor_id: z.string().optional(),
@@ -102,6 +103,7 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
           date_received: values.date_received,
           date_won: values.status === "won" && values.date_won ? values.date_won : null,
           status: values.status,
+          po_number: values.status === "won" && values.po_number ? values.po_number : null,
           distributor_id: values.distributor_id || null,
           wholesaler_id: values.wholesaler_id || null,
           contractor_id: values.contractor_id || null,
@@ -230,19 +232,34 @@ export function AddJobQuoteDialog({ open, onOpenChange }: AddJobQuoteDialogProps
             </div>
 
             {status === "won" && (
-              <FormField
-                control={form.control}
-                name="date_won"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date Won</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="date_won"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date Won</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="po_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PO Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Enter PO number..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
