@@ -145,8 +145,8 @@ const Auth = () => {
       if (factors?.totp && factors.totp.length > 0) {
         const totpFactor = factors.totp.find(f => f.status === 'verified');
         if (totpFactor) {
-          // Trusted device window: skip MFA if verified within the last 30 days on this device
-          const TRUST_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+          // Trusted device window: skip MFA if verified within the last 2 hours on this device
+          const TRUST_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
           const trustKey = `mfa_trusted_until_${data.user?.id}`;
           const trustedUntil = parseInt(localStorage.getItem(trustKey) || '0', 10);
           if (trustedUntil && Date.now() < trustedUntil) {
@@ -191,9 +191,9 @@ const Auth = () => {
     // Session is already established and upgraded to aal2 after MFA verification
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Mark this device as trusted for 30 days to skip MFA on subsequent logins
+    // Mark this device as trusted for 2 hours to skip MFA on subsequent logins
     if (user) {
-      const TRUST_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+      const TRUST_WINDOW_MS = 2 * 60 * 60 * 1000;
       localStorage.setItem(`mfa_trusted_until_${user.id}`, String(Date.now() + TRUST_WINDOW_MS));
     }
 
