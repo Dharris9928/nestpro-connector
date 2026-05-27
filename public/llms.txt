@@ -1,0 +1,9 @@
+# NestPro Connector
+
+> Sales CRM for managing builder and contractor relationships, lead scoring, and pipeline analytics in the smart home channel.
+
+NestPro Connector is an internal sales platform. The application itself is behind authentication; the public landing page is the only crawlable surface.
+
+## Pages
+
+- [Home](/): Sign in to NestPro Connector.
