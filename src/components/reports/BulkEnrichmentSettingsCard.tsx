@@ -211,6 +211,9 @@ export function BulkEnrichmentSettingsCard() {
           </div>
         </div>
 
+        <TierUpgradeRecommendations currentTier={settings.tier} onUpgrade={(t) => save({ tier: t })} disabled={saving} />
+
+
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
             {settings.enabled && ready > 0
