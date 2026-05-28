@@ -623,11 +623,12 @@ const Auth = () => {
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
                     id="signup-email"
+                    name="email"
                     type="email"
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
+                    autoComplete="username"
                     required
                   />
                 </div>
@@ -635,6 +636,7 @@ const Auth = () => {
                   <Label htmlFor="signup-password">Password</Label>
                   <PasswordInput
                     id="signup-password"
+                    name="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="new-password"
