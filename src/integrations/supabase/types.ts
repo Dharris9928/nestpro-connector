@@ -146,6 +146,51 @@ export type Database = {
           },
         ]
       }
+      ai_action_log: {
+        Row: {
+          action_name: string
+          confirmed_by_user: boolean
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          payload: Json | null
+          result: Json | null
+          status: string
+          target_id: string | null
+          target_table: string | null
+          user_id: string
+        }
+        Insert: {
+          action_name: string
+          confirmed_by_user?: boolean
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          payload?: Json | null
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+          target_table?: string | null
+          user_id: string
+        }
+        Update: {
+          action_name?: string
+          confirmed_by_user?: boolean
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          payload?: Json | null
+          result?: Json | null
+          status?: string
+          target_id?: string | null
+          target_table?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_usage_logs: {
         Row: {
           ai_model: string
@@ -672,6 +717,193 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      automation_action_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          dedupe_key: string
+          dedupe_until: string
+          id: string
+          payload: Json | null
+          rule_id: string
+          rule_key: string
+          target_id: string
+          target_table: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          dedupe_key: string
+          dedupe_until: string
+          id?: string
+          payload?: Json | null
+          rule_id: string
+          rule_key: string
+          target_id: string
+          target_table: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          dedupe_key?: string
+          dedupe_until?: string
+          id?: string
+          payload?: Json | null
+          rule_id?: string
+          rule_key?: string
+          target_id?: string
+          target_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_action_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          config: Json
+          cost_ceilings: Json
+          created_at: string
+          description: string | null
+          flagged_for_review: boolean
+          flagged_reason: string | null
+          flow_type: string
+          id: string
+          last_run_at: string | null
+          last_run_status: string | null
+          mode: string
+          name: string
+          rule_key: string
+          safety_limits: Json
+          schedule_cron: string
+          schedule_timezone: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          cost_ceilings?: Json
+          created_at?: string
+          description?: string | null
+          flagged_for_review?: boolean
+          flagged_reason?: string | null
+          flow_type: string
+          id?: string
+          last_run_at?: string | null
+          last_run_status?: string | null
+          mode?: string
+          name: string
+          rule_key: string
+          safety_limits?: Json
+          schedule_cron: string
+          schedule_timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          cost_ceilings?: Json
+          created_at?: string
+          description?: string | null
+          flagged_for_review?: boolean
+          flagged_reason?: string | null
+          flow_type?: string
+          id?: string
+          last_run_at?: string | null
+          last_run_status?: string | null
+          mode?: string
+          name?: string
+          rule_key?: string
+          safety_limits?: Json
+          schedule_cron?: string
+          schedule_timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      automation_runs: {
+        Row: {
+          ai_calls_used: number | null
+          attempt_number: number
+          created_at: string
+          dry_run_payload: Json | null
+          duration_ms: number | null
+          error_category: string | null
+          error_message: string | null
+          error_stack: string | null
+          finished_at: string | null
+          fix_attempts: Json
+          flagged_for_review: boolean
+          id: string
+          mode: string
+          notifications_sent: number | null
+          result_payload: Json | null
+          rows_acted_on: number | null
+          rows_scanned: number | null
+          rule_id: string
+          rule_key: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          ai_calls_used?: number | null
+          attempt_number?: number
+          created_at?: string
+          dry_run_payload?: Json | null
+          duration_ms?: number | null
+          error_category?: string | null
+          error_message?: string | null
+          error_stack?: string | null
+          finished_at?: string | null
+          fix_attempts?: Json
+          flagged_for_review?: boolean
+          id?: string
+          mode: string
+          notifications_sent?: number | null
+          result_payload?: Json | null
+          rows_acted_on?: number | null
+          rows_scanned?: number | null
+          rule_id: string
+          rule_key: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          ai_calls_used?: number | null
+          attempt_number?: number
+          created_at?: string
+          dry_run_payload?: Json | null
+          duration_ms?: number | null
+          error_category?: string | null
+          error_message?: string | null
+          error_stack?: string | null
+          finished_at?: string | null
+          fix_attempts?: Json
+          flagged_for_review?: boolean
+          id?: string
+          mode?: string
+          notifications_sent?: number | null
+          result_payload?: Json | null
+          rows_acted_on?: number | null
+          rows_scanned?: number | null
+          rule_id?: string
+          rule_key?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       blocked_signup_attempts: {
         Row: {
@@ -3451,10 +3683,18 @@ export type Database = {
           access_revoked: boolean
           access_status: boolean
           appeal_submitted: boolean
+          assistant_sound_enabled: boolean
+          assistant_widget_enabled: boolean
+          automation_enrichment: boolean
+          automation_hot_lead: boolean
+          automation_meeting_followup: boolean
+          automation_stale_opportunity: boolean
           communication_requests: boolean
           created_at: string
           delivery_method: string
           id: string
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
           updated_at: string
           user_id: string
         }
@@ -3464,10 +3704,18 @@ export type Database = {
           access_revoked?: boolean
           access_status?: boolean
           appeal_submitted?: boolean
+          assistant_sound_enabled?: boolean
+          assistant_widget_enabled?: boolean
+          automation_enrichment?: boolean
+          automation_hot_lead?: boolean
+          automation_meeting_followup?: boolean
+          automation_stale_opportunity?: boolean
           communication_requests?: boolean
           created_at?: string
           delivery_method?: string
           id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
           updated_at?: string
           user_id: string
         }
@@ -3477,10 +3725,18 @@ export type Database = {
           access_revoked?: boolean
           access_status?: boolean
           appeal_submitted?: boolean
+          assistant_sound_enabled?: boolean
+          assistant_widget_enabled?: boolean
+          automation_enrichment?: boolean
+          automation_hot_lead?: boolean
+          automation_meeting_followup?: boolean
+          automation_stale_opportunity?: boolean
           communication_requests?: boolean
           created_at?: string
           delivery_method?: string
           id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
           updated_at?: string
           user_id?: string
         }
