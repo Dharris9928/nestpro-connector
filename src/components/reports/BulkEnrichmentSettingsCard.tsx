@@ -112,12 +112,28 @@ export function BulkEnrichmentSettingsCard() {
       </CardHeader>
       <CardContent className="space-y-6">
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <Stat label="Total" value={stats.total} />
-            <Stat label="Scored" value={stats.scored} tone="success" />
-            <Stat label="Awaiting Enrichment" value={ready} tone="warning" />
-            <Stat label="Tried (last 7d)" value={stats.attempted_recent} tone="muted" />
-          </div>
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <Stat label="Total" value={stats.total} />
+              <Stat label="Scored" value={stats.scored} tone="success" />
+              <Stat label="Awaiting Enrichment" value={ready} tone="warning" />
+              <Stat label="Tried (last 7d)" value={stats.attempted_recent} tone="muted" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Enrichment progress</span>
+                <span>
+                  {stats.scored.toLocaleString()} / {stats.total.toLocaleString()} ({stats.total ? Math.round((stats.scored / stats.total) * 100) : 0}%)
+                </span>
+              </div>
+              <Progress value={stats.total ? (stats.scored / stats.total) * 100 : 0} />
+              {settings.enabled && ready > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {ready.toLocaleString()} remaining · processing {settings.batch_size} every 2 min
+                </p>
+              )}
+            </div>
+          </>
         )}
 
         <div className="flex items-center justify-between rounded-lg border p-4">
