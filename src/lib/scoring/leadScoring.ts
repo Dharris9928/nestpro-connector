@@ -240,14 +240,16 @@ function deriveInstallVolume(c: any): number {
 }
 
 function buildBuilderInput(c: any): BuilderScoringInput {
-  const bestContact = (c.contacts ?? []).reduce<{ authority: ContactAuthority; score: number }>(
-    (best, contact) => {
+  const bestContact = ((c.contacts ?? []) as any[]).reduce(
+    (best: { authority: ContactAuthority; score: number }, contact: any) => {
       const a = mapContactAuthority(contact.title);
       const rank = { owner_csuite: 4, vp_director: 3, manager: 2, gatekeeper_only: 1, no_contact: 0 }[a];
       return rank > best.score ? { authority: a, score: rank } : best;
     },
-    { authority: 'no_contact', score: 0 }
+    { authority: 'no_contact' as ContactAuthority, score: 0 }
   );
+
+
 
   return {
     annual_volume: deriveAnnualVolume(c),
@@ -268,19 +270,24 @@ function buildBuilderInput(c: any): BuilderScoringInput {
 }
 
 function buildContractorInput(c: any): ContractorScoringInput {
-  const bestContact = (c.contacts ?? []).reduce<{ authority: ContactAuthority; score: number }>(
-    (best, contact) => {
+  const bestContact = ((c.contacts ?? []) as any[]).reduce(
+    (best: { authority: ContactAuthority; score: number }, contact: any) => {
       const a = mapContactAuthority(contact.title);
       const rank = { owner_csuite: 4, vp_director: 3, manager: 2, gatekeeper_only: 1, no_contact: 0 }[a];
       return rank > best.score ? { authority: a, score: rank } : best;
     },
-    { authority: 'no_contact', score: 0 }
+    { authority: 'no_contact' as ContactAuthority, score: 0 }
   );
 
-  // ContractorScoringInput restricts smart_home_readiness to specific values
-  const readiness = (c.smart_home_readiness as ContractorScoringInput['smart_home_readiness']) ?? 'open_no_program';
+  // ContractorScoringInput restricts smart_home_readiness to specific values;
+  // the DB field uses the Builder enum ("evaluating") which we normalize to
+  // the contractor equivalent ("considering").
+  const rawReadiness = (c.smart_home_readiness as string | null) ?? 'open_no_program';
   const normalizedReadiness: ContractorScoringInput['smart_home_readiness'] =
-    readiness === 'evaluating' ? 'considering' : readiness;
+    rawReadiness === 'evaluating'
+      ? 'considering'
+      : (rawReadiness as ContractorScoringInput['smart_home_readiness']);
+
 
   return {
     annual_install_units: deriveInstallVolume(c),
