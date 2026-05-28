@@ -48,6 +48,7 @@ import { ImportExportLogsViewer } from "@/components/settings/audit/ImportExport
 import { TeamManagement } from "@/components/settings/TeamManagement";
 import { ApprovalAuditViewer } from "@/components/settings/audit/ApprovalAuditViewer";
 import { ContactAccessLogsViewer } from "@/components/settings/audit/ContactAccessLogsViewer";
+import { AutomationKillSwitch } from "@/components/settings/AutomationKillSwitch";
 import { AccessRequestsPanel } from '@/components/settings/AccessRequestsPanel';
 import { FieldPermissionsManager } from '@/components/settings/FieldPermissionsManager';
 import { FieldAccessAuditLog } from '@/components/settings/FieldAccessAuditLog';
@@ -254,6 +255,9 @@ const Settings = () => {
 
         {/* AI Error Helper */}
         <AIErrorHelper />
+
+        {/* Automation Kill Switch (admin-only, self-gates) */}
+        <AutomationKillSwitch />
 
         {/* Admin Impersonation Tool */}
         {userData?.role === 'admin' && <UserImpersonation />}
