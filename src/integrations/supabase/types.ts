@@ -6503,6 +6503,11 @@ export type Database = {
         Args: { _field_name: string; _table_name: string; _user_id: string }
         Returns: undefined
       }
+      disable_all_automation: { Args: { reason?: string }; Returns: number }
+      enable_automation_rule: {
+        Args: { _mode?: string; _rule_key: string }
+        Returns: boolean
+      }
       encrypt_text: { Args: { plain_text: string }; Returns: string }
       execute_admin_sql: { Args: { sql_query: string }; Returns: string }
       find_duplicate_companies: {
