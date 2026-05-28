@@ -63,6 +63,16 @@ export function BulkEnrichmentSettingsCard() {
 
   useEffect(() => { load(); }, []);
 
+  // Auto-refresh stats every 15s while cron is enabled
+  useEffect(() => {
+    if (!settings?.enabled) return;
+    const id = setInterval(async () => {
+      const s = await loadStats();
+      if (s) setStats(s);
+    }, 15000);
+    return () => clearInterval(id);
+  }, [settings?.enabled]);
+
   const save = async (patch: Partial<Settings>) => {
     if (!settings) return;
     setSaving(true);
