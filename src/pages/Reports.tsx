@@ -3,6 +3,7 @@ import { ScoringBreakdownReport } from '@/components/reports/ScoringBreakdownRep
 import { ContactsScoringReport } from '@/components/reports/ContactsScoringReport';
 import { RecalculateAllScoresButton } from '@/components/reports/RecalculateAllScoresButton';
 import { RecalculateContractorScoresButton } from '@/components/reports/RecalculateContractorScoresButton';
+import { BulkEnrichButton } from '@/components/reports/BulkEnrichButton';
 
 const Reports = () => {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -19,7 +20,8 @@ const Reports = () => {
           <h1 className="text-3xl font-bold text-foreground">Reports</h1>
           <p className="text-muted-foreground mt-2">Analytics and reporting</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <BulkEnrichButton onComplete={handleRecalculateComplete} />
           <RecalculateContractorScoresButton onComplete={handleRecalculateComplete} />
           <RecalculateAllScoresButton onComplete={handleRecalculateComplete} />
         </div>
