@@ -1,3 +1,5 @@
+import { buildEnrichmentSystemPrompt, V2_STRATEGIC_TOOL_PROPERTIES, extractV2Fields } from "../_shared/enrichmentDirectives.ts";
+
 // Deepseek enrichment function
 export async function enrichWithDeepseek(company: any, deepEnrich: boolean) {
   const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
