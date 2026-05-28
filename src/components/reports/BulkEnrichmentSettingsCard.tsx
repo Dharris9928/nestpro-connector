@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Bot, Loader2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface Settings {
   enabled: boolean;
