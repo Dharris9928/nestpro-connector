@@ -27,7 +27,9 @@ const Reports = () => {
           <RecalculateAllScoresButton onComplete={handleRecalculateComplete} />
         </div>
       </div>
-      
+
+      <BulkEnrichmentSettingsCard />
+
       <ScoringBreakdownReport key={`scoring-${refreshKey}`} />
       
       <ContactsScoringReport key={`contacts-${refreshKey}`} />
