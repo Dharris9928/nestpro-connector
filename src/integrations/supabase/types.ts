@@ -1427,6 +1427,7 @@ export type Database = {
           assigned_to_sales_rep_id: string | null
           average_home_price: number | null
           average_home_price_range: string | null
+          builder_segment: string | null
           buying_intent_last_detected: string | null
           buying_intent_strength: string | null
           buying_intent_topics: string[] | null
@@ -1434,6 +1435,9 @@ export type Database = {
           company_logo: string | null
           company_name: string
           company_type: string | null
+          competitor_status: string | null
+          contact_trust_level: string | null
+          contractor_segment: string | null
           contractor_specialty: string | null
           created_at: string | null
           created_by: string
@@ -1444,6 +1448,7 @@ export type Database = {
           facebook_url: string | null
           financial_health_rating: string | null
           franchise_name: string | null
+          geographic_tier: string | null
           has_google_business_profile: boolean | null
           hvac_monitoring: string | null
           id: string
@@ -1464,6 +1469,7 @@ export type Database = {
           nest_installation_volume_range: string | null
           nest_pro_industry: string | null
           nest_pro_partner_id: string | null
+          nest_pro_status: string | null
           nest_product_mix: string[] | null
           next_activity_date: string | null
           next_activity_type: string | null
@@ -1477,6 +1483,7 @@ export type Database = {
           parent_company_id: string | null
           partner_introduction_date: string | null
           partner_relationship_status: string | null
+          permits_in_pipeline: number
           positive_reviews_reputation: boolean | null
           price_point_category: string | null
           primary_email: string | null
@@ -1485,24 +1492,32 @@ export type Database = {
           primary_phone_encrypted: string | null
           priority_tier: string | null
           profitability_level: string | null
+          program_readiness_stage: string | null
           region: string | null
           revenue_growth_indicators: boolean | null
           revenue_growth_trend: string | null
+          score_breakdown_v2: Json | null
           score_calculated_at: string | null
           segment: string | null
           segment_confidence: string | null
+          service_agreement_count: number
           service_area_type: string | null
+          smart_home_readiness: string | null
           social_media_presence: string | null
           state: string | null
           status: string | null
+          tech_adoption_signal: string | null
           technology_adoption_level: string | null
           total_employees: number | null
           total_employees_range: string | null
+          training_readiness: string | null
           updated_at: string | null
           website_has_smart_home_content: boolean | null
           website_last_updated: string | null
           website_quality: string | null
           website_url: string | null
+          wholesale_partner_match: string | null
+          work_type_focus: string | null
           years_in_business: number | null
           years_in_business_range: string | null
           youtube_url: string | null
@@ -1517,6 +1532,7 @@ export type Database = {
           assigned_to_sales_rep_id?: string | null
           average_home_price?: number | null
           average_home_price_range?: string | null
+          builder_segment?: string | null
           buying_intent_last_detected?: string | null
           buying_intent_strength?: string | null
           buying_intent_topics?: string[] | null
@@ -1524,6 +1540,9 @@ export type Database = {
           company_logo?: string | null
           company_name: string
           company_type?: string | null
+          competitor_status?: string | null
+          contact_trust_level?: string | null
+          contractor_segment?: string | null
           contractor_specialty?: string | null
           created_at?: string | null
           created_by: string
@@ -1534,6 +1553,7 @@ export type Database = {
           facebook_url?: string | null
           financial_health_rating?: string | null
           franchise_name?: string | null
+          geographic_tier?: string | null
           has_google_business_profile?: boolean | null
           hvac_monitoring?: string | null
           id?: string
@@ -1554,6 +1574,7 @@ export type Database = {
           nest_installation_volume_range?: string | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          nest_pro_status?: string | null
           nest_product_mix?: string[] | null
           next_activity_date?: string | null
           next_activity_type?: string | null
@@ -1567,6 +1588,7 @@ export type Database = {
           parent_company_id?: string | null
           partner_introduction_date?: string | null
           partner_relationship_status?: string | null
+          permits_in_pipeline?: number
           positive_reviews_reputation?: boolean | null
           price_point_category?: string | null
           primary_email?: string | null
@@ -1575,24 +1597,32 @@ export type Database = {
           primary_phone_encrypted?: string | null
           priority_tier?: string | null
           profitability_level?: string | null
+          program_readiness_stage?: string | null
           region?: string | null
           revenue_growth_indicators?: boolean | null
           revenue_growth_trend?: string | null
+          score_breakdown_v2?: Json | null
           score_calculated_at?: string | null
           segment?: string | null
           segment_confidence?: string | null
+          service_agreement_count?: number
           service_area_type?: string | null
+          smart_home_readiness?: string | null
           social_media_presence?: string | null
           state?: string | null
           status?: string | null
+          tech_adoption_signal?: string | null
           technology_adoption_level?: string | null
           total_employees?: number | null
           total_employees_range?: string | null
+          training_readiness?: string | null
           updated_at?: string | null
           website_has_smart_home_content?: boolean | null
           website_last_updated?: string | null
           website_quality?: string | null
           website_url?: string | null
+          wholesale_partner_match?: string | null
+          work_type_focus?: string | null
           years_in_business?: number | null
           years_in_business_range?: string | null
           youtube_url?: string | null
@@ -1607,6 +1637,7 @@ export type Database = {
           assigned_to_sales_rep_id?: string | null
           average_home_price?: number | null
           average_home_price_range?: string | null
+          builder_segment?: string | null
           buying_intent_last_detected?: string | null
           buying_intent_strength?: string | null
           buying_intent_topics?: string[] | null
@@ -1614,6 +1645,9 @@ export type Database = {
           company_logo?: string | null
           company_name?: string
           company_type?: string | null
+          competitor_status?: string | null
+          contact_trust_level?: string | null
+          contractor_segment?: string | null
           contractor_specialty?: string | null
           created_at?: string | null
           created_by?: string
@@ -1624,6 +1658,7 @@ export type Database = {
           facebook_url?: string | null
           financial_health_rating?: string | null
           franchise_name?: string | null
+          geographic_tier?: string | null
           has_google_business_profile?: boolean | null
           hvac_monitoring?: string | null
           id?: string
@@ -1644,6 +1679,7 @@ export type Database = {
           nest_installation_volume_range?: string | null
           nest_pro_industry?: string | null
           nest_pro_partner_id?: string | null
+          nest_pro_status?: string | null
           nest_product_mix?: string[] | null
           next_activity_date?: string | null
           next_activity_type?: string | null
@@ -1657,6 +1693,7 @@ export type Database = {
           parent_company_id?: string | null
           partner_introduction_date?: string | null
           partner_relationship_status?: string | null
+          permits_in_pipeline?: number
           positive_reviews_reputation?: boolean | null
           price_point_category?: string | null
           primary_email?: string | null
@@ -1665,24 +1702,32 @@ export type Database = {
           primary_phone_encrypted?: string | null
           priority_tier?: string | null
           profitability_level?: string | null
+          program_readiness_stage?: string | null
           region?: string | null
           revenue_growth_indicators?: boolean | null
           revenue_growth_trend?: string | null
+          score_breakdown_v2?: Json | null
           score_calculated_at?: string | null
           segment?: string | null
           segment_confidence?: string | null
+          service_agreement_count?: number
           service_area_type?: string | null
+          smart_home_readiness?: string | null
           social_media_presence?: string | null
           state?: string | null
           status?: string | null
+          tech_adoption_signal?: string | null
           technology_adoption_level?: string | null
           total_employees?: number | null
           total_employees_range?: string | null
+          training_readiness?: string | null
           updated_at?: string | null
           website_has_smart_home_content?: boolean | null
           website_last_updated?: string | null
           website_quality?: string | null
           website_url?: string | null
+          wholesale_partner_match?: string | null
+          work_type_focus?: string | null
           years_in_business?: number | null
           years_in_business_range?: string | null
           youtube_url?: string | null

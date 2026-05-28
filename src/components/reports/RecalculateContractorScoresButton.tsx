@@ -43,20 +43,24 @@ export function RecalculateContractorScoresButton({ onComplete }: RecalculateCon
       }
 
       const results = await response.json();
+      const tiers = results.by_tier ?? {};
+      const channels = results.by_channel ?? {};
 
       toast({
-        title: 'Recalculation Complete',
-        description: `Successfully recalculated ${results.success} of ${results.total} contractors. ${results.errors > 0 ? `${results.errors} errors occurred.` : ''}`,
+        title: 'v2.0 Recalculation Complete',
+        description:
+          `Scored ${results.success}/${results.total} companies ` +
+          `(${channels.Builder ?? 0} builder, ${channels.Contractor ?? 0} contractor). ` +
+          `P1:${tiers.P1 ?? 0} · P2:${tiers.P2 ?? 0} · P3:${tiers.P3 ?? 0} · Unscored:${tiers.Unscored ?? 0}` +
+          (results.errors > 0 ? ` · ${results.errors} errors` : ''),
       });
 
-      if (onComplete) {
-        onComplete();
-      }
+      if (onComplete) onComplete();
     } catch (error: any) {
-      console.error('Error recalculating contractor scores:', error);
+      console.error('Error recalculating v2 scores:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to recalculate contractor scores',
+        description: error.message || 'Failed to recalculate v2.0 scores',
         variant: 'destructive',
       });
     } finally {
@@ -66,14 +70,9 @@ export function RecalculateContractorScoresButton({ onComplete }: RecalculateCon
   };
 
   return (
-    <Button
-      onClick={handleRecalculateAll}
-      disabled={calculating}
-      variant="outline"
-      size="sm"
-    >
+    <Button onClick={handleRecalculateAll} disabled={calculating} variant="outline" size="sm">
       <RefreshCw className={`h-4 w-4 mr-2 ${calculating ? 'animate-spin' : ''}`} />
-      {calculating ? progress || 'Recalculating...' : 'Recalculate All Contractor Scores'}
+      {calculating ? progress || 'Recalculating v2.0...' : 'Recalculate v2.0 Scores (All Companies)'}
     </Button>
   );
 }
