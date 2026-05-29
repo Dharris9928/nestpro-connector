@@ -3326,7 +3326,7 @@ export type Database = {
           impersonated_user_id: string
           ip_address: unknown
           is_active: boolean | null
-          session_token: string
+          session_token_hash: string | null
           user_agent: string | null
         }
         Insert: {
@@ -3338,7 +3338,7 @@ export type Database = {
           impersonated_user_id: string
           ip_address?: unknown
           is_active?: boolean | null
-          session_token: string
+          session_token_hash?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -3350,7 +3350,7 @@ export type Database = {
           impersonated_user_id?: string
           ip_address?: unknown
           is_active?: boolean | null
-          session_token?: string
+          session_token_hash?: string | null
           user_agent?: string | null
         }
         Relationships: []
