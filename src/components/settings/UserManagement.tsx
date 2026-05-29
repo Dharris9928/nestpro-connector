@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from "sonner";
 import { Shield, ShieldAlert, ShieldCheck, Eye, Key, Pencil, Plus, Mail, Ban, UserX, CheckCircle, UserCog } from "lucide-react";
 import { useImpersonation } from "@/hooks/useImpersonation";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Tooltip,
@@ -40,7 +41,8 @@ interface UserProfile {
 }
 
 export function UserManagement() {
-  const { startImpersonation } = useImpersonation();
+  const { startImpersonation, isImpersonating } = useImpersonation();
+  const { data: effectiveRole } = useUserRole();
   const [approvedUsers, setApprovedUsers] = useState<UserProfile[]>([]);
   const [invitedUsers, setInvitedUsers] = useState<UserProfile[]>([]);
   const [pendingSignups, setPendingSignups] = useState<UserProfile[]>([]);
@@ -526,7 +528,8 @@ export function UserManagement() {
     );
   };
 
-  const isAdmin = currentUser?.role === 'admin';
+  // Effective admin = actually an admin AND (not impersonating, OR impersonating another admin)
+  const isAdmin = currentUser?.role === 'admin' && effectiveRole?.role === 'admin';
 
   if (!isAdmin) {
     return (
@@ -779,7 +782,7 @@ export function UserManagement() {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            {currentUser?.role === 'admin' && user.id !== currentUser?.id && (
+                            {isAdmin && !isImpersonating && user.id !== currentUser?.id && (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
