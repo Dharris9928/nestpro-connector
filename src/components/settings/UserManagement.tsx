@@ -164,7 +164,7 @@ export function UserManagement() {
         last_name: profile.last_name,
         created_at: profile.created_at,
         role: rolesMap[profile.id] || 'sales_rep',
-        temp_password: profile.temp_password,
+        // temp_password removed — never persisted
         invitation_email_sent_at: profile.invitation_email_sent_at,
         invitation_email_opened_at: profile.invitation_email_opened_at,
         invitation_email_status: profile.invitation_email_status,
