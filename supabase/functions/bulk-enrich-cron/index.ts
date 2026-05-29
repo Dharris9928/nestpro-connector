@@ -97,7 +97,6 @@ serve(async (req) => {
           if (!res.ok) {
             errors++;
             console.warn(`Enrich failed for ${row.company_name}: HTTP ${res.status}`);
-            // Log failure into enrichment_logs so it appears in the Activity Log
             await supabase.from('enrichment_logs').insert({
               company_id: row.id,
               provider: 'bulk_cron',
@@ -108,6 +107,21 @@ serve(async (req) => {
             });
           } else {
             success++;
+            // Check whether enrichment actually produced a segment
+            const { data: c } = await supabase
+              .from('companies')
+              .select('builder_segment')
+              .eq('id', row.id)
+              .maybeSingle();
+            const gotSegment = !!c?.builder_segment;
+            await supabase.from('enrichment_logs').insert({
+              company_id: row.id,
+              provider: 'bulk_cron',
+              enrichment_type: 'bulk',
+              status: gotSegment ? 'success' : 'no_segment',
+              error_message: gotSegment ? null : `enrich-company returned 200 but builder_segment is still null. Response: ${bodyText?.slice(0, 300)}`,
+              fields_enriched: gotSegment ? { builder_segment: c.builder_segment } : [],
+            });
           }
         } catch (e) {
           errors++;
@@ -126,10 +140,21 @@ serve(async (req) => {
     });
     await Promise.all(workers);
 
+    // Always log a batch summary so the cron is visible in the Activity Log
+    await supabase.from('enrichment_logs').insert({
+      company_id: null,
+      provider: 'bulk_cron',
+      enrichment_type: 'bulk_summary',
+      status: errors > 0 && success === 0 ? 'failed' : 'success',
+      error_message: `Batch: processed=${rows.length}, success=${success}, errors=${errors}, tier=${tier}`,
+      fields_enriched: { processed: rows.length, success, errors, tier, batch_size: batchSize },
+    });
+
     return new Response(
       JSON.stringify({ processed: rows.length, success, errors, tier, batch_size: batchSize }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (e) {
     console.error('bulk-enrich-cron error:', e);
     return new Response(
