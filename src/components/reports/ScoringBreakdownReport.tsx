@@ -199,7 +199,7 @@ export function ScoringBreakdownReport() {
                     <Button
                       variant="link"
                       className="p-0 h-auto font-medium text-primary hover:underline"
-                      onClick={() => navigate('/companies', { state: { editCompanyId: company.company_id } })}
+                      onClick={() => setOpenCompanyId(company.company_id)}
                     >
                       {company.company_name}
                     </Button>
