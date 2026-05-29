@@ -562,7 +562,7 @@ export function UserManagement() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Temp Password</TableHead>
+                <TableHead>Invited</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
