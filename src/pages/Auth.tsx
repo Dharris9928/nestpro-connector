@@ -198,9 +198,13 @@ const Auth = () => {
     // Session is already established and upgraded to aal2 after MFA verification
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Mark this device as trusted for 2 hours to skip MFA on subsequent logins
+    // Mark this device as trusted to skip MFA on subsequent logins (admins: 8h, others: 2h)
     if (user) {
-      const TRUST_WINDOW_MS = 2 * 60 * 60 * 1000;
+      const { data: isAdmin } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin',
+      });
+      const TRUST_WINDOW_MS = (isAdmin ? 8 : 2) * 60 * 60 * 1000;
       localStorage.setItem(`mfa_trusted_until_${user.id}`, String(Date.now() + TRUST_WINDOW_MS));
     }
 
