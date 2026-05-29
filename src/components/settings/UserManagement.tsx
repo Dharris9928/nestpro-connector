@@ -583,10 +583,10 @@ export function UserManagement() {
                         : 'N/A'}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{user.email}</TableCell>
-                    <TableCell>
-                      <code className="px-2 py-1 bg-muted rounded text-xs">
-                        {user.temp_password || 'N/A'}
-                      </code>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {user.invitation_email_sent_at
+                        ? new Date(user.invitation_email_sent_at).toLocaleString()
+                        : '—'}
                     </TableCell>
                     <TableCell>
                       {user.invitation_email_opened_at ? (
