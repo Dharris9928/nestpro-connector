@@ -4842,7 +4842,6 @@ export type Database = {
           status_change_reason: string | null
           status_changed_at: string | null
           status_changed_by: string | null
-          temp_password: string | null
           updated_at: string | null
         }
         Insert: {
@@ -4864,7 +4863,6 @@ export type Database = {
           status_change_reason?: string | null
           status_changed_at?: string | null
           status_changed_by?: string | null
-          temp_password?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -4886,7 +4884,6 @@ export type Database = {
           status_change_reason?: string | null
           status_changed_at?: string | null
           status_changed_by?: string | null
-          temp_password?: string | null
           updated_at?: string | null
         }
         Relationships: [
