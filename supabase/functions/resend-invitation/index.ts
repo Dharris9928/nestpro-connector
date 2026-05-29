@@ -101,7 +101,7 @@ serve(async (req) => {
       <p>Hi ${userName},</p>
       <p>Your account has been approved and you can now access the Nest Pro CRM system.</p>
       <p><strong>Your temporary password is:</strong></p>
-      <h3 style="background: #f4f4f4; padding: 16px; border-radius: 8px; font-family: monospace;">${profile.temp_password}</h3>
+      <h3 style="background: #f4f4f4; padding: 16px; border-radius: 8px; font-family: monospace;">${newTempPassword}</h3>
       <p>To get started:</p>
       <ol>
         <li>Visit <a href="${appUrl}/auth">${appUrl}/auth</a></li>
