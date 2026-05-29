@@ -58,7 +58,7 @@ import { AccessPatternMonitor } from "@/components/settings/AccessPatternMonitor
 import { AccessExpirationManager } from "@/components/settings/AccessExpirationManager";
 import { DatabaseManagementImproved } from "@/components/settings/DatabaseManagementImproved";
 import { AIErrorHelper } from "@/components/settings/AIErrorHelper";
-import { UserImpersonation } from "@/components/settings/UserImpersonation";
+
 import { UploadLogViewer } from "@/components/settings/UploadLogViewer";
 
 const Settings = () => {
