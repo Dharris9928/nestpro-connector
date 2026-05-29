@@ -97,11 +97,13 @@ serve(async (req) => {
     const token = authHeader?.replace('Bearer ', '') || '';
     const { data: { user: adminUser } } = await supabase.auth.getUser(token);
 
-    // Update profile with temp password, email tracking, and auto-approve invited users
+    // Update profile with email tracking + auto-approve invited users.
+    // NOTE: We intentionally do NOT store the temporary password in the DB.
+    // The temp password is returned ONCE in the response below so the admin
+    // UI can show it immediately, then it is discarded forever.
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
-        temp_password: useTemporaryPassword ? actualPassword : null,
         invitation_email_sent_at: useTemporaryPassword ? new Date().toISOString() : null,
         invitation_email_status: useTemporaryPassword ? 'sent' : 'not_applicable',
         approval_status: useTemporaryPassword ? 'approved' : 'pending',
