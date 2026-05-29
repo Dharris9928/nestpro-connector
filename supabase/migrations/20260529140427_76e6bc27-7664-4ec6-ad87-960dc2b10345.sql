@@ -1,0 +1,1 @@
+ALTER TABLE public.password_reset_codes DROP COLUMN IF EXISTS code;

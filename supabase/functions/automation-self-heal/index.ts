@@ -7,12 +7,16 @@
 
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { getServiceClient } from "../_shared/automationContext.ts";
+import { verifyCronRequest } from "../_shared/cronAuth.ts";
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+
+  const authError = verifyCronRequest(req, cors);
+  if (authError) return authError;
 
   try {
     const { rule_id, run_id } = await req.json();

@@ -33,6 +33,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email, code, newPassword }: VerifyResetCodeRequest = await req.json();
 
+    // Enforce password complexity (must match signup policy)
+    if (
+      !newPassword ||
+      typeof newPassword !== 'string' ||
+      newPassword.length < 8 ||
+      newPassword.length > 128 ||
+      !/[A-Z]/.test(newPassword) ||
+      !/[0-9]/.test(newPassword) ||
+      !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)
+    ) {
+      return new Response(
+        JSON.stringify({ error: "Password must be 8+ characters and include an uppercase letter, a number, and a special character." }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     console.log("Verifying reset code for email:", email);
 
     // Get user by email

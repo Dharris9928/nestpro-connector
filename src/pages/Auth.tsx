@@ -20,7 +20,7 @@ const passwordSchema = z.string()
   .regex(/[0-9]/, "Password must contain at least one number")
   .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character");
 
-const ADMIN_EXCEPTION = import.meta.env.VITE_ADMIN_EMAIL || 'dharris9928@gmail.com';
+const ADMIN_EXCEPTION = (import.meta.env.VITE_ADMIN_EMAIL ?? '').toLowerCase().trim();
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ const Auth = () => {
 
   const validateEmailDomain = (email: string): boolean => {
     const normalizedEmail = email.toLowerCase().trim();
-    if (normalizedEmail === ADMIN_EXCEPTION.toLowerCase()) {
+    if (ADMIN_EXCEPTION && normalizedEmail === ADMIN_EXCEPTION) {
       return true;
     }
     return allowedDomains.some(domain => normalizedEmail.endsWith(domain));

@@ -4356,7 +4356,6 @@ export type Database = {
       }
       password_reset_codes: {
         Row: {
-          code: string
           code_hash: string
           created_at: string
           created_by: string | null
@@ -4366,7 +4365,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          code: string
           code_hash: string
           created_at?: string
           created_by?: string | null
@@ -4376,7 +4374,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          code?: string
           code_hash?: string
           created_at?: string
           created_by?: string | null
