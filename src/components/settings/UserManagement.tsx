@@ -782,7 +782,7 @@ export function UserManagement() {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            {currentUser?.role === 'admin' && user.id !== currentUser?.id && (
+                            {isAdmin && !isImpersonating && user.id !== currentUser?.id && (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
