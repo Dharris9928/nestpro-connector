@@ -32,6 +32,14 @@ serve(async (req) => {
       .single();
 
     if (!settings?.enabled) {
+      await supabase.from('enrichment_logs').insert({
+        company_id: null,
+        provider: 'bulk_cron',
+        enrichment_type: 'bulk_summary',
+        status: 'success',
+        error_message: 'Cron tick skipped: bulk enrichment is disabled in settings.',
+        fields_enriched: { skipped: true, reason: 'disabled' },
+      });
       return new Response(
         JSON.stringify({ skipped: true, reason: 'disabled' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,8 +67,34 @@ serve(async (req) => {
 
     if (error) throw error;
     if (!rows || rows.length === 0) {
+      // Log queue-empty ticks too so the Activity Log shows the cron is alive
+      // Include diagnostic counts so the user can see WHY the queue is empty.
+      const [{ count: missingSegment }, { count: missingWithSource }, { count: attemptedRecently }] = await Promise.all([
+        supabase.from('companies').select('id', { count: 'exact', head: true }).is('builder_segment', null),
+        supabase.from('companies').select('id', { count: 'exact', head: true })
+          .is('builder_segment', null)
+          .or('website_url.not.is.null,linkedin_company_url.not.is.null,primary_email.not.is.null'),
+        supabase.from('companies').select('id', { count: 'exact', head: true })
+          .is('builder_segment', null)
+          .gte('last_enrichment_attempt_at', retryThreshold),
+      ]);
+      await supabase.from('enrichment_logs').insert({
+        company_id: null,
+        provider: 'bulk_cron',
+        enrichment_type: 'bulk_summary',
+        status: 'no_segment',
+        error_message: `Queue empty. ${missingSegment ?? 0} companies missing segment, ${missingWithSource ?? 0} have an enrichable source (website/linkedin/email), ${attemptedRecently ?? 0} were attempted in the last ${retryDays} days and are excluded by retry_after_days. Lower retry_after_days or add source data to unblock.`,
+        fields_enriched: {
+          queue_empty: true,
+          missing_segment: missingSegment ?? 0,
+          missing_with_source: missingWithSource ?? 0,
+          attempted_within_retry_window: attemptedRecently ?? 0,
+          retry_after_days: retryDays,
+          tier,
+        },
+      });
       return new Response(
-        JSON.stringify({ processed: 0, message: 'queue empty' }),
+        JSON.stringify({ processed: 0, message: 'queue empty', missingSegment, missingWithSource, attemptedRecently }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
