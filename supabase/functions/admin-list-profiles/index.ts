@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     // Fetch profiles (service role bypasses RLS but access already checked)
     const { data: profiles, error } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, approval_status, created_at, temp_password, invitation_email_sent_at, invitation_email_delivered_at, invitation_email_opened_at, invitation_email_status, approved_at, approved_by')
+      .select('id, first_name, last_name, approval_status, created_at, invitation_email_sent_at, invitation_email_delivered_at, invitation_email_opened_at, invitation_email_status, approved_at, approved_by')
 
     if (error) throw error
 
