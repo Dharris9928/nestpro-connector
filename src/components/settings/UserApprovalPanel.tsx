@@ -225,59 +225,7 @@ export function UserApprovalPanel() {
                     <div className="text-xs text-muted-foreground">
                       Requested: {new Date(user.created_at).toLocaleDateString()}
                     </div>
-                    
-                    {user.temp_password && (
-                      <>
-                        <Separator className="my-2" />
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Key className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">Temp Password:</span>
-                            <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
-                              {user.temp_password}
-                            </code>
-                          </div>
-                          
-                          <div className="text-xs space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-3 w-3" />
-                              <span>
-                                Sent: {user.invitation_email_sent_at 
-                                  ? new Date(user.invitation_email_sent_at).toLocaleString()
-                                  : 'Not sent'}
-                              </span>
-                            </div>
-                            {user.invitation_email_delivered_at && (
-                              <div className="flex items-center gap-2 text-green-600">
-                                <MailCheck className="h-3 w-3" />
-                                <span>
-                                  Delivered: {new Date(user.invitation_email_delivered_at).toLocaleString()}
-                                </span>
-                              </div>
-                            )}
-                            {user.invitation_email_opened_at && (
-                              <div className="flex items-center gap-2 text-blue-600">
-                                <MailOpen className="h-3 w-3" />
-                                <span>
-                                  Opened: {new Date(user.invitation_email_opened_at).toLocaleString()}
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <Badge variant={
-                                user.invitation_email_status === 'opened' ? 'default' :
-                                user.invitation_email_status === 'delivered' ? 'secondary' :
-                                user.invitation_email_status === 'sent' ? 'outline' :
-                                'destructive'
-                              } className="text-xs">
-                                {user.invitation_email_status || 'pending'}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                    </div>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
