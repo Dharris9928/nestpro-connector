@@ -5,6 +5,7 @@
 
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { buildContext, getServiceClient, type AutomationRuleRow } from "../_shared/automationContext.ts";
+import { verifyCronRequest } from "../_shared/cronAuth.ts";
 
 interface RunRequest {
   rule_key?: string;
@@ -15,6 +16,9 @@ interface RunRequest {
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+
+  const authError = verifyCronRequest(req, cors);
+  if (authError) return authError;
 
   try {
     const body: RunRequest = req.method === "POST" ? await req.json().catch(() => ({})) : {};
