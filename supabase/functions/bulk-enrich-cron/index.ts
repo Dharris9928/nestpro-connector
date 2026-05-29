@@ -89,16 +89,34 @@ serve(async (req) => {
             },
             body: JSON.stringify({ companyId: row.id, providers, deepEnrich: false }),
           });
+          const bodyText = await res.text();
           if (!res.ok) {
             errors++;
             console.warn(`Enrich failed for ${row.company_name}: HTTP ${res.status}`);
+            // Log failure into enrichment_logs so it appears in the Activity Log
+            await supabase.from('enrichment_logs').insert({
+              company_id: row.id,
+              provider: 'bulk_cron',
+              enrichment_type: 'bulk',
+              status: 'failed',
+              error_message: `HTTP ${res.status}: ${bodyText?.slice(0, 500) || 'no body'}`,
+              fields_enriched: [],
+            });
           } else {
             success++;
           }
-          await res.text(); // consume body
         } catch (e) {
           errors++;
-          console.warn(`Enrich error for ${row.company_name}:`, e);
+          const msg = e instanceof Error ? e.message : String(e);
+          console.warn(`Enrich error for ${row.company_name}:`, msg);
+          await supabase.from('enrichment_logs').insert({
+            company_id: row.id,
+            provider: 'bulk_cron',
+            enrichment_type: 'bulk',
+            status: 'failed',
+            error_message: `Network/Runtime: ${msg.slice(0, 500)}`,
+            fields_enriched: [],
+          });
         }
       }
     });
