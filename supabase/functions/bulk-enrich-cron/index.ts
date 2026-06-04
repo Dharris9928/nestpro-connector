@@ -47,7 +47,9 @@ serve(async (req) => {
     }
 
     const tier = (settings.tier as string) || 'free';
-    const batchSize = Math.min(Math.max(settings.batch_size ?? 20, 1), 50);
+    // Cap raised from 50 → 200. Users can request up to 200 per tick from settings;
+    // larger requests are clamped here to protect enrich-company throughput.
+    const batchSize = Math.min(Math.max(settings.batch_size ?? 20, 1), 200);
     const retryDays = settings.retry_after_days ?? 7;
     const providers = TIER_PROVIDERS[tier] ?? TIER_PROVIDERS.free;
 
