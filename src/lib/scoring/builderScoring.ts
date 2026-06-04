@@ -312,9 +312,9 @@ function buildBuilderNarrative(breakdown: Partial<BuilderScoreBreakdown>, input:
 // ── PRIORITY TIER ────────────────────────────────────────────
 
 function assignPriorityTier(score: number): 'P1' | 'P2' | 'P3' | 'Unscored' {
-  if (score >= 75) return 'P1';
-  if (score >= 55) return 'P2';
-  if (score >= 35) return 'P3';
+  if (score >= 70) return 'P1';
+  if (score >= 45) return 'P2';
+  if (score >= 20) return 'P3';
   return 'Unscored';
 }
 

@@ -394,9 +394,9 @@ function buildContractorNarrative(input: ContractorScoringInput, total: number):
 // ── PRIORITY TIER ────────────────────────────────────────────
 
 function assignContractorTier(score: number): 'P1' | 'P2' | 'P3' | 'Unscored' {
-  if (score >= 72) return 'P1';
-  if (score >= 52) return 'P2';
-  if (score >= 32) return 'P3';
+  if (score >= 70) return 'P1';
+  if (score >= 45) return 'P2';
+  if (score >= 20) return 'P3';
   return 'Unscored';
 }
 

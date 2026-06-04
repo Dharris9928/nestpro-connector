@@ -181,8 +181,8 @@ export function calculateGeographicScore(state?: string): number {
 // ============================================
 
 export function assignPriorityTier(totalScore: number): 'P1' | 'P2' | 'P3' | 'Unscored' {
-  if (totalScore >= 80) return 'P1';
-  if (totalScore >= 60) return 'P2';
-  if (totalScore >= 40) return 'P3';
+  if (totalScore >= 70) return 'P1';
+  if (totalScore >= 45) return 'P2';
+  if (totalScore >= 20) return 'P3';
   return 'Unscored';
 }

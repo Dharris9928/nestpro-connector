@@ -110,8 +110,8 @@ export function routeAndScore(
 }
 
 export const PRIORITY_THRESHOLDS = {
-  builder: { P1: 75, P2: 55, P3: 35 },
-  contractor: { P1: 72, P2: 52, P3: 32 },
+  builder: { P1: 70, P2: 45, P3: 20 },
+  contractor: { P1: 70, P2: 45, P3: 20 },
 };
 
 // ── Outreach cadence recommendation ──────────────────────────
