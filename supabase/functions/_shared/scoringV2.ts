@@ -300,7 +300,7 @@ export function calculateContractorScore(input: ContractorScoringInput) {
     dataPoints >= 8 ? 'High 90%+' : dataPoints >= 5 ? 'Medium 70-89%' : 'Low <70%';
 
   const priority_tier: 'P1' | 'P2' | 'P3' | 'Unscored' =
-    total_score >= 72 ? 'P1' : total_score >= 52 ? 'P2' : total_score >= 32 ? 'P3' : 'Unscored';
+    total_score >= 70 ? 'P1' : total_score >= 45 ? 'P2' : total_score >= 20 ? 'P3' : 'Unscored';
 
   let program_readiness_stage: 'Ready to Enroll' | 'Needs Education' | 'Long-Term Nurture' | 'Not a Fit';
   if (input.smart_home_readiness === 'active_program' || input.smart_home_readiness === 'considering') {
