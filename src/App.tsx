@@ -29,6 +29,7 @@ const Presentation = lazy(() => import("./pages/Presentation"));
 const PresentationView = lazy(() => import("./pages/PresentationView"));
 const PipelineAnalytics = lazy(() => import("./pages/PipelineAnalytics"));
 const JobQuotes = lazy(() => import("./pages/JobQuotes"));
+const PurgeCandidates = lazy(() => import("./pages/PurgeCandidates"));
 
 const queryClient = new QueryClient();
 

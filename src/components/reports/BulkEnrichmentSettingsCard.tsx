@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Bot, Loader2, TrendingUp, Lock, Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 
@@ -41,6 +42,9 @@ interface QueueStats {
   unscored: number;
   attempted_recent: number;
   scored: number;
+  reachable: number;
+  blocked: number;
+  skipped: number;
 }
 
 export function BulkEnrichmentSettingsCard() {
@@ -61,22 +65,32 @@ export function BulkEnrichmentSettingsCard() {
   };
 
   const loadStats = async (): Promise<QueueStats | null> => {
-    const { count: total } = await supabase.from('companies').select('*', { count: 'exact', head: true });
-    const { count: unscored } = await supabase
-      .from('companies')
-      .select('*', { count: 'exact', head: true })
-      .is('builder_segment', null);
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const { count: attempted_recent } = await supabase
-      .from('companies')
-      .select('*', { count: 'exact', head: true })
-      .is('builder_segment', null)
-      .gte('last_enrichment_attempt_at', sevenDaysAgo);
+    const [totalRes, unscoredRes, attemptedRes, blockedRes, skippedRes, reachableRes] = await Promise.all([
+      supabase.from('companies').select('*', { count: 'exact', head: true }),
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null),
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null).gte('last_enrichment_attempt_at', sevenDaysAgo),
+      // Blocked = no website (purge candidates)
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null).is('website_url', null),
+      // Skipped = has skip reason set
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null).not('enrichment_skip_reason', 'is', null),
+      // Reachable = unscored, has website, no skip reason, not attempted in last 7d
+      supabase.from('companies').select('*', { count: 'exact', head: true })
+        .is('builder_segment', null)
+        .not('website_url', 'is', null)
+        .is('enrichment_skip_reason', null)
+        .or(`last_enrichment_attempt_at.is.null,last_enrichment_attempt_at.lt.${sevenDaysAgo}`),
+    ]);
+    const total = totalRes.count ?? 0;
+    const unscored = unscoredRes.count ?? 0;
     return {
-      total: total ?? 0,
-      unscored: unscored ?? 0,
-      attempted_recent: attempted_recent ?? 0,
-      scored: (total ?? 0) - (unscored ?? 0),
+      total,
+      unscored,
+      attempted_recent: attemptedRes.count ?? 0,
+      scored: total - unscored,
+      reachable: reachableRes.count ?? 0,
+      blocked: blockedRes.count ?? 0,
+      skipped: skippedRes.count ?? 0,
     };
   };
 
@@ -125,7 +139,7 @@ export function BulkEnrichmentSettingsCard() {
     return <Card><CardContent className="p-6"><Loader2 className="h-4 w-4 animate-spin" /></CardContent></Card>;
   }
 
-  const ready = stats ? stats.unscored - stats.attempted_recent : 0;
+  const ready = stats?.reachable ?? 0;
 
   return (
     <Card>
@@ -135,8 +149,8 @@ export function BulkEnrichmentSettingsCard() {
           Background Enrichment (Cron)
         </CardTitle>
         <CardDescription>
-          Automatically enriches companies every 2 minutes while enabled. Skips records attempted in the last {settings.retry_after_days} days
-          and requires at least one source signal (website, LinkedIn, or email).
+          Automatically enriches companies every 2 minutes while enabled. Requires a website URL; companies without one
+          are flagged as purge candidates and never queued.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -145,8 +159,24 @@ export function BulkEnrichmentSettingsCard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <Stat label="Total" value={stats.total} />
               <Stat label="Scored" value={stats.scored} tone="success" />
-              <Stat label="Awaiting Enrichment" value={ready} tone="warning" />
               <Stat label="Tried (last 7d)" value={stats.attempted_recent} tone="muted" />
+              <Stat label="Reachable (queue)" value={stats.reachable} tone="warning" hint="Has website, eligible for cron" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Link to="/purge-candidates" className="block">
+                <Stat
+                  label="Blocked — no website"
+                  value={stats.blocked}
+                  tone="destructive"
+                  hint="Purge candidates · click to review"
+                />
+              </Link>
+              <Stat
+                label="Skipped (2-strike)"
+                value={stats.skipped}
+                tone="muted"
+                hint="No segment after 2 attempts"
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -158,7 +188,7 @@ export function BulkEnrichmentSettingsCard() {
               <Progress value={stats.total ? (stats.scored / stats.total) * 100 : 0} />
               {settings.enabled && ready > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {ready.toLocaleString()} remaining · processing {settings.batch_size} every 2 min
+                  {ready.toLocaleString()} reachable · processing {settings.batch_size} every 2 min
                 </p>
               )}
             </div>
@@ -236,15 +266,17 @@ export function BulkEnrichmentSettingsCard() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: 'success' | 'warning' | 'muted' }) {
+function Stat({ label, value, tone, hint }: { label: string; value: number; tone?: 'success' | 'warning' | 'muted' | 'destructive'; hint?: string }) {
   const color =
     tone === 'success' ? 'text-green-600' :
     tone === 'warning' ? 'text-amber-600' :
+    tone === 'destructive' ? 'text-destructive' :
     tone === 'muted' ? 'text-muted-foreground' : 'text-foreground';
   return (
-    <div className="rounded-lg border p-3">
+    <div className="rounded-lg border p-3 hover:bg-muted/40 transition-colors">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={`text-2xl font-semibold ${color}`}>{value.toLocaleString()}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }
