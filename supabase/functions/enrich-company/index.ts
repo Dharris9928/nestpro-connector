@@ -599,6 +599,50 @@ serve(async (req) => {
 
     persistedRow = updatedCompany;
 
+    // Self-verification: confirm each updated field actually landed; retry stragglers field-by-field.
+    const verifyAndHeal = async () => {
+      const expectedKeys = Object.keys(updates);
+      const missing = expectedKeys.filter((k) => {
+        const exp = updates[k];
+        const got = persistedRow?.[k];
+        // Normalize for comparison (string trim, null-equivalence)
+        const normExp = typeof exp === 'string' ? exp.trim() : exp;
+        const normGot = typeof got === 'string' ? got.trim() : got;
+        return JSON.stringify(normExp) !== JSON.stringify(normGot);
+      });
+      if (missing.length === 0) return { healed: [] as string[], stillMissing: [] as string[] };
+
+      console.log(`[self-heal] ${missing.length} field(s) did not persist on bulk update — retrying individually:`, missing);
+      const healed: string[] = [];
+      const stillMissing: string[] = [];
+      for (const field of missing) {
+        const { data: single, error: singleErr } = await supabase
+          .from('companies')
+          .update({ [field]: updates[field] })
+          .eq('id', companyId)
+          .select(field)
+          .single();
+        if (singleErr) {
+          console.log(`[self-heal] '${field}' failed:`, singleErr.message);
+          stillMissing.push(field);
+          if (!failedFields.includes(field)) failedFields.push(field);
+        } else if (single && JSON.stringify(single[field]) === JSON.stringify(updates[field])) {
+          healed.push(field);
+          persistedRow[field] = single[field];
+        } else {
+          stillMissing.push(field);
+        }
+      }
+      return { healed, stillMissing };
+    };
+
+    const healResult = await verifyAndHeal();
+    if (healResult.healed.length) {
+      console.log(`[self-heal] recovered ${healResult.healed.length} field(s):`, healResult.healed);
+    }
+
+
+
     // Upsert AI insights with proper conflict handling
     const { error: insightsError } = await supabase
       .from('company_ai_insights')
