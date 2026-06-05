@@ -668,8 +668,11 @@ serve(async (req) => {
 // (Perplexity / identifyMissingFields helpers removed — providers retired.)
 
 
-async function enrichWithLovableAI(company: any) {
+async function enrichWithLovableAI(company: any, deepEnrich: boolean = false) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  // Cheapest model (free promo) for cron/standard runs; upgrade to Flash for deep enrich.
+  const model = deepEnrich ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite';
+
   
   const prompt = `Analyze this company and provide COMPREHENSIVE enrichment data with PRIORITY on business metrics and digital engagement:
 
