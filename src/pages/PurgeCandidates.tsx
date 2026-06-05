@@ -17,7 +17,7 @@ interface PurgeRow {
   id: string;
   company_name: string;
   website_url: string | null;
-  linkedin_url: string | null;
+  linkedin_company_url: string | null;
   primary_email: string | null;
   apollo_organization_id: string | null;
   state: string | null;
@@ -44,7 +44,7 @@ export default function PurgeCandidates() {
     const to = from + PAGE_SIZE - 1;
     const { data, count, error } = await supabase
       .from('companies')
-      .select('id,company_name,website_url,linkedin_url,primary_email,apollo_organization_id,state,city,industry,created_at', { count: 'exact' })
+      .select('id,company_name,website_url,linkedin_company_url,primary_email,apollo_organization_id,state,city,industry,created_at', { count: 'exact' })
       .is('website_url', null)
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -180,10 +180,10 @@ export default function PurgeCandidates() {
                       </td>
                       <td className="p-2">
                         <div className="flex gap-1 flex-wrap">
-                          {r.linkedin_url && <Badge variant="outline" className="text-xs">LinkedIn</Badge>}
+                          {r.linkedin_company_url && <Badge variant="outline" className="text-xs">LinkedIn</Badge>}
                           {r.primary_email && <Badge variant="outline" className="text-xs">Email</Badge>}
                           {r.apollo_organization_id && <Badge variant="outline" className="text-xs">Apollo</Badge>}
-                          {!r.linkedin_url && !r.primary_email && !r.apollo_organization_id && (
+                          {!r.linkedin_company_url && !r.primary_email && !r.apollo_organization_id && (
                             <span className="text-xs text-muted-foreground">None</span>
                           )}
                         </div>
