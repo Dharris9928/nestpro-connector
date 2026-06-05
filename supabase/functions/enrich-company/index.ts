@@ -265,30 +265,8 @@ serve(async (req) => {
         return `❌ Claude: ${errorMsg}`;
       }
       
-      // DeepSeek errors
-      if (provider === 'deepseek') {
-        if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('invalid') || msg.includes('api key')) {
-          return '⚠️ DeepSeek: API key is missing or invalid. Add or update your DEEPSEEK_API_KEY at Settings.';
-        }
-        if (msg.includes('429') || msg.includes('rate limit')) {
-          return '⏸️ DeepSeek: Rate limit exceeded. Please wait before trying again.';
-        }
-        if (msg.includes('500') || msg.includes('503')) {
-          return '🔧 DeepSeek: Service temporarily unavailable. Try again shortly.';
-        }
-        return `❌ DeepSeek: ${errorMsg}`;
-      }
-      
-      // Perplexity errors
-      if (provider === 'perplexity') {
-        if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('invalid') || msg.includes('api key')) {
-          return '⚠️ Perplexity: API key is missing or invalid. Add or update your PERPLEXITY_API_KEY at Settings.';
-        }
-        if (msg.includes('429') || msg.includes('rate limit')) {
-          return '⏸️ Perplexity: Rate limit exceeded. Wait before trying again.';
-        }
-        return `❌ Perplexity: ${errorMsg}`;
-      }
+      // (Deepseek / Perplexity error branches removed — providers retired.)
+
       
       return `❌ ${provider}: ${errorMsg}`;
     };
