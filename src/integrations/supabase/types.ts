@@ -2263,6 +2263,95 @@ export type Database = {
           },
         ]
       }
+      contact_company_matches: {
+        Row: {
+          company_id: string
+          contact_id: string
+          created_at: string
+          id: string
+          match_confidence: number
+          match_method: string
+          match_signal: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          company_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          match_confidence: number
+          match_method: string
+          match_signal?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          match_confidence?: number
+          match_method?: string
+          match_signal?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_company_matches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_company_matches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_company_matches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_company_matches_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_company_matches_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_decrypted"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_company_matches_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_decrypted_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_company_matches_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_masked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           assigned_to: string | null

@@ -5,6 +5,7 @@ import { RecalculateAllScoresButton } from '@/components/reports/RecalculateAllS
 import { RecalculateContractorScoresButton } from '@/components/reports/RecalculateContractorScoresButton';
 import { BulkEnrichButton } from '@/components/reports/BulkEnrichButton';
 import { BulkEnrichmentSettingsCard } from '@/components/reports/BulkEnrichmentSettingsCard';
+import { OrphanContactMatcherCard } from '@/components/reports/OrphanContactMatcherCard';
 
 const Reports = () => {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -29,6 +30,8 @@ const Reports = () => {
       </div>
 
       <BulkEnrichmentSettingsCard />
+
+      <OrphanContactMatcherCard />
 
       <ScoringBreakdownReport key={`scoring-${refreshKey}`} />
       

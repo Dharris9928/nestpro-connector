@@ -19,6 +19,8 @@ interface EnrichmentLog {
   created_at: string;
   created_by: string;
   company_name?: string;
+  company_segment?: string | null;
+  company_confidence?: number | null;
   user_name?: string;
 }
 
@@ -54,6 +56,7 @@ export function EnrichmentErrorLog() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed'>('all');
+  const [recentOnly, setRecentOnly] = useState(false);
   const [openCompanyId, setOpenCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,7 +111,7 @@ export function EnrichmentErrorLog() {
           fields_enriched,
           created_at,
           created_by,
-          companies!inner(company_name)
+          companies!inner(company_name, segment, segment_confidence)
         `)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -131,6 +134,8 @@ export function EnrichmentErrorLog() {
       const formattedLogs = data?.map(log => ({
         ...log,
         company_name: (log.companies as any)?.company_name,
+        company_segment: (log.companies as any)?.segment ?? null,
+        company_confidence: (log.companies as any)?.segment_confidence ?? null,
         user_name: profilesMap.get(log.created_by) || 'Unknown User'
       })) || [];
 
@@ -247,17 +252,20 @@ export function EnrichmentErrorLog() {
           </div>
         )}
 
-        {statusFilter !== 'all' && (
-          <div className="flex items-center justify-between mb-3 px-1">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <ListFilter className="h-4 w-4" />
-              Showing {statusFilter === 'success' ? 'successful' : 'failed'} enrichments only
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setStatusFilter('all')}>
-              Clear filter
+        <div className="flex items-center gap-2 mb-3 px-1 flex-wrap">
+          <Button
+            variant={recentOnly ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setRecentOnly(v => !v)}
+          >
+            Recently Enriched (24h)
+          </Button>
+          {(statusFilter !== 'all' || recentOnly) && (
+            <Button variant="ghost" size="sm" onClick={() => { setStatusFilter('all'); setRecentOnly(false); }}>
+              Clear filters
             </Button>
-          </div>
-        )}
+          )}
+        </div>
 
 
         {loading ? (
@@ -278,9 +286,15 @@ export function EnrichmentErrorLog() {
             <div className="space-y-3">
               {logs
                 .filter(log => {
-                  if (statusFilter === 'all') return true;
-                  const isSuccess = log.status === 'success';
-                  return statusFilter === 'success' ? isSuccess : !isSuccess;
+                  if (statusFilter !== 'all') {
+                    const isSuccess = log.status === 'success';
+                    if (statusFilter === 'success' ? !isSuccess : isSuccess) return false;
+                  }
+                  if (recentOnly) {
+                    const ageMs = Date.now() - new Date(log.created_at).getTime();
+                    if (ageMs > 24 * 60 * 60 * 1000) return false;
+                  }
+                  return true;
                 })
                 .map((log) => {
                 const costInfo = estimateCost(log.provider);
@@ -353,6 +367,16 @@ export function EnrichmentErrorLog() {
                       {isSuccess && (
                         <Badge variant="secondary" className="text-xs">
                           {fieldsCount} fields enriched
+                        </Badge>
+                      )}
+                      {log.company_segment && (
+                        <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+                          {log.company_segment}
+                        </Badge>
+                      )}
+                      {typeof log.company_confidence === 'number' && (
+                        <Badge variant="outline" className="text-xs">
+                          {log.company_confidence}% confidence
                         </Badge>
                       )}
                       <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
