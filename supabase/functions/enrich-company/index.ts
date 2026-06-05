@@ -338,29 +338,8 @@ serve(async (req) => {
       ]));
     }
 
-    // Use Perplexity as final fallback to fill remaining blank fields (if enabled)
-    if (providers.includes('perplexity') && provider !== 'perplexity') {
-      const missingFields = identifyMissingFields(company, enrichmentResult.companyUpdates);
-      if (missingFields.length > 0) {
-        console.log(`Attempting Perplexity fallback for ${missingFields.length} missing fields:`, missingFields);
-        try {
-          const perplexityData = await enrichWithPerplexity(company, missingFields);
-          if (perplexityData && Object.keys(perplexityData).length > 0) {
-            console.log(`Perplexity filled ${Object.keys(perplexityData).length} additional fields`);
-            enrichmentResult.companyUpdates = {
-              ...enrichmentResult.companyUpdates,
-              ...perplexityData
-            };
-            enrichmentResult.fieldsEnriched = Array.from(new Set([
-              ...enrichmentResult.fieldsEnriched,
-              ...Object.keys(perplexityData)
-            ]));
-          }
-        } catch (error) {
-          console.log('Perplexity fallback failed:', error instanceof Error ? error.message : 'Unknown error');
-        }
-      }
-    }
+    // (Perplexity self-heal removed — retired to control cost.)
+
 
     // If preview mode, return what would be changed without updating
     if (previewOnly) {
