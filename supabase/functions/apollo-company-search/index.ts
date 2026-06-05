@@ -37,20 +37,26 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Authenticate user (from Authorization header)
+    // Authentication required
     const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(
-        authHeader.replace('Bearer ', '')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-
-      if (!authError && user) {
-        // Check rate limit
-        const rateLimitResponse = await checkRateLimit(supabase, user.id, 'apollo-company-search');
-        if (rateLimitResponse) {
-          return rateLimitResponse;
-        }
-      }
+    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const rateLimitResponse = await checkRateLimit(supabase, user.id, 'apollo-company-search');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     // Parse and validate request body
