@@ -42,6 +42,9 @@ interface QueueStats {
   unscored: number;
   attempted_recent: number;
   scored: number;
+  reachable: number;
+  blocked: number;
+  skipped: number;
 }
 
 export function BulkEnrichmentSettingsCard() {
@@ -62,22 +65,32 @@ export function BulkEnrichmentSettingsCard() {
   };
 
   const loadStats = async (): Promise<QueueStats | null> => {
-    const { count: total } = await supabase.from('companies').select('*', { count: 'exact', head: true });
-    const { count: unscored } = await supabase
-      .from('companies')
-      .select('*', { count: 'exact', head: true })
-      .is('builder_segment', null);
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const { count: attempted_recent } = await supabase
-      .from('companies')
-      .select('*', { count: 'exact', head: true })
-      .is('builder_segment', null)
-      .gte('last_enrichment_attempt_at', sevenDaysAgo);
+    const [totalRes, unscoredRes, attemptedRes, blockedRes, skippedRes, reachableRes] = await Promise.all([
+      supabase.from('companies').select('*', { count: 'exact', head: true }),
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null),
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null).gte('last_enrichment_attempt_at', sevenDaysAgo),
+      // Blocked = no website (purge candidates)
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null).is('website_url', null),
+      // Skipped = has skip reason set
+      supabase.from('companies').select('*', { count: 'exact', head: true }).is('builder_segment', null).not('enrichment_skip_reason', 'is', null),
+      // Reachable = unscored, has website, no skip reason, not attempted in last 7d
+      supabase.from('companies').select('*', { count: 'exact', head: true })
+        .is('builder_segment', null)
+        .not('website_url', 'is', null)
+        .is('enrichment_skip_reason', null)
+        .or(`last_enrichment_attempt_at.is.null,last_enrichment_attempt_at.lt.${sevenDaysAgo}`),
+    ]);
+    const total = totalRes.count ?? 0;
+    const unscored = unscoredRes.count ?? 0;
     return {
-      total: total ?? 0,
-      unscored: unscored ?? 0,
-      attempted_recent: attempted_recent ?? 0,
-      scored: (total ?? 0) - (unscored ?? 0),
+      total,
+      unscored,
+      attempted_recent: attemptedRes.count ?? 0,
+      scored: total - unscored,
+      reachable: reachableRes.count ?? 0,
+      blocked: blockedRes.count ?? 0,
+      skipped: skippedRes.count ?? 0,
     };
   };
 
