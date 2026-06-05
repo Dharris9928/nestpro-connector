@@ -151,19 +151,19 @@ export function BulkEnrichButton({ onComplete }: Props) {
         <DropdownMenuItem onClick={() => run('free')}>
           <div className="flex flex-col">
             <span className="font-medium">Free Tier</span>
-            <span className="text-xs text-muted-foreground">Deepseek → Gemini · baseline profiles</span>
+            <span className="text-xs text-muted-foreground">Gemini Flash-Lite · free, baseline profiles</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => run('standard')}>
           <div className="flex flex-col">
             <span className="font-medium">Standard</span>
-            <span className="text-xs text-muted-foreground">+ Apollo firmographics</span>
+            <span className="text-xs text-muted-foreground">Gemini + Apollo firmographics</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => run('premium')}>
           <div className="flex flex-col">
             <span className="font-medium">Premium</span>
-            <span className="text-xs text-muted-foreground">+ Claude deep reasoning</span>
+            <span className="text-xs text-muted-foreground">Gemini + Apollo (Claude reserved for manual deep-enrich)</span>
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
