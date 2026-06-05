@@ -19,6 +19,8 @@ interface EnrichmentLog {
   created_at: string;
   created_by: string;
   company_name?: string;
+  company_segment?: string | null;
+  company_confidence?: number | null;
   user_name?: string;
 }
 
@@ -54,6 +56,7 @@ export function EnrichmentErrorLog() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed'>('all');
+  const [recentOnly, setRecentOnly] = useState(false);
   const [openCompanyId, setOpenCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -108,7 +111,7 @@ export function EnrichmentErrorLog() {
           fields_enriched,
           created_at,
           created_by,
-          companies!inner(company_name)
+          companies!inner(company_name, segment, segment_confidence)
         `)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -131,6 +134,8 @@ export function EnrichmentErrorLog() {
       const formattedLogs = data?.map(log => ({
         ...log,
         company_name: (log.companies as any)?.company_name,
+        company_segment: (log.companies as any)?.segment ?? null,
+        company_confidence: (log.companies as any)?.segment_confidence ?? null,
         user_name: profilesMap.get(log.created_by) || 'Unknown User'
       })) || [];
 
