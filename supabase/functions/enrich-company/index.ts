@@ -173,50 +173,29 @@ serve(async (req) => {
       }
     }
 
-    // Build list of available AI providers based on user selection
-    // Primary: Gemini, Backup: Claude
-    const availableProviders = [];
+    // Build list of available AI providers based on user selection.
+    // Primary: Gemini (Lovable AI). Backup: Claude (manual deep enrich only).
+    const availableProviders: string[] = [];
     if (providers.includes('gemini')) availableProviders.push('gemini');
     if (providers.includes('claude')) availableProviders.push('claude');
-    if (providers.includes('deepseek')) availableProviders.push('deepseek');
-    if (providers.includes('perplexity')) availableProviders.push('perplexity');
 
     // Try AI providers in order of preference
     for (const providerName of availableProviders) {
-      if (enrichmentResult) break; // Already succeeded
-      
+      if (enrichmentResult) break;
+
       try {
         console.log(`Attempting ${providerName} enrichment...`);
-        
-        if (providerName === 'gemini' && !deepEnrich) {
+
+        if (providerName === 'gemini') {
           provider = 'lovable_ai';
-          enrichmentResult = await enrichWithLovableAI(company);
+          // Cron / standard runs use Flash-Lite (cheapest/free).
+          // Deep enrich elevates Gemini to Flash for better reasoning.
+          enrichmentResult = await enrichWithLovableAI(company, deepEnrich);
         } else if (providerName === 'claude') {
           provider = 'claude';
           enrichmentResult = await enrichWithClaude(company, deepEnrich);
-        } else if (providerName === 'deepseek') {
-          provider = 'deepseek';
-          enrichmentResult = await enrichWithDeepseek(company, deepEnrich);
-        } else if (providerName === 'perplexity') {
-          provider = 'perplexity';
-          const allMissingFields = [
-            'website_url', 'linkedin_company_url', 'primary_phone',
-            'total_employees', 'total_employees_range', 'annual_revenue_range',
-            'years_in_business', 'city', 'state', 'facebook_url', 'instagram_url',
-            'technology_adoption_level', 'online_review_rating'
-          ].filter(field => !company[field] || company[field] === '');
-          
-          const perplexityData = await enrichWithPerplexity(company, allMissingFields);
-          if (perplexityData && Object.keys(perplexityData).length > 0) {
-            enrichmentResult = {
-              companyUpdates: perplexityData,
-              fieldsEnriched: Object.keys(perplexityData),
-              confidence: 60,
-              insights: null
-            };
-          }
         }
-        
+
         if (enrichmentResult) {
           console.log(`${providerName} enrichment successful`);
           break;
