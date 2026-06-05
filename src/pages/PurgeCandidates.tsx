@@ -21,7 +21,7 @@ interface PurgeRow {
   primary_email: string | null;
   state: string | null;
   city: string | null;
-  industry: string | null;
+  industry_type: string | null;
   created_at: string;
 }
 
@@ -43,7 +43,7 @@ export default function PurgeCandidates() {
     const to = from + PAGE_SIZE - 1;
     const { data, count, error } = await supabase
       .from('companies')
-      .select('id,company_name,website_url,linkedin_company_url,primary_email,state,city,industry,created_at', { count: 'exact' })
+      .select('id,company_name,website_url,linkedin_company_url,primary_email,state,city,industry_type,created_at', { count: 'exact' })
       .is('website_url', null)
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -173,7 +173,7 @@ export default function PurgeCandidates() {
                       <td className="p-2 font-medium">
                         <Link to={`/companies?id=${r.id}`} className="hover:underline">{r.company_name}</Link>
                       </td>
-                      <td className="p-2 text-muted-foreground">{r.industry ?? '—'}</td>
+                      <td className="p-2 text-muted-foreground">{r.industry_type ?? '—'}</td>
                       <td className="p-2 text-muted-foreground">
                         {[r.city, r.state].filter(Boolean).join(', ') || '—'}
                       </td>
