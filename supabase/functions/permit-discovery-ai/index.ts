@@ -9,7 +9,7 @@ serve(async (req) => {
   }
 
   try {
-    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
+    // Perplexity removed — Lovable AI (Gemini) is the sole search/extraction backend here.
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
     if (!lovableApiKey) {
