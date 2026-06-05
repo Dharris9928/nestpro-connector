@@ -183,9 +183,9 @@ export function BulkEnrichmentSettingsCard() {
             <Select value={settings.tier} onValueChange={(v: any) => save({ tier: v })} disabled={saving}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="free">Free (Deepseek → Gemini)</SelectItem>
-                <SelectItem value="standard">Standard (+ Apollo)</SelectItem>
-                <SelectItem value="premium">Premium (+ Claude)</SelectItem>
+                <SelectItem value="free">Free (Gemini Flash-Lite)</SelectItem>
+                <SelectItem value="standard">Standard (Gemini + Apollo)</SelectItem>
+                <SelectItem value="premium">Premium (Gemini + Apollo)</SelectItem>
               </SelectContent>
             </Select>
           </div>
