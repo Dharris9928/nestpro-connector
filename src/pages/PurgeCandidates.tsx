@@ -181,8 +181,7 @@ export default function PurgeCandidates() {
                         <div className="flex gap-1 flex-wrap">
                           {r.linkedin_company_url && <Badge variant="outline" className="text-xs">LinkedIn</Badge>}
                           {r.primary_email && <Badge variant="outline" className="text-xs">Email</Badge>}
-                          {r.apollo_organization_id && <Badge variant="outline" className="text-xs">Apollo</Badge>}
-                          {!r.linkedin_company_url && !r.primary_email && !r.apollo_organization_id && (
+                          {!r.linkedin_company_url && !r.primary_email && (
                             <span className="text-xs text-muted-foreground">None</span>
                           )}
                         </div>
