@@ -90,7 +90,12 @@ export function PoFileUpload({ value, onChange, quoteId, onExtracted }: PoFileUp
     setUploading(true);
     try {
       const ext = pendingFile.name.split(".").pop();
-      const folder = quoteId || "unassigned";
+      let folder = quoteId;
+      if (!folder) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) throw new Error("You must be signed in to upload");
+        folder = `unassigned/${userData.user.id}`;
+      }
       const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, pendingFile, {
         cacheControl: "3600",
