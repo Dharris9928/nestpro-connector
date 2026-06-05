@@ -139,7 +139,7 @@ export function BulkEnrichmentSettingsCard() {
     return <Card><CardContent className="p-6"><Loader2 className="h-4 w-4 animate-spin" /></CardContent></Card>;
   }
 
-  const ready = stats ? stats.unscored - stats.attempted_recent : 0;
+  const ready = stats?.reachable ?? 0;
 
   return (
     <Card>
@@ -149,8 +149,8 @@ export function BulkEnrichmentSettingsCard() {
           Background Enrichment (Cron)
         </CardTitle>
         <CardDescription>
-          Automatically enriches companies every 2 minutes while enabled. Skips records attempted in the last {settings.retry_after_days} days
-          and requires at least one source signal (website, LinkedIn, or email).
+          Automatically enriches companies every 2 minutes while enabled. Requires a website URL; companies without one
+          are flagged as purge candidates and never queued.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -159,8 +159,24 @@ export function BulkEnrichmentSettingsCard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <Stat label="Total" value={stats.total} />
               <Stat label="Scored" value={stats.scored} tone="success" />
-              <Stat label="Awaiting Enrichment" value={ready} tone="warning" />
               <Stat label="Tried (last 7d)" value={stats.attempted_recent} tone="muted" />
+              <Stat label="Reachable (queue)" value={stats.reachable} tone="warning" hint="Has website, eligible for cron" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Link to="/purge-candidates" className="block">
+                <Stat
+                  label="Blocked — no website"
+                  value={stats.blocked}
+                  tone="destructive"
+                  hint="Purge candidates · click to review"
+                />
+              </Link>
+              <Stat
+                label="Skipped (2-strike)"
+                value={stats.skipped}
+                tone="muted"
+                hint="No segment after 2 attempts"
+              />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -172,7 +188,7 @@ export function BulkEnrichmentSettingsCard() {
               <Progress value={stats.total ? (stats.scored / stats.total) * 100 : 0} />
               {settings.enabled && ready > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {ready.toLocaleString()} remaining · processing {settings.batch_size} every 2 min
+                  {ready.toLocaleString()} reachable · processing {settings.batch_size} every 2 min
                 </p>
               )}
             </div>
