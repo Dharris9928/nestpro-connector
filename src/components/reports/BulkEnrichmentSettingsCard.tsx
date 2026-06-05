@@ -266,15 +266,17 @@ export function BulkEnrichmentSettingsCard() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: 'success' | 'warning' | 'muted' }) {
+function Stat({ label, value, tone, hint }: { label: string; value: number; tone?: 'success' | 'warning' | 'muted' | 'destructive'; hint?: string }) {
   const color =
     tone === 'success' ? 'text-green-600' :
     tone === 'warning' ? 'text-amber-600' :
+    tone === 'destructive' ? 'text-destructive' :
     tone === 'muted' ? 'text-muted-foreground' : 'text-foreground';
   return (
-    <div className="rounded-lg border p-3">
+    <div className="rounded-lg border p-3 hover:bg-muted/40 transition-colors">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={`text-2xl font-semibold ${color}`}>{value.toLocaleString()}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
     </div>
   );
 }
