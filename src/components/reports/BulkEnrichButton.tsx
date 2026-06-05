@@ -14,19 +14,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 type Tier = 'free' | 'standard' | 'premium';
 
-// Free-tier directive: Deepseek → Gemini  (no paid APIs)
-// Standard:           Deepseek → Gemini → Apollo
-// Premium:            Deepseek → Gemini → Apollo → Claude
-const TIER_PROVIDERS: Record<Tier, ('deepseek' | 'gemini' | 'apollo' | 'claude')[]> = {
-  free: ['deepseek', 'gemini'],
-  standard: ['deepseek', 'gemini', 'apollo'],
-  premium: ['deepseek', 'gemini', 'apollo', 'claude'],
+// Cost-conscious policy:
+//   Free / Standard / Premium cron all use Gemini (Lovable AI free window).
+//   Apollo adds firmographics. Claude is reserved for manual deep-enrich only.
+const TIER_PROVIDERS: Record<Tier, ('gemini' | 'apollo' | 'claude')[]> = {
+  free:     ['gemini'],
+  standard: ['gemini', 'apollo'],
+  premium:  ['gemini', 'apollo'],
 };
 
 const TIER_LABEL: Record<Tier, string> = {
-  free: 'Free Tier (Deepseek → Gemini)',
+  free:     'Free Tier (Gemini Flash-Lite)',
   standard: 'Standard (+ Apollo)',
-  premium: 'Premium (+ Claude)',
+  premium:  'Premium (+ Apollo)',
 };
 
 const CHUNK_SIZE = 25;     // companies pulled per page
