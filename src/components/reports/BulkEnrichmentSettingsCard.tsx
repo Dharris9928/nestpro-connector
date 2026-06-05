@@ -191,13 +191,19 @@ export function BulkEnrichmentSettingsCard() {
           </div>
           <div className="space-y-2">
             <Label>Batch Size (per 2 min)</Label>
-            <Input
-              type="number" min={1} max={50}
-              value={settings.batch_size}
-              onChange={(e) => setSettings({ ...settings, batch_size: Number(e.target.value) })}
-              onBlur={() => save({ batch_size: settings.batch_size })}
+            <Select
+              value={String(settings.batch_size)}
+              onValueChange={(v) => save({ batch_size: Number(v) })}
               disabled={saving}
-            />
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-background">
+                <SelectItem value="25">25 (light)</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="200">200 (max)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Retry After (days)</Label>
