@@ -13,16 +13,16 @@ import { Badge } from '@/components/ui/badge';
 
 const TIER_CAPABILITIES: Record<'free' | 'standard' | 'premium', { fields: string[]; estCoverage: number }> = {
   free: {
-    fields: ['Company segment', 'Industry classification', 'Builder profile', 'Basic firmographics', 'Website signals'],
+    fields: ['Gemini Flash-Lite (free)', 'Company segment', 'Industry classification', 'Basic firmographics', 'Website signals'],
     estCoverage: 55,
   },
   standard: {
-    fields: ['Apollo firmographics', 'Employee count & growth', 'Annual revenue', 'Tech stack', 'Verified emails & phones', 'Decision-maker contacts'],
+    fields: ['Gemini + Apollo', 'Employee count & growth', 'Annual revenue', 'Tech stack', 'Verified emails & phones', 'Decision-maker contacts'],
     estCoverage: 80,
   },
   premium: {
-    fields: ['Claude deep reasoning', 'Strategic buying signals', 'Competitive positioning', 'Project pipeline insights', 'Custom outreach hooks'],
-    estCoverage: 95,
+    fields: ['Gemini + Apollo (cron)', 'Claude reserved for manual deep-enrich', 'Strategic buying signals', 'Custom outreach hooks'],
+    estCoverage: 90,
   },
 };
 
@@ -183,9 +183,9 @@ export function BulkEnrichmentSettingsCard() {
             <Select value={settings.tier} onValueChange={(v: any) => save({ tier: v })} disabled={saving}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="free">Free (Deepseek → Gemini)</SelectItem>
-                <SelectItem value="standard">Standard (+ Apollo)</SelectItem>
-                <SelectItem value="premium">Premium (+ Claude)</SelectItem>
+                <SelectItem value="free">Free (Gemini Flash-Lite)</SelectItem>
+                <SelectItem value="standard">Standard (Gemini + Apollo)</SelectItem>
+                <SelectItem value="premium">Premium (Gemini + Apollo)</SelectItem>
               </SelectContent>
             </Select>
           </div>

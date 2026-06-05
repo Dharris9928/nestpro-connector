@@ -388,8 +388,6 @@ export function CommunicationsTab({ companyId }: CommunicationsTabProps) {
                 <SelectContent>
                   <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</SelectItem>
                   <SelectItem value="google/gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</SelectItem>
-                  <SelectItem value="openai/gpt-5-mini">GPT-5 Mini</SelectItem>
-                  <SelectItem value="openai/gpt-5">GPT-5 (Premium)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

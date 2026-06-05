@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit } from '../_shared/rateLimiting.ts';
-import { enrichWithDeepseek } from "./enrichWithDeepseek.ts";
 import { determineSegment } from "./segmentLogic.ts";
 import { buildEnrichmentSystemPrompt, V2_STRATEGIC_TOOL_PROPERTIES, extractV2Fields } from "../_shared/enrichmentDirectives.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
@@ -11,12 +10,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Input validation schema
+// Provider policy:
+// - 'gemini'  → Lovable AI Gateway (free Gemini window) for cron + bulk
+// - 'claude'  → Anthropic API for manual Deep Enrichment (paid, user-confirmed)
+// - 'apollo'  → firmographic enrichment
+// Deepseek / Perplexity / OpenAI removed (cost-cutting policy).
 const requestSchema = z.object({
   companyId: z.string().uuid('Invalid company ID format'),
   deepEnrich: z.boolean().optional().default(false),
   previewOnly: z.boolean().optional().default(false),
-  providers: z.array(z.enum(['apollo', 'gemini', 'claude', 'deepseek', 'perplexity'])).optional().default(['apollo', 'gemini', 'claude'])
+  providers: z.array(z.enum(['apollo', 'gemini', 'claude'])).optional().default(['apollo', 'gemini'])
 });
 
 // Normalize various enum-like values to database-accepted values
@@ -170,50 +173,29 @@ serve(async (req) => {
       }
     }
 
-    // Build list of available AI providers based on user selection
-    // Primary: Gemini, Backup: Claude
-    const availableProviders = [];
+    // Build list of available AI providers based on user selection.
+    // Primary: Gemini (Lovable AI). Backup: Claude (manual deep enrich only).
+    const availableProviders: string[] = [];
     if (providers.includes('gemini')) availableProviders.push('gemini');
     if (providers.includes('claude')) availableProviders.push('claude');
-    if (providers.includes('deepseek')) availableProviders.push('deepseek');
-    if (providers.includes('perplexity')) availableProviders.push('perplexity');
 
     // Try AI providers in order of preference
     for (const providerName of availableProviders) {
-      if (enrichmentResult) break; // Already succeeded
-      
+      if (enrichmentResult) break;
+
       try {
         console.log(`Attempting ${providerName} enrichment...`);
-        
-        if (providerName === 'gemini' && !deepEnrich) {
+
+        if (providerName === 'gemini') {
           provider = 'lovable_ai';
-          enrichmentResult = await enrichWithLovableAI(company);
+          // Cron / standard runs use Flash-Lite (cheapest/free).
+          // Deep enrich elevates Gemini to Flash for better reasoning.
+          enrichmentResult = await enrichWithLovableAI(company, deepEnrich);
         } else if (providerName === 'claude') {
           provider = 'claude';
           enrichmentResult = await enrichWithClaude(company, deepEnrich);
-        } else if (providerName === 'deepseek') {
-          provider = 'deepseek';
-          enrichmentResult = await enrichWithDeepseek(company, deepEnrich);
-        } else if (providerName === 'perplexity') {
-          provider = 'perplexity';
-          const allMissingFields = [
-            'website_url', 'linkedin_company_url', 'primary_phone',
-            'total_employees', 'total_employees_range', 'annual_revenue_range',
-            'years_in_business', 'city', 'state', 'facebook_url', 'instagram_url',
-            'technology_adoption_level', 'online_review_rating'
-          ].filter(field => !company[field] || company[field] === '');
-          
-          const perplexityData = await enrichWithPerplexity(company, allMissingFields);
-          if (perplexityData && Object.keys(perplexityData).length > 0) {
-            enrichmentResult = {
-              companyUpdates: perplexityData,
-              fieldsEnriched: Object.keys(perplexityData),
-              confidence: 60,
-              insights: null
-            };
-          }
         }
-        
+
         if (enrichmentResult) {
           console.log(`${providerName} enrichment successful`);
           break;
@@ -283,30 +265,8 @@ serve(async (req) => {
         return `❌ Claude: ${errorMsg}`;
       }
       
-      // DeepSeek errors
-      if (provider === 'deepseek') {
-        if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('invalid') || msg.includes('api key')) {
-          return '⚠️ DeepSeek: API key is missing or invalid. Add or update your DEEPSEEK_API_KEY at Settings.';
-        }
-        if (msg.includes('429') || msg.includes('rate limit')) {
-          return '⏸️ DeepSeek: Rate limit exceeded. Please wait before trying again.';
-        }
-        if (msg.includes('500') || msg.includes('503')) {
-          return '🔧 DeepSeek: Service temporarily unavailable. Try again shortly.';
-        }
-        return `❌ DeepSeek: ${errorMsg}`;
-      }
-      
-      // Perplexity errors
-      if (provider === 'perplexity') {
-        if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('invalid') || msg.includes('api key')) {
-          return '⚠️ Perplexity: API key is missing or invalid. Add or update your PERPLEXITY_API_KEY at Settings.';
-        }
-        if (msg.includes('429') || msg.includes('rate limit')) {
-          return '⏸️ Perplexity: Rate limit exceeded. Wait before trying again.';
-        }
-        return `❌ Perplexity: ${errorMsg}`;
-      }
+      // (Deepseek / Perplexity error branches removed — providers retired.)
+
       
       return `❌ ${provider}: ${errorMsg}`;
     };
@@ -378,29 +338,8 @@ serve(async (req) => {
       ]));
     }
 
-    // Use Perplexity as final fallback to fill remaining blank fields (if enabled)
-    if (providers.includes('perplexity') && provider !== 'perplexity') {
-      const missingFields = identifyMissingFields(company, enrichmentResult.companyUpdates);
-      if (missingFields.length > 0) {
-        console.log(`Attempting Perplexity fallback for ${missingFields.length} missing fields:`, missingFields);
-        try {
-          const perplexityData = await enrichWithPerplexity(company, missingFields);
-          if (perplexityData && Object.keys(perplexityData).length > 0) {
-            console.log(`Perplexity filled ${Object.keys(perplexityData).length} additional fields`);
-            enrichmentResult.companyUpdates = {
-              ...enrichmentResult.companyUpdates,
-              ...perplexityData
-            };
-            enrichmentResult.fieldsEnriched = Array.from(new Set([
-              ...enrichmentResult.fieldsEnriched,
-              ...Object.keys(perplexityData)
-            ]));
-          }
-        } catch (error) {
-          console.log('Perplexity fallback failed:', error instanceof Error ? error.message : 'Unknown error');
-        }
-      }
-    }
+    // (Perplexity self-heal removed — retired to control cost.)
+
 
     // If preview mode, return what would be changed without updating
     if (previewOnly) {
@@ -726,264 +665,14 @@ serve(async (req) => {
   }
 });
 
-// Identify which critical fields are still missing
-function identifyMissingFields(company: any, updates: any): string[] {
-  const criticalFields = [
-    'website_url',
-    'linkedin_company_url',
-    'primary_phone',
-    'primary_email',
-    'total_employees',
-    'total_employees_range',
-    'annual_revenue_range',
-    'years_in_business',
-    'city',
-    'state',
-    'address_line1',
-    'zip',
-    'owner_name',
-    'contractor_specialty',
-    'service_area_type',
-    'facebook_url',
-    'instagram_url',
-    'technology_adoption_level',
-    'online_review_rating',
-    'online_review_count_range',
-    'website_quality',
-    'social_media_presence',
-    'linkedin_followers_range',
-    'linkedin_activity_level'
-  ];
+// (Perplexity / identifyMissingFields helpers removed — providers retired.)
 
-  const missing: string[] = [];
-  
-  for (const field of criticalFields) {
-    const currentValue = company[field];
-    const updatedValue = updates[field];
-    
-    // Field is missing if it's null/empty in both current company and updates
-    if ((!currentValue || currentValue === '') && (!updatedValue || updatedValue === '')) {
-      missing.push(field);
-    }
-  }
-  
-  return missing;
-}
 
-// Use Perplexity to search for specific missing company information
-async function enrichWithPerplexity(company: any, missingFields: string[]): Promise<Record<string, any>> {
-  const PERPLEXITY_API_KEY = Deno.env.get('PERPLEXITY_API_KEY');
-  
-  if (!PERPLEXITY_API_KEY) {
-    throw new Error('PERPLEXITY_API_KEY not configured');
-  }
-
-  const fieldDescriptions: Record<string, string> = {
-    website_url: 'official company website URL',
-    linkedin_company_url: 'LinkedIn company page URL',
-    primary_phone: 'main business phone number',
-    primary_email: 'main business email address',
-    total_employees: 'number of employees',
-    total_employees_range: 'employee count range (1-5, 6-10, 11-25, 26-50, 51-100, 101-250, 251-500, 500+)',
-    annual_revenue_range: 'annual revenue range (<$500K, $500K-$999K, $1M-$2.9M, $3M-$5.9M, $6M-$10M, $10M+)',
-    years_in_business: 'years the company has been operating',
-    city: 'city where company is headquartered',
-    state: 'state where company is headquartered (2-letter code)',
-    address_line1: 'street address of company headquarters',
-    zip: 'ZIP/postal code of company headquarters',
-    owner_name: 'owner or CEO name',
-    contractor_specialty: 'primary specialty (HVAC, Plumbing, Electrical, General, etc.)',
-    service_area_type: 'service area scope (Local, Regional, Statewide, Multi-State, National)',
-    facebook_url: 'Facebook page URL',
-    instagram_url: 'Instagram profile URL',
-    technology_adoption_level: 'technology adoption level (Traditional, Late Adopter, Mainstream, Early Adopter, Industry Leader)',
-    online_review_rating: 'average online review rating (0-5 scale)',
-    online_review_count_range: 'number of online reviews (None, <10, 10-24, 25-49, 50-99, 100+)',
-    website_quality: 'website quality (None, Poor, Basic, Good, Professional)',
-    social_media_presence: 'social media activity level (None, Limited, Moderate, Active, Very Active)',
-    linkedin_followers_range: 'LinkedIn followers (No page, <500, 500-1K, 1K-5K, 5K-10K, 10K+)',
-    linkedin_activity_level: 'LinkedIn activity level (None, Low, Moderate, Active, Very Active)'
-  };
-
-  const searchableFields = missingFields.filter(f => fieldDescriptions[f]);
-  if (searchableFields.length === 0) return {};
-
-  const fieldsList = searchableFields.map(f => `- ${f}: ${fieldDescriptions[f]}`).join('\n');
-
-  const prompt = `Find the following missing information about ${company.company_name}${company.industry_type ? `, a ${company.industry_type} company` : ''}${company.website_url ? ` (${company.website_url})` : ''}:
-
-${fieldsList}
-
-Return ONLY factual information you can verify. If you cannot find accurate information for a field, omit it. Be specific and concise.`;
-
-  console.log('Perplexity search prompt:', prompt);
-
-  const response = await fetch('https://api.perplexity.ai/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'sonar-pro',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a business data researcher. Provide only verified, factual information in a structured format. For URLs, provide complete URLs. For phone numbers, use standard format. For location data, be precise.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.2,
-      max_tokens: 1000
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Perplexity API error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices[0]?.message?.content;
-  
-  if (!content) {
-    console.log('No content returned from Perplexity');
-    return {};
-  }
-
-  console.log('Perplexity response:', content);
-
-  // Parse the response to extract structured data
-  const enrichedData: Record<string, any> = {};
-
-  // Helper function to extract URLs
-  const extractUrl = (text: string, keywords: string[]): string | null => {
-    for (const keyword of keywords) {
-      const regex = new RegExp(`${keyword}[:\\s]+([https://]+[^\\s,]+)`, 'i');
-      const match = text.match(regex);
-      if (match) return match[1].trim();
-    }
-    return null;
-  };
-
-  // Helper function to extract phone
-  const extractPhone = (text: string): string | null => {
-    const phoneRegex = /(?:phone|tel|contact)[:\s]*(\+?[\d\s\-\(\)]+)/i;
-    const match = text.match(phoneRegex);
-    if (match) {
-      const phone = match[1].replace(/\D/g, '');
-      if (phone.length >= 10) return phone;
-    }
-    return null;
-  };
-
-  // Helper function to extract number
-  const extractNumber = (text: string, keywords: string[]): number | null => {
-    for (const keyword of keywords) {
-      const regex = new RegExp(`${keyword}[:\\s]*(\\d+[,\\d]*)`, 'i');
-      const match = text.match(regex);
-      if (match) {
-        return parseInt(match[1].replace(/,/g, ''));
-      }
-    }
-    return null;
-  };
-
-  // Extract specific fields
-  if (missingFields.includes('website_url')) {
-    const url = extractUrl(content, ['website', 'site', 'web']);
-    if (url) enrichedData.website_url = url;
-  }
-
-  if (missingFields.includes('linkedin_company_url')) {
-    const url = extractUrl(content, ['linkedin', 'linkedin.com']);
-    if (url && url.includes('linkedin.com')) enrichedData.linkedin_company_url = url;
-  }
-
-  if (missingFields.includes('facebook_url')) {
-    const url = extractUrl(content, ['facebook', 'facebook.com', 'fb']);
-    if (url && url.includes('facebook.com')) enrichedData.facebook_url = url;
-  }
-
-  if (missingFields.includes('instagram_url')) {
-    const url = extractUrl(content, ['instagram', 'instagram.com']);
-    if (url && url.includes('instagram.com')) enrichedData.instagram_url = url;
-  }
-
-  if (missingFields.includes('primary_phone')) {
-    const phone = extractPhone(content);
-    if (phone) enrichedData.primary_phone = phone;
-  }
-
-  if (missingFields.includes('total_employees')) {
-    const employees = extractNumber(content, ['employees', 'staff', 'team size', 'workforce']);
-    if (employees) enrichedData.total_employees = employees;
-  }
-
-  if (missingFields.includes('years_in_business')) {
-    const years = extractNumber(content, ['years in business', 'established', 'founded', 'since']);
-    if (years) {
-      const currentYear = new Date().getFullYear();
-      enrichedData.years_in_business = years > 1900 ? currentYear - years : years;
-    }
-  }
-
-  // Extract city and state
-  if (missingFields.includes('city') || missingFields.includes('state')) {
-    const locationRegex = /(?:location|headquarter|based in|located|address)[:\s]*([A-Za-z\s]+),\s*([A-Z]{2})/i;
-    const match = content.match(locationRegex);
-    if (match) {
-      if (missingFields.includes('city')) enrichedData.city = match[1].trim();
-      if (missingFields.includes('state')) enrichedData.state = match[2].trim();
-    }
-  }
-
-  // Extract street address
-  if (missingFields.includes('address_line1')) {
-    const addressRegex = /(?:address|located at|headquarters)[:\s]*(\d+[^,\n]+)/i;
-    const match = content.match(addressRegex);
-    if (match) enrichedData.address_line1 = match[1].trim();
-  }
-
-  // Extract ZIP code
-  if (missingFields.includes('zip')) {
-    const zipRegex = /(?:zip|postal|zip code)[:\s]*(\d{5}(?:-\d{4})?)/i;
-    const match = content.match(zipRegex);
-    if (match) enrichedData.zip = match[1].trim();
-  }
-
-  // Extract owner name
-  if (missingFields.includes('owner_name')) {
-    const ownerRegex = /(?:owner|ceo|president|founder)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i;
-    const match = content.match(ownerRegex);
-    if (match) enrichedData.owner_name = match[1].trim();
-  }
-
-  // Extract email
-  if (missingFields.includes('primary_email')) {
-    const emailRegex = /[\w.+-]+@[\w-]+\.[\w.]+/;
-    const match = content.match(emailRegex);
-    if (match) enrichedData.primary_email = match[0].trim();
-  }
-
-  // Extract rating
-  if (missingFields.includes('online_review_rating')) {
-    const ratingRegex = /(?:rating|review)[:\s]*([\d.]+)[\s\/]*(?:out of\s*)?5?/i;
-    const match = content.match(ratingRegex);
-    if (match) {
-      const rating = parseFloat(match[1]);
-      if (rating >= 0 && rating <= 5) enrichedData.online_review_rating = rating;
-    }
-  }
-
-  return enrichedData;
-}
-
-async function enrichWithLovableAI(company: any) {
+async function enrichWithLovableAI(company: any, deepEnrich: boolean = false) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  // Cheapest model (free promo) for cron/standard runs; upgrade to Flash for deep enrich.
+  const model = deepEnrich ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite';
+
   
   const prompt = `Analyze this company and provide COMPREHENSIVE enrichment data with PRIORITY on business metrics and digital engagement:
 
@@ -1037,7 +726,7 @@ Research the company thoroughly using the website and LinkedIn URLs provided. Be
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model,
       messages: [
         { role: 'system', content: buildEnrichmentSystemPrompt(company.industry_type) },
         { role: 'user', content: prompt }
