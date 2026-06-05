@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit } from '../_shared/rateLimiting.ts';
-import { enrichWithDeepseek } from "./enrichWithDeepseek.ts";
 import { determineSegment } from "./segmentLogic.ts";
 import { buildEnrichmentSystemPrompt, V2_STRATEGIC_TOOL_PROPERTIES, extractV2Fields } from "../_shared/enrichmentDirectives.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
@@ -11,12 +10,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Input validation schema
+// Provider policy:
+// - 'gemini'  → Lovable AI Gateway (free Gemini window) for cron + bulk
+// - 'claude'  → Anthropic API for manual Deep Enrichment (paid, user-confirmed)
+// - 'apollo'  → firmographic enrichment
+// Deepseek / Perplexity / OpenAI removed (cost-cutting policy).
 const requestSchema = z.object({
   companyId: z.string().uuid('Invalid company ID format'),
   deepEnrich: z.boolean().optional().default(false),
   previewOnly: z.boolean().optional().default(false),
-  providers: z.array(z.enum(['apollo', 'gemini', 'claude', 'deepseek', 'perplexity'])).optional().default(['apollo', 'gemini', 'claude'])
+  providers: z.array(z.enum(['apollo', 'gemini', 'claude'])).optional().default(['apollo', 'gemini'])
 });
 
 // Normalize various enum-like values to database-accepted values
