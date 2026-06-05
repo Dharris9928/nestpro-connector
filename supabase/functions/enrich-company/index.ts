@@ -726,7 +726,7 @@ Research the company thoroughly using the website and LinkedIn URLs provided. Be
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model,
       messages: [
         { role: 'system', content: buildEnrichmentSystemPrompt(company.industry_type) },
         { role: 'user', content: prompt }
