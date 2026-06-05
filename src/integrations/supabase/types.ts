@@ -1475,6 +1475,8 @@ export type Database = {
           currently_using_technologies: string[] | null
           emergency_service_percentage: number | null
           encryption_version: number | null
+          enrichment_no_segment_count: number
+          enrichment_skip_reason: string | null
           facebook_url: string | null
           financial_health_rating: string | null
           franchise_name: string | null
@@ -1581,6 +1583,8 @@ export type Database = {
           currently_using_technologies?: string[] | null
           emergency_service_percentage?: number | null
           encryption_version?: number | null
+          enrichment_no_segment_count?: number
+          enrichment_skip_reason?: string | null
           facebook_url?: string | null
           financial_health_rating?: string | null
           franchise_name?: string | null
@@ -1687,6 +1691,8 @@ export type Database = {
           currently_using_technologies?: string[] | null
           emergency_service_percentage?: number | null
           encryption_version?: number | null
+          enrichment_no_segment_count?: number
+          enrichment_skip_reason?: string | null
           facebook_url?: string | null
           financial_health_rating?: string | null
           franchise_name?: string | null
