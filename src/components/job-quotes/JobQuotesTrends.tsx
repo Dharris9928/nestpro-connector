@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, DollarSign } from "lucide-react";
-import { subDays, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, format } from "date-fns";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { subDays, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, format, eachDayOfInterval } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 
 function pctChange(current: number, prev: number) {
   if (prev === 0) return current === 0 ? 0 : 100;
@@ -101,18 +101,18 @@ export function JobQuotesTrends() {
   const thisQAvg = avgValueBetween(thisQStart, now);
   const lastQAvg = avgValueBetween(lastQStart, lastQEnd);
 
-  // 6 month chart — counts
-  const monthlyVolume = Array.from({ length: 6 }, (_, i) => {
-    const d = subMonths(now, 5 - i);
-    const start = startOfMonth(d);
-    const end = endOfMonth(d);
-    const isCurrent = i === 5;
+  // Daily submissions — last 30 days
+  const dailyVolume = eachDayOfInterval({ start: subDays(now, 29), end: now }).map((d) => {
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
     return {
-      label: format(d, "MMM"),
-      count: countBetween(start, isCurrent ? now : end),
-      isCurrent,
+      label: format(d, "M/d"),
+      count: countBetween(dayStart, dayEnd),
     };
   });
+
 
   // 6 month chart — avg values
   const monthlyValue = Array.from({ length: 6 }, (_, i) => {
@@ -166,10 +166,12 @@ export function JobQuotesTrends() {
 
             {/* Volume Chart */}
             <div className="lg:col-span-3 h-[180px]">
-              <p className="text-xs text-muted-foreground mb-2">Monthly volume — last 6 months</p>
+              <p className="text-xs text-muted-foreground mb-2">Daily submissions — last 30 days</p>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyVolume}>
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
+                <BarChart data={dailyVolume}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={10} interval={2} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
                   <Tooltip
                     cursor={{ fill: "hsl(var(--muted))" }}
                     contentStyle={{
@@ -180,14 +182,11 @@ export function JobQuotesTrends() {
                     }}
                     formatter={(value: any) => [`${value} quotes`, "Submitted"]}
                   />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {monthlyVolume.map((m, i) => (
-                      <Cell key={i} fill={m.isCurrent ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.4)"} />
-                    ))}
-                  </Bar>
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
+
           </div>
         </CardContent>
       </Card>
