@@ -101,18 +101,18 @@ export function JobQuotesTrends() {
   const thisQAvg = avgValueBetween(thisQStart, now);
   const lastQAvg = avgValueBetween(lastQStart, lastQEnd);
 
-  // 6 month chart — counts
-  const monthlyVolume = Array.from({ length: 6 }, (_, i) => {
-    const d = subMonths(now, 5 - i);
-    const start = startOfMonth(d);
-    const end = endOfMonth(d);
-    const isCurrent = i === 5;
+  // Daily submissions — last 30 days
+  const dailyVolume = eachDayOfInterval({ start: subDays(now, 29), end: now }).map((d) => {
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
     return {
-      label: format(d, "MMM"),
-      count: countBetween(start, isCurrent ? now : end),
-      isCurrent,
+      label: format(d, "M/d"),
+      count: countBetween(dayStart, dayEnd),
     };
   });
+
 
   // 6 month chart — avg values
   const monthlyValue = Array.from({ length: 6 }, (_, i) => {
