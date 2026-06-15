@@ -333,7 +333,11 @@ export default function JobQuotes() {
       </div>
 
       {/* Submission Trends */}
+      <JobQuotesSubmissionTrends />
+
+      {/* Volume & Value Trends */}
       <JobQuotesTrends />
+
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
