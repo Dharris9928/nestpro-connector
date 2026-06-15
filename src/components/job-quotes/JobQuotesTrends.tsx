@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, DollarSign } from "lucide-react";
-import { subDays, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, format } from "date-fns";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { subDays, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, format, eachDayOfInterval } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 
 function pctChange(current: number, prev: number) {
   if (prev === 0) return current === 0 ? 0 : 100;
