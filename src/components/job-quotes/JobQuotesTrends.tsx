@@ -166,10 +166,12 @@ export function JobQuotesTrends() {
 
             {/* Volume Chart */}
             <div className="lg:col-span-3 h-[180px]">
-              <p className="text-xs text-muted-foreground mb-2">Monthly volume — last 6 months</p>
+              <p className="text-xs text-muted-foreground mb-2">Daily submissions — last 30 days</p>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyVolume}>
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
+                <BarChart data={dailyVolume}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={10} interval={2} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
                   <Tooltip
                     cursor={{ fill: "hsl(var(--muted))" }}
                     contentStyle={{
@@ -180,14 +182,11 @@ export function JobQuotesTrends() {
                     }}
                     formatter={(value: any) => [`${value} quotes`, "Submitted"]}
                   />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {monthlyVolume.map((m, i) => (
-                      <Cell key={i} fill={m.isCurrent ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.4)"} />
-                    ))}
-                  </Bar>
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
+
           </div>
         </CardContent>
       </Card>
