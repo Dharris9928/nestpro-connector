@@ -163,6 +163,12 @@ export default function JobQuotes() {
   const wonCount = quotes.filter((q: any) => q.status === "won").length;
   const lostCount = quotes.filter((q: any) => q.status === "lost").length;
 
+  // Submissions in last 30 days (based on date_received, independent of active filters)
+  const last30Cutoff = subDays(new Date(), 30);
+  const submissionsLast30 = quotes.filter(
+    (q: any) => q.date_received && new Date(q.date_received) >= last30Cutoff
+  ).length;
+
   // Avg Time to Close (days) - for won quotes
   const wonQuotes = quotes.filter((q: any) => q.status === "won" && q.date_received && q.date_won);
   const avgTimeToClose = wonQuotes.length > 0
