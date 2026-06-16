@@ -37,6 +37,11 @@ interface Props {
 
 type Step = 'list' | 'fetching' | 'preview' | 'importing' | 'complete';
 
+const normalizeListType = (modality: unknown): 'contact' | 'account' => {
+  const value = String(modality || '').toLowerCase();
+  return value === 'account' || value === 'accounts' ? 'account' : 'contact';
+};
+
 export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }: Props) {
   const [step, setStep] = useState<Step>('list');
   const [loadingLists, setLoadingLists] = useState(false);
@@ -79,7 +84,10 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
         body: { action: 'list' },
       });
       if (error) throw error;
-      setLists((data?.labels || []) as ApolloSavedList[]);
+      setLists(((data?.labels || []) as ApolloSavedList[]).map((list) => ({
+        ...list,
+        modality: normalizeListType(list.modality),
+      })));
     } catch (e: any) {
       toast({
         title: 'Failed to load Apollo lists',

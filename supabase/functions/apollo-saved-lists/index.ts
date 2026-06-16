@@ -16,10 +16,15 @@ const requestSchema = z.object({
   labelType: z.enum(['contact', 'account']).optional(),
 });
 
+function normalizeLabelType(modality: unknown): 'contact' | 'account' {
+  const value = String(modality || '').toLowerCase();
+  return value === 'account' || value === 'accounts' ? 'account' : 'contact';
+}
+
 // Map an Apollo person object to the same shape produced by an Apollo CSV row
 // so the existing groupByCompany/importApolloData pipeline can consume it.
 function mapPersonToCsvRow(person: any) {
-  const org = person.organization || {};
+  const org = person.organization || person.account || {};
   const orgCity = org.city || person.city || null;
   const orgState = org.state || person.state || null;
   const orgCountry = org.country || person.country || null;
@@ -53,6 +58,8 @@ function mapPersonToCsvRow(person: any) {
 }
 
 function mapCompanyToCsvRow(company: any) {
+  const primaryPhone = company.primary_phone?.sanitized_number || company.primary_phone?.number || '';
+
   return {
     'First Name': '',
     'Last Name': '',
@@ -65,8 +72,8 @@ function mapCompanyToCsvRow(company: any) {
     'Company': company.name || '',
     'Company Name': company.name || '',
     'Organization Name': company.name || '',
-    'Website': company.website_url || '',
-    'Company Website': company.website_url || '',
+    'Website': company.website_url || company.domain || '',
+    'Company Website': company.website_url || company.domain || '',
     'Industry': company.industry || '',
     'Company Linkedin Url': company.linkedin_url || '',
     '# Employees': company.estimated_num_employees || '',
@@ -74,7 +81,7 @@ function mapCompanyToCsvRow(company: any) {
     'City': company.city || '',
     'State': company.state || '',
     'Country': company.country || '',
-    'Company Phone': company.phone || company.sanitized_phone || '',
+    'Company Phone': company.phone || company.sanitized_phone || primaryPhone,
     'Facebook Url': company.facebook_url || '',
     'Twitter Url': company.twitter_url || '',
     'Keywords': Array.isArray(company.keywords) ? company.keywords.join(', ') : '',
@@ -150,7 +157,7 @@ serve(async (req) => {
         created_at: l.created_at || null,
         modified_at: l.modified_at || null,
         cached_count: l.cached_count ?? l.num_contacts ?? null,
-        modality: l.modality || l.label_type || 'contact', // 'contact' or 'account'
+        modality: normalizeLabelType(l.modality || l.label_type),
       }));
 
       return new Response(
@@ -170,15 +177,18 @@ serve(async (req) => {
         );
       }
 
-      const isAccount = (body.labelType === 'account');
+      const isAccount = validation.data.labelType === 'account';
       const rows: any[] = [];
       let page = 1;
       let total = 0;
 
       while (rows.length < maxRecords) {
         const endpoint = isAccount
-          ? 'https://api.apollo.io/api/v1/mixed_companies/search'
-          : 'https://api.apollo.io/api/v1/mixed_people/api_search';
+          ? 'https://api.apollo.io/api/v1/accounts/search'
+          : 'https://api.apollo.io/api/v1/contacts/search';
+        const labelFilter = isAccount
+          ? { account_label_ids: [labelId] }
+          : { contact_label_ids: [labelId] };
 
         const resp = await fetch(endpoint, {
           method: 'POST',
@@ -188,7 +198,7 @@ serve(async (req) => {
             'X-Api-Key': apolloApiKey,
           },
           body: JSON.stringify({
-            label_ids: [labelId],
+            ...labelFilter,
             page,
             per_page: perPage,
           }),
@@ -206,7 +216,7 @@ serve(async (req) => {
         const data = await resp.json();
 
         if (isAccount) {
-          const companies: any[] = data.organizations || data.companies || [];
+          const companies: any[] = data.accounts || [];
           total = data.pagination?.total_entries ?? total;
           if (companies.length === 0) break;
           for (const c of companies) {
@@ -214,7 +224,7 @@ serve(async (req) => {
             if (rows.length >= maxRecords) break;
           }
         } else {
-          const people: any[] = data.people || data.contacts || [];
+          const people: any[] = data.contacts || [];
           total = data.pagination?.total_entries ?? total;
           if (people.length === 0) break;
           for (const p of people) {
