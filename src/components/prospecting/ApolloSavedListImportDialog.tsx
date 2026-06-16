@@ -96,14 +96,14 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
     setStep('fetching');
     try {
       const { data, error } = await supabase.functions.invoke('apollo-saved-lists', {
-        body: { action: 'fetch', labelId: list.id, maxRecords, perPage: 100 },
+        body: { action: 'fetch', labelId: list.id, maxRecords, perPage: 100, labelType: list.modality },
       });
       if (error) throw error;
       const rows = (data?.rows || []) as any[];
       if (rows.length === 0) {
         toast({
           title: 'No records found',
-          description: 'This Apollo list returned no people.',
+          description: `This Apollo ${list.modality === 'account' ? 'company' : 'people'} list returned no records.`,
           variant: 'destructive',
         });
         setStep('list');
