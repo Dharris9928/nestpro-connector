@@ -120,6 +120,7 @@ serve(async (req) => {
         created_at: l.created_at || null,
         modified_at: l.modified_at || null,
         cached_count: l.cached_count ?? l.num_contacts ?? null,
+        modality: l.modality || l.label_type || 'contact', // 'contact' or 'account'
       }));
 
       return new Response(
