@@ -177,8 +177,8 @@ serve(async (req) => {
 
       while (rows.length < maxRecords) {
         const endpoint = isAccount
-          ? 'https://api.apollo.io/v1/mixed_companies/search'
-          : 'https://api.apollo.io/v1/mixed_people/search';
+          ? 'https://api.apollo.io/api/v1/mixed_companies/search'
+          : 'https://api.apollo.io/api/v1/mixed_people/search';
 
         const resp = await fetch(endpoint, {
           method: 'POST',
