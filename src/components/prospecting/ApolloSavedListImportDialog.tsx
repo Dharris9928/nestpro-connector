@@ -26,6 +26,7 @@ interface ApolloSavedList {
   name: string;
   cached_count: number | null;
   modified_at: string | null;
+  modality: 'contact' | 'account';
 }
 
 interface Props {
