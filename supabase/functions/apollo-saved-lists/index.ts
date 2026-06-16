@@ -16,6 +16,11 @@ const requestSchema = z.object({
   labelType: z.enum(['contact', 'account']).optional(),
 });
 
+function normalizeLabelType(modality: unknown): 'contact' | 'account' {
+  const value = String(modality || '').toLowerCase();
+  return value === 'account' || value === 'accounts' ? 'account' : 'contact';
+}
+
 // Map an Apollo person object to the same shape produced by an Apollo CSV row
 // so the existing groupByCompany/importApolloData pipeline can consume it.
 function mapPersonToCsvRow(person: any) {
@@ -150,7 +155,7 @@ serve(async (req) => {
         created_at: l.created_at || null,
         modified_at: l.modified_at || null,
         cached_count: l.cached_count ?? l.num_contacts ?? null,
-        modality: l.modality || l.label_type || 'contact', // 'contact' or 'account'
+        modality: normalizeLabelType(l.modality || l.label_type),
       }));
 
       return new Response(
@@ -170,7 +175,7 @@ serve(async (req) => {
         );
       }
 
-      const isAccount = (body.labelType === 'account');
+      const isAccount = validation.data.labelType === 'account';
       const rows: any[] = [];
       let page = 1;
       let total = 0;
