@@ -52,6 +52,35 @@ function mapPersonToCsvRow(person: any) {
   };
 }
 
+function mapCompanyToCsvRow(company: any) {
+  return {
+    'First Name': '',
+    'Last Name': '',
+    'Title': '',
+    'Email': '',
+    'Person Linkedin Url': '',
+    'Mobile Phone': '',
+    'Seniority': '',
+
+    'Company': company.name || '',
+    'Company Name': company.name || '',
+    'Organization Name': company.name || '',
+    'Website': company.website_url || '',
+    'Company Website': company.website_url || '',
+    'Industry': company.industry || '',
+    'Company Linkedin Url': company.linkedin_url || '',
+    '# Employees': company.estimated_num_employees || '',
+    'Annual Revenue': company.annual_revenue || company.organization_revenue || '',
+    'City': company.city || '',
+    'State': company.state || '',
+    'Country': company.country || '',
+    'Company Phone': company.phone || company.sanitized_phone || '',
+    'Facebook Url': company.facebook_url || '',
+    'Twitter Url': company.twitter_url || '',
+    'Keywords': Array.isArray(company.keywords) ? company.keywords.join(', ') : '',
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
