@@ -142,9 +142,11 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
     }
   };
 
-  const filtered = lists.filter(l =>
-    l.name?.toLowerCase().includes(filter.toLowerCase())
-  );
+  const filtered = lists.filter(l => {
+    const matchesText = l.name?.toLowerCase().includes(filter.toLowerCase());
+    const matchesType = filterType === 'all' || l.modality === filterType;
+    return matchesText && matchesType;
+  });
 
   const totalContacts = grouped.reduce((s, c) => s + c.contacts.length, 0);
 
