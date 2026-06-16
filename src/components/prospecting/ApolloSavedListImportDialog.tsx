@@ -325,7 +325,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
           <div className="py-10 flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">
-              Fetching up to {maxRecords} records from "{selected?.name}"...
+              Fetching {autoMax ? (selected?.cached_count ?? 'all') : `up to ${maxRecords}`} records from "{selected?.name}"...
             </p>
           </div>
         )}
@@ -348,6 +348,19 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
                   ? `${grouped.length} companies ready to import`
                   : `${grouped.length} companies · ${totalContacts} contacts ready to import`
                 }
+              </div>
+              <div className="text-xs mt-2">
+                {dupScan?.scanning ? (
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Scanning CRM for duplicates...
+                  </span>
+                ) : dupScan ? (
+                  <span className="text-amber-700 dark:text-amber-400">
+                    Duplicates already in CRM: {dupScan.companies} companies
+                    {selected?.modality !== 'account' && ` · ${dupScan.contacts} contacts`}
+                    {' '}(will be skipped on import)
+                  </span>
+                ) : null}
               </div>
             </div>
             <ScrollArea className="h-64 border rounded-md">
