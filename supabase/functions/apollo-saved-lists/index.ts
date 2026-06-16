@@ -12,7 +12,7 @@ const requestSchema = z.object({
   action: z.enum(['list', 'fetch']),
   labelId: z.string().min(1).max(100).optional(),
   perPage: z.number().min(1).max(100).optional(),
-  maxRecords: z.number().min(1).max(1000).optional(),
+  maxRecords: z.number().min(1).max(15000).optional(),
   labelType: z.enum(['contact', 'account']).optional(),
 });
 
@@ -122,7 +122,7 @@ serve(async (req) => {
       );
     }
 
-    const { action, labelId, perPage = 100, maxRecords = 500 } = validation.data;
+    const { action, labelId, perPage = 100, maxRecords = 15000 } = validation.data;
 
     // ============================================================
     // LIST: return Apollo saved lists (labels)

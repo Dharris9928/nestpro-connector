@@ -49,8 +49,10 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
   const [filter, setFilter] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'contact' | 'account'>('all');
   const [selected, setSelected] = useState<ApolloSavedList | null>(null);
-  const [maxRecords, setMaxRecords] = useState(500);
+  const [autoMax, setAutoMax] = useState(true);
+  const [maxRecords, setMaxRecords] = useState(2000);
   const [grouped, setGrouped] = useState<CompanyWithContacts[]>([]);
+  const [dupScan, setDupScan] = useState<{ companies: number; contacts: number; scanning: boolean } | null>(null);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<ImportResult | null>(null);
   const { toast } = useToast();
@@ -66,13 +68,13 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
       loadLists();
     }
     if (!open) {
-      // reset on close
       setTimeout(() => {
         setStep('list');
         setSelected(null);
         setGrouped([]);
         setResults(null);
         setProgress(0);
+        setDupScan(null);
       }, 300);
     }
   }, [open]);
@@ -102,9 +104,13 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
   const handleFetch = async (list: ApolloSavedList) => {
     setSelected(list);
     setStep('fetching');
+    // Auto-determine cap from list size (with 15k hard ceiling), else use manual maxRecords
+    const effectiveMax = autoMax
+      ? Math.min(15000, Math.max(1, list.cached_count ?? maxRecords))
+      : maxRecords;
     try {
       const { data, error } = await supabase.functions.invoke('apollo-saved-lists', {
-        body: { action: 'fetch', labelId: list.id, maxRecords, perPage: 100, labelType: list.modality },
+        body: { action: 'fetch', labelId: list.id, maxRecords: effectiveMax, perPage: 100, labelType: list.modality },
       });
       if (error) throw error;
       const rows = (data?.rows || []) as any[];
@@ -120,6 +126,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
       const groupedData = groupByCompany(rows);
       setGrouped(groupedData);
       setStep('preview');
+      scanForDuplicates(groupedData);
     } catch (e: any) {
       toast({
         title: 'Failed to fetch list',
@@ -127,6 +134,44 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
         variant: 'destructive',
       });
       setStep('list');
+    }
+  };
+
+  const scanForDuplicates = async (data: CompanyWithContacts[]) => {
+    setDupScan({ companies: 0, contacts: 0, scanning: true });
+    try {
+      const companyNames = data.map(d => d.companyData.company_name).filter(Boolean) as string[];
+      const emails = data.flatMap(d => d.contacts.map(c => c.email).filter(Boolean)) as string[];
+
+      // Batch in chunks of 500 to keep URL/IN clauses sane
+      const chunk = <T,>(arr: T[], n: number) => {
+        const out: T[][] = [];
+        for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+        return out;
+      };
+
+      const dupCompanies = new Set<string>();
+      for (const batch of chunk(companyNames, 500)) {
+        const { data: rows } = await supabase
+          .from('companies')
+          .select('company_name')
+          .in('company_name', batch);
+        rows?.forEach((r: any) => dupCompanies.add(r.company_name.toLowerCase()));
+      }
+
+      let dupContacts = 0;
+      for (const batch of chunk(emails, 500)) {
+        const { data: rows } = await supabase
+          .from('contacts')
+          .select('email')
+          .in('email', batch);
+        dupContacts += rows?.length || 0;
+      }
+
+      setDupScan({ companies: dupCompanies.size, contacts: dupContacts, scanning: false });
+    } catch (e) {
+      console.error('Duplicate scan failed:', e);
+      setDupScan(null);
     }
   };
 
@@ -195,16 +240,28 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Max records per import:</span>
-              <Input
-                type="number"
-                min={1}
-                max={1000}
-                value={maxRecords}
-                onChange={(e) => setMaxRecords(Math.max(1, Math.min(1000, parseInt(e.target.value) || 500)))}
-                className="w-24 h-8"
-              />
+            <div className="flex items-center gap-2 text-sm flex-wrap">
+              <Button
+                variant={autoMax ? 'default' : 'outline'}
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setAutoMax(v => !v)}
+              >
+                {autoMax ? '✓ Auto-size' : 'Auto-size'}
+              </Button>
+              <span className="text-muted-foreground">
+                {autoMax ? 'Fetches the entire list (up to 15,000)' : 'Max records:'}
+              </span>
+              {!autoMax && (
+                <Input
+                  type="number"
+                  min={1}
+                  max={15000}
+                  value={maxRecords}
+                  onChange={(e) => setMaxRecords(Math.max(1, Math.min(15000, parseInt(e.target.value) || 2000)))}
+                  className="w-24 h-8"
+                />
+              )}
             </div>
 
             <div className="flex items-center gap-1">
@@ -268,7 +325,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
           <div className="py-10 flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">
-              Fetching up to {maxRecords} records from "{selected?.name}"...
+              Fetching {autoMax ? (selected?.cached_count ?? 'all') : `up to ${maxRecords}`} records from "{selected?.name}"...
             </p>
           </div>
         )}
@@ -291,6 +348,19 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
                   ? `${grouped.length} companies ready to import`
                   : `${grouped.length} companies · ${totalContacts} contacts ready to import`
                 }
+              </div>
+              <div className="text-xs mt-2">
+                {dupScan?.scanning ? (
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Scanning CRM for duplicates...
+                  </span>
+                ) : dupScan ? (
+                  <span className="text-amber-700 dark:text-amber-400">
+                    Duplicates already in CRM: {dupScan.companies} companies
+                    {selected?.modality !== 'account' && ` · ${dupScan.contacts} contacts`}
+                    {' '}(will be skipped on import)
+                  </span>
+                ) : null}
               </div>
             </div>
             <ScrollArea className="h-64 border rounded-md">
