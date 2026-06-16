@@ -268,9 +268,21 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
         {step === 'preview' && (
           <div className="space-y-4">
             <div className="border rounded-md p-4 bg-accent/30">
-              <div className="text-sm font-medium">{selected?.name}</div>
+              <div className="text-sm font-medium flex items-center gap-2">
+                {selected?.name}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                  selected?.modality === 'account'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                    : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                }`}>
+                  {selected?.modality === 'account' ? 'Company List' : 'People List'}
+                </span>
+              </div>
               <div className="text-sm text-muted-foreground mt-1">
-                {grouped.length} companies · {totalContacts} contacts ready to import
+                {selected?.modality === 'account'
+                  ? `${grouped.length} companies ready to import`
+                  : `${grouped.length} companies · ${totalContacts} contacts ready to import`
+                }
               </div>
             </div>
             <ScrollArea className="h-64 border rounded-md">
@@ -279,7 +291,9 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
                   <div key={i} className="p-2">
                     <div className="font-medium">{c.companyData.company_name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {c.companyData.state || '—'} · {c.contacts.length} contact(s) · {c.companyData.industry_type}
+                      {c.companyData.state || '—'}
+                      {selected?.modality !== 'account' && ` · ${c.contacts.length} contact(s)`}
+                      {` · ${c.companyData.industry_type}`}
                     </div>
                   </div>
                 ))}
@@ -292,7 +306,9 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
             </ScrollArea>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setStep('list')}>Back</Button>
-              <Button onClick={handleImport}>Import {grouped.length} companies</Button>
+              <Button onClick={handleImport}>
+                Import {selected?.modality === 'account' ? `${grouped.length} companies` : `${grouped.length} companies`}
+              </Button>
             </div>
           </div>
         )}
