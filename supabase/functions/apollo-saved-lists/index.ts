@@ -160,7 +160,7 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // FETCH: pull people from a specific saved list (label)
+    // FETCH: pull people or companies from a specific saved list (label)
     // ============================================================
     if (action === 'fetch') {
       if (!labelId) {
@@ -170,12 +170,17 @@ serve(async (req) => {
         );
       }
 
+      const isAccount = (body.labelType === 'account');
       const rows: any[] = [];
       let page = 1;
       let total = 0;
 
       while (rows.length < maxRecords) {
-        const resp = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+        const endpoint = isAccount
+          ? 'https://api.apollo.io/v1/mixed_companies/search'
+          : 'https://api.apollo.io/v1/mixed_people/search';
+
+        const resp = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Cache-Control': 'no-cache',
@@ -199,14 +204,23 @@ serve(async (req) => {
         }
 
         const data = await resp.json();
-        const people: any[] = data.people || data.contacts || [];
-        total = data.pagination?.total_entries ?? total;
 
-        if (people.length === 0) break;
-
-        for (const p of people) {
-          rows.push(mapPersonToCsvRow(p));
-          if (rows.length >= maxRecords) break;
+        if (isAccount) {
+          const companies: any[] = data.organizations || data.companies || [];
+          total = data.pagination?.total_entries ?? total;
+          if (companies.length === 0) break;
+          for (const c of companies) {
+            rows.push(mapCompanyToCsvRow(c));
+            if (rows.length >= maxRecords) break;
+          }
+        } else {
+          const people: any[] = data.people || data.contacts || [];
+          total = data.pagination?.total_entries ?? total;
+          if (people.length === 0) break;
+          for (const p of people) {
+            rows.push(mapPersonToCsvRow(p));
+            if (rows.length >= maxRecords) break;
+          }
         }
 
         const totalPages = data.pagination?.total_pages ?? 1;
@@ -215,7 +229,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ rows, totalAvailable: total, fetched: rows.length }),
+        JSON.stringify({ rows, totalAvailable: total, fetched: rows.length, labelType: body.labelType || 'contact' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
