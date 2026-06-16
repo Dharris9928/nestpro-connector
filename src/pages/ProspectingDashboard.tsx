@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { SegmentCard } from '@/components/prospecting/SegmentCard';
 import { ApolloCSVImportDialog } from '@/components/prospecting/ApolloCSVImportDialog';
+import { ApolloSavedListImportDialog } from '@/components/prospecting/ApolloSavedListImportDialog';
 import { ProspectingAIChatBubble } from '@/components/prospecting/ProspectingAIChatBubble';
-import { TrendingUp, Home, Wrench, Zap, Award, DollarSign, Building2, FileUp } from 'lucide-react';
+import { TrendingUp, Home, Wrench, Zap, Award, DollarSign, Building2, FileUp, ListChecks } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -107,6 +108,7 @@ const SEGMENT_CONFIGS = [
 
 export default function ProspectingDashboard() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [savedListDialogOpen, setSavedListDialogOpen] = useState(false);
 
   return (
     <>
@@ -118,10 +120,16 @@ export default function ProspectingDashboard() {
               Find and import companies for each target segment using Apollo's database
             </p>
           </div>
-          <Button onClick={() => setImportDialogOpen(true)} size="lg">
-            <FileUp className="h-4 w-4 mr-2" />
-            Import CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setSavedListDialogOpen(true)} size="lg">
+              <ListChecks className="h-4 w-4 mr-2" />
+              Import Apollo List
+            </Button>
+            <Button onClick={() => setImportDialogOpen(true)} size="lg" variant="outline">
+              <FileUp className="h-4 w-4 mr-2" />
+              Import CSV
+            </Button>
+          </div>
         </div>
 
         <Card className="bg-accent/50">
@@ -178,9 +186,13 @@ export default function ProspectingDashboard() {
       <ApolloCSVImportDialog
         open={importDialogOpen}
         onClose={() => setImportDialogOpen(false)}
-        onImportComplete={() => {
-          // Could add refresh logic here if needed
-        }}
+        onImportComplete={() => {}}
+      />
+
+      <ApolloSavedListImportDialog
+        open={savedListDialogOpen}
+        onClose={() => setSavedListDialogOpen(false)}
+        onImportComplete={() => {}}
       />
 
       <ProspectingAIChatBubble />
