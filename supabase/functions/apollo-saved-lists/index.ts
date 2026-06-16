@@ -24,7 +24,7 @@ function normalizeLabelType(modality: unknown): 'contact' | 'account' {
 // Map an Apollo person object to the same shape produced by an Apollo CSV row
 // so the existing groupByCompany/importApolloData pipeline can consume it.
 function mapPersonToCsvRow(person: any) {
-  const org = person.organization || {};
+  const org = person.organization || person.account || {};
   const orgCity = org.city || person.city || null;
   const orgState = org.state || person.state || null;
   const orgCountry = org.country || person.country || null;
@@ -58,6 +58,8 @@ function mapPersonToCsvRow(person: any) {
 }
 
 function mapCompanyToCsvRow(company: any) {
+  const primaryPhone = company.primary_phone?.sanitized_number || company.primary_phone?.number || '';
+
   return {
     'First Name': '',
     'Last Name': '',
@@ -70,8 +72,8 @@ function mapCompanyToCsvRow(company: any) {
     'Company': company.name || '',
     'Company Name': company.name || '',
     'Organization Name': company.name || '',
-    'Website': company.website_url || '',
-    'Company Website': company.website_url || '',
+    'Website': company.website_url || company.domain || '',
+    'Company Website': company.website_url || company.domain || '',
     'Industry': company.industry || '',
     'Company Linkedin Url': company.linkedin_url || '',
     '# Employees': company.estimated_num_employees || '',
@@ -79,7 +81,7 @@ function mapCompanyToCsvRow(company: any) {
     'City': company.city || '',
     'State': company.state || '',
     'Country': company.country || '',
-    'Company Phone': company.phone || company.sanitized_phone || '',
+    'Company Phone': company.phone || company.sanitized_phone || primaryPhone,
     'Facebook Url': company.facebook_url || '',
     'Twitter Url': company.twitter_url || '',
     'Keywords': Array.isArray(company.keywords) ? company.keywords.join(', ') : '',
@@ -182,8 +184,11 @@ serve(async (req) => {
 
       while (rows.length < maxRecords) {
         const endpoint = isAccount
-          ? 'https://api.apollo.io/api/v1/mixed_companies/search'
-          : 'https://api.apollo.io/api/v1/mixed_people/api_search';
+          ? 'https://api.apollo.io/api/v1/accounts/search'
+          : 'https://api.apollo.io/api/v1/contacts/search';
+        const labelFilter = isAccount
+          ? { account_label_ids: [labelId] }
+          : { contact_label_ids: [labelId] };
 
         const resp = await fetch(endpoint, {
           method: 'POST',
@@ -193,7 +198,7 @@ serve(async (req) => {
             'X-Api-Key': apolloApiKey,
           },
           body: JSON.stringify({
-            label_ids: [labelId],
+            ...labelFilter,
             page,
             per_page: perPage,
           }),
@@ -211,7 +216,7 @@ serve(async (req) => {
         const data = await resp.json();
 
         if (isAccount) {
-          const companies: any[] = data.organizations || data.companies || [];
+          const companies: any[] = data.accounts || [];
           total = data.pagination?.total_entries ?? total;
           if (companies.length === 0) break;
           for (const c of companies) {
@@ -219,7 +224,7 @@ serve(async (req) => {
             if (rows.length >= maxRecords) break;
           }
         } else {
-          const people: any[] = data.people || data.contacts || [];
+          const people: any[] = data.contacts || [];
           total = data.pagination?.total_entries ?? total;
           if (people.length === 0) break;
           for (const p of people) {
