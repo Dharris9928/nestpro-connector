@@ -154,7 +154,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
       }}
     >
       <DialogContent
-        className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="max-w-2xl h-[85vh] overflow-hidden flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
           if (step === 'importing' || step === 'fetching') e.preventDefault();
