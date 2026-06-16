@@ -12,7 +12,7 @@ const requestSchema = z.object({
   action: z.enum(['list', 'fetch']),
   labelId: z.string().min(1).max(100).optional(),
   perPage: z.number().min(1).max(100).optional(),
-  maxRecords: z.number().min(1).max(1000).optional(),
+  maxRecords: z.number().min(1).max(15000).optional(),
   labelType: z.enum(['contact', 'account']).optional(),
 });
 
