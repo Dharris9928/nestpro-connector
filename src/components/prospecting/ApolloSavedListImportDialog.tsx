@@ -199,6 +199,20 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
               />
             </div>
 
+            <div className="flex items-center gap-1">
+              {(['all', 'contact', 'account'] as const).map((type) => (
+                <Button
+                  key={type}
+                  variant={filterType === type ? 'default' : 'outline'}
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => setFilterType(type)}
+                >
+                  {type === 'all' ? 'All' : type === 'contact' ? 'People' : 'Companies'}
+                </Button>
+              ))}
+            </div>
+
             <ScrollArea className="h-full border rounded-md min-h-0">
               {loadingLists ? (
                 <div className="p-8 flex items-center justify-center text-muted-foreground">
@@ -215,8 +229,17 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
                       key={l.id}
                       className="flex items-center justify-between p-3 hover:bg-accent/50"
                     >
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{l.name}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium truncate">{l.name}</div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            l.modality === 'account'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                              : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                          }`}>
+                            {l.modality === 'account' ? 'Company' : 'People'}
+                          </span>
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {l.cached_count != null ? `${l.cached_count} records` : 'Size unknown'}
                           {l.modified_at && ` · Updated ${new Date(l.modified_at).toLocaleDateString()}`}
