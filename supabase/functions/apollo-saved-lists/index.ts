@@ -122,7 +122,7 @@ serve(async (req) => {
       );
     }
 
-    const { action, labelId, perPage = 100, maxRecords = 500 } = validation.data;
+    const { action, labelId, perPage = 100, maxRecords = 15000 } = validation.data;
 
     // ============================================================
     // LIST: return Apollo saved lists (labels)
