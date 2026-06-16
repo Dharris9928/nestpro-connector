@@ -13,6 +13,7 @@ const requestSchema = z.object({
   labelId: z.string().min(1).max(100).optional(),
   perPage: z.number().min(1).max(100).optional(),
   maxRecords: z.number().min(1).max(1000).optional(),
+  labelType: z.enum(['contact', 'account']).optional(),
 });
 
 // Map an Apollo person object to the same shape produced by an Apollo CSV row
@@ -48,6 +49,35 @@ function mapPersonToCsvRow(person: any) {
     'Facebook Url': org.facebook_url || '',
     'Twitter Url': org.twitter_url || '',
     'Keywords': Array.isArray(org.keywords) ? org.keywords.join(', ') : '',
+  };
+}
+
+function mapCompanyToCsvRow(company: any) {
+  return {
+    'First Name': '',
+    'Last Name': '',
+    'Title': '',
+    'Email': '',
+    'Person Linkedin Url': '',
+    'Mobile Phone': '',
+    'Seniority': '',
+
+    'Company': company.name || '',
+    'Company Name': company.name || '',
+    'Organization Name': company.name || '',
+    'Website': company.website_url || '',
+    'Company Website': company.website_url || '',
+    'Industry': company.industry || '',
+    'Company Linkedin Url': company.linkedin_url || '',
+    '# Employees': company.estimated_num_employees || '',
+    'Annual Revenue': company.annual_revenue || company.organization_revenue || '',
+    'City': company.city || '',
+    'State': company.state || '',
+    'Country': company.country || '',
+    'Company Phone': company.phone || company.sanitized_phone || '',
+    'Facebook Url': company.facebook_url || '',
+    'Twitter Url': company.twitter_url || '',
+    'Keywords': Array.isArray(company.keywords) ? company.keywords.join(', ') : '',
   };
 }
 
@@ -120,6 +150,7 @@ serve(async (req) => {
         created_at: l.created_at || null,
         modified_at: l.modified_at || null,
         cached_count: l.cached_count ?? l.num_contacts ?? null,
+        modality: l.modality || l.label_type || 'contact', // 'contact' or 'account'
       }));
 
       return new Response(
@@ -129,7 +160,7 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // FETCH: pull people from a specific saved list (label)
+    // FETCH: pull people or companies from a specific saved list (label)
     // ============================================================
     if (action === 'fetch') {
       if (!labelId) {
@@ -139,12 +170,17 @@ serve(async (req) => {
         );
       }
 
+      const isAccount = (body.labelType === 'account');
       const rows: any[] = [];
       let page = 1;
       let total = 0;
 
       while (rows.length < maxRecords) {
-        const resp = await fetch('https://api.apollo.io/v1/mixed_people/search', {
+        const endpoint = isAccount
+          ? 'https://api.apollo.io/v1/mixed_companies/search'
+          : 'https://api.apollo.io/v1/mixed_people/search';
+
+        const resp = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Cache-Control': 'no-cache',
@@ -168,14 +204,23 @@ serve(async (req) => {
         }
 
         const data = await resp.json();
-        const people: any[] = data.people || data.contacts || [];
-        total = data.pagination?.total_entries ?? total;
 
-        if (people.length === 0) break;
-
-        for (const p of people) {
-          rows.push(mapPersonToCsvRow(p));
-          if (rows.length >= maxRecords) break;
+        if (isAccount) {
+          const companies: any[] = data.organizations || data.companies || [];
+          total = data.pagination?.total_entries ?? total;
+          if (companies.length === 0) break;
+          for (const c of companies) {
+            rows.push(mapCompanyToCsvRow(c));
+            if (rows.length >= maxRecords) break;
+          }
+        } else {
+          const people: any[] = data.people || data.contacts || [];
+          total = data.pagination?.total_entries ?? total;
+          if (people.length === 0) break;
+          for (const p of people) {
+            rows.push(mapPersonToCsvRow(p));
+            if (rows.length >= maxRecords) break;
+          }
         }
 
         const totalPages = data.pagination?.total_pages ?? 1;
@@ -184,7 +229,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ rows, totalAvailable: total, fetched: rows.length }),
+        JSON.stringify({ rows, totalAvailable: total, fetched: rows.length, labelType: body.labelType || 'contact' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

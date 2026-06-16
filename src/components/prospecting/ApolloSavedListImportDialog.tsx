@@ -26,6 +26,7 @@ interface ApolloSavedList {
   name: string;
   cached_count: number | null;
   modified_at: string | null;
+  modality: 'contact' | 'account';
 }
 
 interface Props {
@@ -41,6 +42,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
   const [loadingLists, setLoadingLists] = useState(false);
   const [lists, setLists] = useState<ApolloSavedList[]>([]);
   const [filter, setFilter] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'contact' | 'account'>('all');
   const [selected, setSelected] = useState<ApolloSavedList | null>(null);
   const [maxRecords, setMaxRecords] = useState(500);
   const [grouped, setGrouped] = useState<CompanyWithContacts[]>([]);
@@ -94,14 +96,14 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
     setStep('fetching');
     try {
       const { data, error } = await supabase.functions.invoke('apollo-saved-lists', {
-        body: { action: 'fetch', labelId: list.id, maxRecords, perPage: 100 },
+        body: { action: 'fetch', labelId: list.id, maxRecords, perPage: 100, labelType: list.modality },
       });
       if (error) throw error;
       const rows = (data?.rows || []) as any[];
       if (rows.length === 0) {
         toast({
           title: 'No records found',
-          description: 'This Apollo list returned no people.',
+          description: `This Apollo ${list.modality === 'account' ? 'company' : 'people'} list returned no records.`,
           variant: 'destructive',
         });
         setStep('list');
@@ -140,9 +142,11 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
     }
   };
 
-  const filtered = lists.filter(l =>
-    l.name?.toLowerCase().includes(filter.toLowerCase())
-  );
+  const filtered = lists.filter(l => {
+    const matchesText = l.name?.toLowerCase().includes(filter.toLowerCase());
+    const matchesType = filterType === 'all' || l.modality === filterType;
+    return matchesText && matchesType;
+  });
 
   const totalContacts = grouped.reduce((s, c) => s + c.contacts.length, 0);
 
@@ -195,6 +199,20 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
               />
             </div>
 
+            <div className="flex items-center gap-1">
+              {(['all', 'contact', 'account'] as const).map((type) => (
+                <Button
+                  key={type}
+                  variant={filterType === type ? 'default' : 'outline'}
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => setFilterType(type)}
+                >
+                  {type === 'all' ? 'All' : type === 'contact' ? 'People' : 'Companies'}
+                </Button>
+              ))}
+            </div>
+
             <ScrollArea className="h-full border rounded-md min-h-0">
               {loadingLists ? (
                 <div className="p-8 flex items-center justify-center text-muted-foreground">
@@ -211,8 +229,17 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
                       key={l.id}
                       className="flex items-center justify-between p-3 hover:bg-accent/50"
                     >
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{l.name}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium truncate">{l.name}</div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            l.modality === 'account'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                              : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                          }`}>
+                            {l.modality === 'account' ? 'Company' : 'People'}
+                          </span>
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {l.cached_count != null ? `${l.cached_count} records` : 'Size unknown'}
                           {l.modified_at && ` · Updated ${new Date(l.modified_at).toLocaleDateString()}`}
@@ -241,9 +268,21 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
         {step === 'preview' && (
           <div className="space-y-4">
             <div className="border rounded-md p-4 bg-accent/30">
-              <div className="text-sm font-medium">{selected?.name}</div>
+              <div className="text-sm font-medium flex items-center gap-2">
+                {selected?.name}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                  selected?.modality === 'account'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                    : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                }`}>
+                  {selected?.modality === 'account' ? 'Company List' : 'People List'}
+                </span>
+              </div>
               <div className="text-sm text-muted-foreground mt-1">
-                {grouped.length} companies · {totalContacts} contacts ready to import
+                {selected?.modality === 'account'
+                  ? `${grouped.length} companies ready to import`
+                  : `${grouped.length} companies · ${totalContacts} contacts ready to import`
+                }
               </div>
             </div>
             <ScrollArea className="h-64 border rounded-md">
@@ -252,7 +291,9 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
                   <div key={i} className="p-2">
                     <div className="font-medium">{c.companyData.company_name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {c.companyData.state || '—'} · {c.contacts.length} contact(s) · {c.companyData.industry_type}
+                      {c.companyData.state || '—'}
+                      {selected?.modality !== 'account' && ` · ${c.contacts.length} contact(s)`}
+                      {` · ${c.companyData.industry_type}`}
                     </div>
                   </div>
                 ))}
@@ -265,7 +306,9 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
             </ScrollArea>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setStep('list')}>Back</Button>
-              <Button onClick={handleImport}>Import {grouped.length} companies</Button>
+              <Button onClick={handleImport}>
+                Import {selected?.modality === 'account' ? `${grouped.length} companies` : `${grouped.length} companies`}
+              </Button>
             </div>
           </div>
         )}
