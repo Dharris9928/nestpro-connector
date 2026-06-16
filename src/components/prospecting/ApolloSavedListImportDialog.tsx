@@ -42,6 +42,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
   const [loadingLists, setLoadingLists] = useState(false);
   const [lists, setLists] = useState<ApolloSavedList[]>([]);
   const [filter, setFilter] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'contact' | 'account'>('all');
   const [selected, setSelected] = useState<ApolloSavedList | null>(null);
   const [maxRecords, setMaxRecords] = useState(500);
   const [grouped, setGrouped] = useState<CompanyWithContacts[]>([]);
