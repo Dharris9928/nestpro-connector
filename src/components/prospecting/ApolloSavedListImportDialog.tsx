@@ -68,13 +68,13 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
       loadLists();
     }
     if (!open) {
-      // reset on close
       setTimeout(() => {
         setStep('list');
         setSelected(null);
         setGrouped([]);
         setResults(null);
         setProgress(0);
+        setDupScan(null);
       }, 300);
     }
   }, [open]);
