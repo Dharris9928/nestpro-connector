@@ -13,6 +13,7 @@ const requestSchema = z.object({
   labelId: z.string().min(1).max(100).optional(),
   perPage: z.number().min(1).max(100).optional(),
   maxRecords: z.number().min(1).max(1000).optional(),
+  labelType: z.enum(['contact', 'account']).optional(),
 });
 
 // Map an Apollo person object to the same shape produced by an Apollo CSV row
