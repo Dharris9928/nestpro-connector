@@ -154,7 +154,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
       }}
     >
       <DialogContent
-        className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="max-w-2xl h-[85vh] overflow-hidden flex flex-col"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
           if (step === 'importing' || step === 'fetching') e.preventDefault();
@@ -171,7 +171,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
         </DialogHeader>
 
         {step === 'list' && (
-          <div className="flex-1 overflow-hidden flex flex-col gap-3">
+          <div className="flex-1 overflow-hidden flex flex-col gap-3 min-h-0">
             <div className="flex items-center gap-2">
               <Input
                 placeholder="Search lists..."
@@ -195,7 +195,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
               />
             </div>
 
-            <ScrollArea className="flex-1 border rounded-md">
+            <ScrollArea className="h-full border rounded-md min-h-0">
               {loadingLists ? (
                 <div className="p-8 flex items-center justify-center text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading saved lists...
