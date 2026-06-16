@@ -49,8 +49,10 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
   const [filter, setFilter] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'contact' | 'account'>('all');
   const [selected, setSelected] = useState<ApolloSavedList | null>(null);
-  const [maxRecords, setMaxRecords] = useState(500);
+  const [autoMax, setAutoMax] = useState(true);
+  const [maxRecords, setMaxRecords] = useState(2000);
   const [grouped, setGrouped] = useState<CompanyWithContacts[]>([]);
+  const [dupScan, setDupScan] = useState<{ companies: number; contacts: number; scanning: boolean } | null>(null);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<ImportResult | null>(null);
   const { toast } = useToast();
