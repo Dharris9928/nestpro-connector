@@ -104,9 +104,13 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
   const handleFetch = async (list: ApolloSavedList) => {
     setSelected(list);
     setStep('fetching');
+    // Auto-determine cap from list size (with 15k hard ceiling), else use manual maxRecords
+    const effectiveMax = autoMax
+      ? Math.min(15000, Math.max(1, list.cached_count ?? maxRecords))
+      : maxRecords;
     try {
       const { data, error } = await supabase.functions.invoke('apollo-saved-lists', {
-        body: { action: 'fetch', labelId: list.id, maxRecords, perPage: 100, labelType: list.modality },
+        body: { action: 'fetch', labelId: list.id, maxRecords: effectiveMax, perPage: 100, labelType: list.modality },
       });
       if (error) throw error;
       const rows = (data?.rows || []) as any[];
@@ -122,6 +126,7 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
       const groupedData = groupByCompany(rows);
       setGrouped(groupedData);
       setStep('preview');
+      scanForDuplicates(groupedData);
     } catch (e: any) {
       toast({
         title: 'Failed to fetch list',
@@ -129,6 +134,44 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
         variant: 'destructive',
       });
       setStep('list');
+    }
+  };
+
+  const scanForDuplicates = async (data: CompanyWithContacts[]) => {
+    setDupScan({ companies: 0, contacts: 0, scanning: true });
+    try {
+      const companyNames = data.map(d => d.companyData.company_name).filter(Boolean) as string[];
+      const emails = data.flatMap(d => d.contacts.map(c => c.email).filter(Boolean)) as string[];
+
+      // Batch in chunks of 500 to keep URL/IN clauses sane
+      const chunk = <T,>(arr: T[], n: number) => {
+        const out: T[][] = [];
+        for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+        return out;
+      };
+
+      const dupCompanies = new Set<string>();
+      for (const batch of chunk(companyNames, 500)) {
+        const { data: rows } = await supabase
+          .from('companies')
+          .select('company_name')
+          .in('company_name', batch);
+        rows?.forEach((r: any) => dupCompanies.add(r.company_name.toLowerCase()));
+      }
+
+      let dupContacts = 0;
+      for (const batch of chunk(emails, 500)) {
+        const { data: rows } = await supabase
+          .from('contacts')
+          .select('email')
+          .in('email', batch);
+        dupContacts += rows?.length || 0;
+      }
+
+      setDupScan({ companies: dupCompanies.size, contacts: dupContacts, scanning: false });
+    } catch (e) {
+      console.error('Duplicate scan failed:', e);
+      setDupScan(null);
     }
   };
 
