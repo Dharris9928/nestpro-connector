@@ -240,16 +240,28 @@ export function ApolloSavedListImportDialog({ open, onClose, onImportComplete }:
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Max records per import:</span>
-              <Input
-                type="number"
-                min={1}
-                max={1000}
-                value={maxRecords}
-                onChange={(e) => setMaxRecords(Math.max(1, Math.min(1000, parseInt(e.target.value) || 500)))}
-                className="w-24 h-8"
-              />
+            <div className="flex items-center gap-2 text-sm flex-wrap">
+              <Button
+                variant={autoMax ? 'default' : 'outline'}
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setAutoMax(v => !v)}
+              >
+                {autoMax ? '✓ Auto-size' : 'Auto-size'}
+              </Button>
+              <span className="text-muted-foreground">
+                {autoMax ? 'Fetches the entire list (up to 15,000)' : 'Max records:'}
+              </span>
+              {!autoMax && (
+                <Input
+                  type="number"
+                  min={1}
+                  max={15000}
+                  value={maxRecords}
+                  onChange={(e) => setMaxRecords(Math.max(1, Math.min(15000, parseInt(e.target.value) || 2000)))}
+                  className="w-24 h-8"
+                />
+              )}
             </div>
 
             <div className="flex items-center gap-1">
