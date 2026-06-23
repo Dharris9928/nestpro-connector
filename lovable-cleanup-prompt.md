@@ -65,6 +65,54 @@ fetches (e.g. opening a record's edit dialog) using `select('*')` since
 those genuinely need full detail — this is specifically about the list
 queries that hydrate many rows at once.
 
+## 5. Replace `any` types with real types
+
+**Where:** Codebase-wide — `npx eslint .` currently reports 719
+`@typescript-eslint/no-explicit-any` violations, heavily concentrated in
+the Supabase edge functions (`supabase/functions/search-contacts-by-name`,
+`send-activity-assignment-notification`, `send-approval-request-notification`,
+`send-approval-status-notification`, `send-deletion-request-notification`,
+`send-notification`, `send-password-reset-notification`,
+`validate-presentation-token`, `verify-email-domain`,
+`verify-reset-code/index.ts`), but also present throughout `src/`.
+
+**Problem:** `any` defeats TypeScript's type checking at that call site —
+`tsc --noEmit` currently passes clean, but that's misleading, because large
+parts of the codebase have opted out of type checking rather than actually
+being type-safe. Bugs that should be caught at compile time (wrong field
+name, wrong shape passed to a function) slip through silently wherever
+`any` is used.
+
+**What to do:** Work through these in batches, starting with the edge
+functions since they're a smaller, self-contained set. For each `any`:
+infer the real type from how the value is used (e.g. a webhook payload
+shape, a Supabase row type, a function parameter) and replace it with an
+explicit interface/type, or `unknown` plus a type guard if the shape is
+genuinely dynamic. Don't do a mechanical `as any` → `as unknown as X` cast
+that just silences the linter without adding real safety — actually type
+the data. Re-run `npx eslint .` after each batch to confirm the count is
+dropping, and run `npx tsc --noEmit` to make sure no new type errors were
+introduced.
+
+## 6. Fix missing `useEffect`/`useMemo`/`useCallback` dependencies
+
+**Where:** Codebase-wide — `npx eslint .` reports 40
+`react-hooks/exhaustive-deps` warnings.
+
+**Problem:** A missing dependency means the hook can run with stale data
+from an earlier render — these are a common source of "it doesn't update
+when X changes" bugs that only show up intermittently.
+
+**What to do:** Go through each warning individually rather than blanket-
+adding every suggested dependency, since some are likely intentional
+(e.g. an effect that should only run once on mount, like the real-time
+subscription setup in `Companies.tsx`). For each one: if the missing
+dependency is genuinely needed, add it; if the effect is intentionally
+mount-only, add an inline comment explaining why and use an
+`// eslint-disable-next-line react-hooks/exhaustive-deps` with a one-line
+reason instead of silently leaving the warning. Flag any case where you're
+not sure which it is rather than guessing.
+
 ---
 
 Already done outside of Lovable (for context, don't redo):
