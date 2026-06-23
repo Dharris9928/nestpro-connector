@@ -845,12 +845,12 @@ const Companies = () => {
             )}
           </div>
 
-          {/* Pagination - only show for grid view */}
-          {currentView === 'grid' && filteredAndSortedCompanies.length > 0 && (
+          {/* Pagination - only show for grid view; driven by server-side count */}
+          {currentView === 'grid' && totalCount > 0 && (
             <TablePagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={filteredAndSortedCompanies.length}
+              totalItems={totalCount}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               onItemsPerPageChange={(value) => {
