@@ -170,10 +170,8 @@ const Companies = () => {
   // server-paginated grid query and the in-memory (capped) query used by
   // Kanban/Gallery/List/Hierarchy views. Returning the configured query
   // builder keeps both code paths in lockstep so pagination stays accurate.
-  const buildFilteredQuery = async (
-    base: ReturnType<typeof supabase.from<"companies">>['select'] extends never ? never : any,
-  ) => {
-    let query = base;
+  const buildFilteredQuery = async (base: any): Promise<any> => {
+    let query: any = base;
 
     // Resolve user (respecting admin impersonation)
     const impersonationData = sessionStorage.getItem('admin-impersonation');
