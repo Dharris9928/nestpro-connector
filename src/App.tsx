@@ -184,6 +184,14 @@ const App = () => (
                 </AppLayout>
               }
             />
+            <Route
+              path="/purge-candidates"
+              element={
+                <AppLayout>
+                  <PurgeCandidates />
+                </AppLayout>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
