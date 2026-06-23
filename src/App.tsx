@@ -31,7 +31,16 @@ const PipelineAnalytics = lazy(() => import("./pages/PipelineAnalytics"));
 const JobQuotes = lazy(() => import("./pages/JobQuotes"));
 const PurgeCandidates = lazy(() => import("./pages/PurgeCandidates"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Loading fallback for lazy-loaded pages
 const PageLoader = () => (

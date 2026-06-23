@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
-import * as XLSX from "@e965/xlsx";
 import { Upload, Download, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { generateBatchId } from "@/lib/import/batchTracking";
@@ -105,8 +104,9 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
         });
       } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           try {
+            const XLSX = await import("@e965/xlsx");
             const data = new Uint8Array(e.target?.result as ArrayBuffer);
             const workbook = XLSX.read(data, { type: 'array' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -145,14 +145,15 @@ export function ImportDialog({ open, onClose, onImportComplete }: ImportDialogPr
     }
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
+    const XLSX = await import("@e965/xlsx");
     const template = [
       ['company_name', 'website_url', 'industry_type', 'builder_segment', 'contractor_segment', 'industry_specialties', 'primary_phone', 'linkedin_company_url', 'status', 'priority_tier', 'lead_score', 'hvac_monitoring'],
       ['Example Builder Inc', 'https://example.com', 'Builder', 'production_tract', '', '', '555-1234', 'https://linkedin.com/company/example', 'Lead', 'P1', '85', 'Yes'],
       ['Sample HVAC Co', 'https://sample.com', 'Contractor', '', 'smart_home_champions', 'HVAC', '555-5678', 'https://linkedin.com/company/sample', 'Contacted', 'P2', '70', 'No'],
       ['Security Pro', 'https://securitypro.com', 'Contractor', '', '', 'CI/Security,Electrical', '555-9999', 'https://linkedin.com/company/securitypro', 'Lead', 'P1', '80', 'Not Interested']
     ];
-    
+
     const worksheet = XLSX.utils.aoa_to_sheet(template);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');

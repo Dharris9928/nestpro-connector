@@ -16,6 +16,26 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    sourcemap: true,
+    sourcemap: mode === "development",
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("@radix-ui")) return "vendor-radix";
+            if (id.includes("recharts")) return "vendor-charts";
+            if (id.includes("pdfjs-dist")) return "vendor-pdf";
+            if (id.includes("xlsx")) return "vendor-xlsx";
+            if (id.includes("@tanstack/react-query")) return "vendor-query";
+            if (
+              id.includes("react-dom") ||
+              id.includes("/react/") ||
+              id.includes("react-router-dom")
+            ) {
+              return "vendor-react";
+            }
+          }
+        },
+      },
+    },
   },
 }));

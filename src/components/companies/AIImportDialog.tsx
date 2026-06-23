@@ -10,7 +10,6 @@ import { Sparkles, Upload, CheckCircle2, AlertCircle, Loader2, FileSpreadsheet }
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Papa from 'papaparse';
-import * as XLSX from '@e965/xlsx';
 import { AIImportReviewStep } from './AIImportReviewStep';
 import { createCompany } from '@/lib/companies/createCompany';
 import { createContact } from '@/lib/contacts/createContact';
@@ -97,7 +96,8 @@ export function AIImportDialog({ open, onClose, onImportComplete, targetTable }:
         });
       } else {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
+          const XLSX = await import('@e965/xlsx');
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];

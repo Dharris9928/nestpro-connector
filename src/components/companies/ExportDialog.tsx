@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
-import * as XLSX from "@e965/xlsx";
 import { Download, FileText, Table } from "lucide-react";
 import { logContactExport } from "@/lib/contacts/logContactAccess";
 import { useExportQuota } from "@/hooks/useExportQuota";
@@ -166,6 +165,7 @@ export function ExportDialog({ open, onClose, selectedIds, filters, totalCount }
         link.click();
         URL.revokeObjectURL(link.href);
       } else {
+        const XLSX = await import("@e965/xlsx");
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Companies");

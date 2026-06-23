@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, Search, ShieldAlert, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from '@e965/xlsx';
 
 export function BlockedSignupsViewer() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +45,7 @@ export function BlockedSignupsViewer() {
     return email.includes(search) || domain.includes(search) || reason.includes(search);
   });
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!filteredAttempts || filteredAttempts.length === 0) {
       toast.error('No data to export');
       return;
@@ -62,6 +61,7 @@ export function BlockedSignupsViewer() {
       'IP Address': attempt.ip_address || 'N/A'
     }));
 
+    const XLSX = await import('@e965/xlsx');
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Blocked Signups');

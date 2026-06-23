@@ -261,26 +261,18 @@ const Companies = () => {
       }
 
       // Apply enrichment status filter
-      if (enrichmentStatusFilter === 'enriched') {
+      if (enrichmentStatusFilter === 'enriched' || enrichmentStatusFilter === 'not-enriched') {
         const { data: enrichedIds } = await supabase
           .from('enrichment_logs')
           .select('company_id')
           .eq('status', 'success');
-        
-        if (enrichedIds && enrichedIds.length > 0) {
-          const uniqueIds = [...new Set(enrichedIds.map(log => log.company_id))];
+
+        const uniqueIds = [...new Set((enrichedIds || []).map(log => log.company_id))];
+
+        if (enrichmentStatusFilter === 'enriched') {
+          if (uniqueIds.length === 0) return [];
           query = query.in('id', uniqueIds);
-        } else {
-          return [];
-        }
-      } else if (enrichmentStatusFilter === 'not-enriched') {
-        const { data: enrichedIds } = await supabase
-          .from('enrichment_logs')
-          .select('company_id')
-          .eq('status', 'success');
-        
-        if (enrichedIds && enrichedIds.length > 0) {
-          const uniqueIds = [...new Set(enrichedIds.map(log => log.company_id))];
+        } else if (uniqueIds.length > 0) {
           query = query.not('id', 'in', `(${uniqueIds.join(',')})`);
         }
       }
