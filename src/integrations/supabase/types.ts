@@ -7115,6 +7115,16 @@ export type Database = {
         Args: { _hours?: number; _user_id: string }
         Returns: boolean
       }
+      user_owns_activity: { Args: { _activity_id: string }; Returns: boolean }
+      user_owns_activity_strict: {
+        Args: { _activity_id: string }
+        Returns: boolean
+      }
+      user_owns_communication: {
+        Args: { _communication_id: string }
+        Returns: boolean
+      }
+      user_owns_company: { Args: { _company_id: string }; Returns: boolean }
       validate_api_key: {
         Args: { _endpoint: string; _ip_address?: unknown; _key_hash: string }
         Returns: {
