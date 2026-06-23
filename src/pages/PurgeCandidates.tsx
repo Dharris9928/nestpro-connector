@@ -30,6 +30,7 @@ const PAGE_SIZE = 100;
 export default function PurgeCandidates() {
   const [rows, setRows] = useState<PurgeRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [excluded, setExcluded] = useState(0);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -38,15 +39,52 @@ export default function PurgeCandidates() {
 
   const load = async () => {
     setLoading(true);
-    // Purge candidate = no website (per agreed bare-minimum rule)
+    // Strict purge candidate: no website, no LinkedIn, no email, and no related
+    // contacts / communications / apollo activity / opportunities / activities /
+    // job quotes / pilot programs. Anything with engagement signals is excluded.
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const { data, count, error } = await supabase
+
+    const baseFilter = (q: ReturnType<typeof supabase.from<'companies'>> extends never ? never : any) =>
+      q
+        .is('website_url', null)
+        .is('linkedin_company_url', null)
+        .is('primary_email', null);
+
+    // IDs of companies with ANY downstream signal — fetched in parallel so we can exclude them.
+    const [contactIds, commIds, apolloIds, oppIds, actIds, jqIds, pilotIds, looseNoWebsite] = await Promise.all([
+      supabase.from('contacts').select('company_id').not('company_id', 'is', null),
+      supabase.from('company_communications').select('company_id').not('company_id', 'is', null),
+      supabase.from('apollo_email_activities').select('company_id').not('company_id', 'is', null),
+      supabase.from('opportunities').select('company_id').not('company_id', 'is', null),
+      supabase.from('outreach_activities').select('company_id').not('company_id', 'is', null),
+      supabase.from('job_quotes').select('contractor_id').not('contractor_id', 'is', null),
+      supabase.from('pilot_programs').select('company_id').not('company_id', 'is', null),
+      supabase.from('companies').select('id', { count: 'exact', head: true }).is('website_url', null),
+    ]);
+
+    const blocked = new Set<string>();
+    [contactIds, commIds, apolloIds, oppIds, actIds, pilotIds].forEach((res) => {
+      (res.data ?? []).forEach((r: any) => r.company_id && blocked.add(r.company_id));
+    });
+    (jqIds.data ?? []).forEach((r: any) => r.contractor_id && blocked.add(r.contractor_id));
+
+    let query = supabase
       .from('companies')
       .select('id,company_name,website_url,linkedin_company_url,primary_email,state,city,industry_type,created_at', { count: 'exact' })
       .is('website_url', null)
+      .is('linkedin_company_url', null)
+      .is('primary_email', null);
+
+    if (blocked.size > 0) {
+      // Postgrest cap: chunk if needed. ~300 IDs is well under the URL limit.
+      query = query.not('id', 'in', `(${Array.from(blocked).join(',')})`);
+    }
+
+    const { data, count, error } = await query
       .order('created_at', { ascending: false })
       .range(from, to);
+
     setLoading(false);
     if (error) {
       toast({ title: 'Failed to load', description: error.message, variant: 'destructive' });
@@ -54,9 +92,11 @@ export default function PurgeCandidates() {
     }
     setRows((data ?? []) as PurgeRow[]);
     setTotal(count ?? 0);
+    setExcluded(Math.max(0, (looseNoWebsite.count ?? 0) - (count ?? 0)));
   };
 
   useEffect(() => { load(); }, [page]);
+
 
   const toggle = (id: string) => {
     const next = new Set(selected);
