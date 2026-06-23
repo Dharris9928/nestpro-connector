@@ -45,11 +45,7 @@ export default function PurgeCandidates() {
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    const baseFilter = (q: ReturnType<typeof supabase.from<'companies'>> extends never ? never : any) =>
-      q
-        .is('website_url', null)
-        .is('linkedin_company_url', null)
-        .is('primary_email', null);
+
 
     // IDs of companies with ANY downstream signal — fetched in parallel so we can exclude them.
     const [contactIds, commIds, apolloIds, oppIds, actIds, jqIds, pilotIds, looseNoWebsite] = await Promise.all([
