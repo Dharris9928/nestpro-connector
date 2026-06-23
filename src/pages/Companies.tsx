@@ -892,7 +892,7 @@ const Companies = () => {
           priority: priorityFilter,
           segment: segmentFilter,
         }}
-        totalCount={filteredAndSortedCompanies.length}
+        totalCount={currentView === 'grid' ? totalCount : filteredAndSortedCompanies.length}
       />
 
       <ImportDialog
