@@ -7,6 +7,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ApolloOrganization {
+  name?: string;
+  primary_domain?: string;
+  domain?: string;
+  website_url?: string;
+  linkedin_url?: string;
+  industry?: string;
+  estimated_num_employees?: number;
+  annual_revenue_printed?: string;
+  city?: string;
+  state?: string;
+}
+
+interface ApolloPerson {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  email?: string;
+  phone_numbers?: Array<{ raw_number?: string }>;
+  sanitized_phone?: string;
+  linkedin_url?: string;
+  organization?: ApolloOrganization;
+  account?: ApolloOrganization;
+  organization_name?: string;
+  photo_url?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  headline?: string;
+  seniority?: string;
+  departments?: string[];
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
