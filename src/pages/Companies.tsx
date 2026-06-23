@@ -732,14 +732,20 @@ const Companies = () => {
           <div className="px-6 py-3 border-b border-border bg-muted/30">
             <p className="text-sm text-muted-foreground">
               Showing <span className="font-medium text-foreground">{paginatedCompanies.length}</span> of{" "}
-              <span className="font-medium text-foreground">{filteredAndSortedCompanies.length}</span> companies
+              <span className="font-medium text-foreground">{currentView === 'grid' ? totalCount : filteredAndSortedCompanies.length}</span> companies
               {debouncedSearch && debouncedSearch.length >= 2 && (
                 <span className="ml-2">
                   matching "<span className="font-medium text-foreground">{debouncedSearch}</span>"
                 </span>
               )}
             </p>
+            {bulkTruncated && (
+              <p className="text-xs text-amber-600 mt-1">
+                Showing the first {BULK_CAP} of {totalCount} matching companies in this view. Narrow your filters to see the rest, or switch to the table view for full pagination.
+              </p>
+            )}
           </div>
+
 
           {/* Bulk Action Bar */}
           {selectedRows.length > 0 && (
