@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Mail, Phone, Linkedin, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Edit, Mail, Phone, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { DeleteRecordDialog } from "@/components/common/DeleteRecordDialog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ContactActivityDialog } from "./ContactActivityDialog";
@@ -52,6 +52,114 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   actions: 100,
 };
 
+const TIER_COLORS: Record<string, string> = {
+  Primary: "bg-priority-p1 text-priority-p1-foreground",
+  Secondary: "bg-priority-p2 text-priority-p2-foreground",
+  Influencer: "bg-priority-p3 text-priority-p3-foreground",
+};
+
+interface ContactRowProps {
+  contact: Contact;
+  columnWidths: Record<string, number>;
+  isAdmin: boolean;
+  onOpenActivity: (contact: Contact) => void;
+  onNavigateCompany: (companyId: string) => void;
+  onEdit: (contact: Contact) => void;
+  onRequestDelete: (contact: Contact) => void;
+}
+
+// Memoized row — re-renders only when its own props change, not when the
+// parent re-renders due to unrelated state (e.g. typing in the search box).
+const ContactRow = memo(function ContactRow({
+  contact,
+  columnWidths,
+  isAdmin,
+  onOpenActivity,
+  onNavigateCompany,
+  onEdit,
+  onRequestDelete,
+}: ContactRowProps) {
+  const assignedName = contact.assigned_profile
+    ? `${contact.assigned_profile.first_name} ${contact.assigned_profile.last_name}`
+    : "";
+  return (
+    <TableRow>
+      <TableCell style={{ width: columnWidths.name, maxWidth: columnWidths.name }} className="font-medium">
+        <div className="truncate">
+          <Button
+            variant="link"
+            className="p-0 h-auto font-medium text-foreground hover:text-primary"
+            onClick={() => onOpenActivity(contact)}
+          >
+            {contact.first_name} {contact.last_name}
+          </Button>
+        </div>
+      </TableCell>
+      <TableCell style={{ width: columnWidths.title, maxWidth: columnWidths.title }} className="text-sm">
+        <div className="truncate" title={contact.title || ''}>{contact.title || "—"}</div>
+      </TableCell>
+      <TableCell style={{ width: columnWidths.company, maxWidth: columnWidths.company }} className="text-sm">
+        <div className="truncate">
+          {contact.companies?.company_name ? (
+            <Button
+              variant="link"
+              className="p-0 h-auto text-sm text-foreground hover:text-primary"
+              onClick={() => onNavigateCompany(contact.company_id)}
+            >
+              {contact.companies.company_name}
+            </Button>
+          ) : (
+            "—"
+          )}
+        </div>
+      </TableCell>
+      <TableCell style={{ width: columnWidths.decision_tier, maxWidth: columnWidths.decision_tier }}>
+        <Badge className={TIER_COLORS[contact.decision_tier] || "bg-muted"}>
+          {contact.decision_tier}
+        </Badge>
+      </TableCell>
+      <TableCell style={{ width: columnWidths.assigned, maxWidth: columnWidths.assigned }} className="text-sm">
+        <div className="truncate" title={assignedName}>{assignedName || "—"}</div>
+      </TableCell>
+      <TableCell style={{ width: columnWidths.contact_info, maxWidth: columnWidths.contact_info }}>
+        <div className="flex gap-2">
+          {contact.email && (
+            <Button variant="ghost" size="sm" asChild>
+              <a href={`mailto:${contact.email}`}>
+                <Mail className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+          {contact.phone && (
+            <Button variant="ghost" size="sm" asChild>
+              <a href={`tel:${contact.phone}`}>
+                <Phone className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+        </div>
+      </TableCell>
+      <TableCell style={{ width: columnWidths.actions, maxWidth: columnWidths.actions }}>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="sm" onClick={() => onEdit(contact)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRequestDelete(contact)}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+});
+
 export function ContactTable({ contacts, isLoading, onEdit, onDelete }: ContactTableProps) {
   const navigate = useNavigate();
   const { data: userData } = useUserRole();
@@ -60,7 +168,7 @@ export function ContactTable({ contacts, isLoading, onEdit, onDelete }: ContactT
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { columnWidths, handleMouseDown, totalWidth } = useResizableColumns(DEFAULT_WIDTHS);
-  
+
   const handleSort = (field: string) => {
     if (sortField === field) {
       if (sortDirection === 'asc') {
@@ -111,8 +219,8 @@ export function ContactTable({ contacts, isLoading, onEdit, onDelete }: ContactT
 
   const renderSortIcon = (field: string) => {
     if (sortField !== field) return <ArrowUpDown className="ml-2 h-4 w-4" />;
-    return sortDirection === 'asc' ? 
-      <ArrowUp className="ml-2 h-4 w-4" /> : 
+    return sortDirection === 'asc' ?
+      <ArrowUp className="ml-2 h-4 w-4" /> :
       <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
@@ -141,14 +249,19 @@ export function ContactTable({ contacts, isLoading, onEdit, onDelete }: ContactT
     </TableHead>
   );
 
-  const getTierColor = (tier: string) => {
-    const tierMap: Record<string, string> = {
-      Primary: "bg-priority-p1 text-priority-p1-foreground",
-      Secondary: "bg-priority-p2 text-priority-p2-foreground",
-      Influencer: "bg-priority-p3 text-priority-p3-foreground",
-    };
-    return tierMap[tier] || "bg-muted";
-  };
+  // Stable callbacks so memoized ContactRow doesn't re-render due to fresh
+  // function identities on every parent render.
+  const handleOpenActivity = useCallback((c: Contact) => setActivityContact(c), []);
+  const handleNavigateCompany = useCallback(
+    (companyId: string) => navigate('/companies', { state: { editCompanyId: companyId } }),
+    [navigate]
+  );
+  const handleRequestDelete = useCallback((c: Contact) => setDeleteContact(c), []);
+  // onEdit comes from parent; wrap once so memoized rows compare against the
+  // same reference even if parent supplies a fresh closure each render.
+  const stableOnEdit = useCallback((c: Contact) => onEdit(c), [onEdit]);
+
+  const isAdmin = userData?.role === 'admin';
 
   if (isLoading) {
     return (
@@ -183,84 +296,16 @@ export function ContactTable({ contacts, isLoading, onEdit, onDelete }: ContactT
           </TableHeader>
           <TableBody>
             {sortedContacts.map((contact) => (
-              <TableRow key={contact.id}>
-                <TableCell style={{ width: columnWidths.name, maxWidth: columnWidths.name }} className="font-medium">
-                  <div className="truncate">
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto font-medium text-foreground hover:text-primary"
-                      onClick={() => setActivityContact(contact)}
-                    >
-                      {contact.first_name} {contact.last_name}
-                    </Button>
-                  </div>
-                </TableCell>
-                <TableCell style={{ width: columnWidths.title, maxWidth: columnWidths.title }} className="text-sm">
-                  <div className="truncate" title={contact.title || ''}>{contact.title || "—"}</div>
-                </TableCell>
-                <TableCell style={{ width: columnWidths.company, maxWidth: columnWidths.company }} className="text-sm">
-                  <div className="truncate">
-                    {contact.companies?.company_name ? (
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-sm text-foreground hover:text-primary"
-                        onClick={() => navigate('/companies', { state: { editCompanyId: contact.company_id } })}
-                      >
-                        {contact.companies.company_name}
-                      </Button>
-                    ) : (
-                      "—"
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell style={{ width: columnWidths.decision_tier, maxWidth: columnWidths.decision_tier }}>
-                  <Badge className={getTierColor(contact.decision_tier)}>
-                    {contact.decision_tier}
-                  </Badge>
-                </TableCell>
-                <TableCell style={{ width: columnWidths.assigned, maxWidth: columnWidths.assigned }} className="text-sm">
-                  <div className="truncate" title={contact.assigned_profile ? `${contact.assigned_profile.first_name} ${contact.assigned_profile.last_name}` : ''}>
-                    {contact.assigned_profile
-                      ? `${contact.assigned_profile.first_name} ${contact.assigned_profile.last_name}`
-                      : "—"}
-                  </div>
-                </TableCell>
-                <TableCell style={{ width: columnWidths.contact_info, maxWidth: columnWidths.contact_info }}>
-                  <div className="flex gap-2">
-                    {contact.email && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={`mailto:${contact.email}`}>
-                          <Mail className="h-4 w-4" />
-                        </a>
-                      </Button>
-                    )}
-                    {contact.phone && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={`tel:${contact.phone}`}>
-                          <Phone className="h-4 w-4" />
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell style={{ width: columnWidths.actions, maxWidth: columnWidths.actions }}>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(contact)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    {userData?.role === 'admin' && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setDeleteContact(contact)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
+              <ContactRow
+                key={contact.id}
+                contact={contact}
+                columnWidths={columnWidths}
+                isAdmin={isAdmin}
+                onOpenActivity={handleOpenActivity}
+                onNavigateCompany={handleNavigateCompany}
+                onEdit={stableOnEdit}
+                onRequestDelete={handleRequestDelete}
+              />
             ))}
           </TableBody>
         </Table>
