@@ -192,9 +192,9 @@ serve(async (req) => {
           p_resend_email_id: emailData?.id || null,
           p_metadata: { notification_id }
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error sending or logging email:", error);
-        
+        const errorMessage = error instanceof Error ? error.message : String(error);
         try {
           await supabase.rpc('log_email', {
             p_recipient_email: userEmail,
@@ -202,7 +202,7 @@ serve(async (req) => {
             p_subject: title,
             p_email_type: type,
             p_status: 'failed',
-            p_error_message: error.message,
+            p_error_message: errorMessage,
             p_metadata: { notification_id }
           });
         } catch (logError) {

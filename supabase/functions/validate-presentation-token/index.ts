@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Token Validation] Error:', error);
     return new Response(
       JSON.stringify({ 

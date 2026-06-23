@@ -7,6 +7,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ApolloOrganization {
+  name?: string;
+  primary_domain?: string;
+  domain?: string;
+  website_url?: string;
+  linkedin_url?: string;
+  industry?: string;
+  estimated_num_employees?: number;
+  annual_revenue_printed?: string;
+  city?: string;
+  state?: string;
+}
+
+interface ApolloPerson {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  email?: string;
+  phone_numbers?: Array<{ raw_number?: string }>;
+  sanitized_phone?: string;
+  linkedin_url?: string;
+  organization?: ApolloOrganization;
+  account?: ApolloOrganization;
+  organization_name?: string;
+  photo_url?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  headline?: string;
+  seniority?: string;
+  departments?: string[];
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -58,7 +92,7 @@ serve(async (req) => {
       console.log(`Looking up Apollo ${isContactId ? 'contact' : 'person'} by ID: ${extractedId}`);
 
       // Try the appropriate endpoint first, then fall back to the other
-      let person: any = null;
+      let person: ApolloPerson | null = null;
 
       const tryEndpoint = async (endpoint: string, id: string) => {
         const resp = await fetch(`https://api.apollo.io/v1/${endpoint}/${id}?api_key=${apolloApiKey}`, {
@@ -145,7 +179,7 @@ serve(async (req) => {
     }
 
     // Build Apollo search body based on search type
-    const searchBody: Record<string, any> = {
+    const searchBody: Record<string, string | number> = {
       api_key: apolloApiKey,
       page: 1,
       per_page: 15,
@@ -198,7 +232,7 @@ serve(async (req) => {
     }
 
     // Pull ALL available data from Apollo
-    const contacts = apolloData.people?.map((person: any) => ({
+    const contacts = apolloData.people?.map((person: ApolloPerson) => ({
       firstName: person.first_name || '',
       lastName: person.last_name || '',
       title: person.title || null,
