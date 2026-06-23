@@ -166,132 +166,165 @@ const Companies = () => {
     setSelectedRows([]);
   }, [debouncedSearch, statusFilter, priorityFilter, segmentFilter, industryTypeFilter, stateFilter, cityFilter, regionFilter, statesFilter, enrichmentStatusFilter, assignedToFilter, perspective]);
 
-  const { data: companies, isLoading, refetch } = useQuery({
-    queryKey: ["companies", debouncedSearch, String(statusFilter || ''), String(priorityFilter || ''), String(segmentFilter || ''), String(industryTypeFilter || ''), String(stateFilter || ''), String(cityFilter || ''), String(regionFilter || ''), String(statesFilter || ''), String(enrichmentStatusFilter || ''), String(assignedToFilter || ''), perspective, JSON.stringify(advancedFilters)],
-    queryFn: async () => {
-      // Check for impersonation
-      const impersonationData = sessionStorage.getItem('admin-impersonation');
-      const impersonation = impersonationData ? JSON.parse(impersonationData) : null;
-      
-      let userId: string;
-      if (impersonation?.userId) {
-        userId = impersonation.userId;
-      } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return [];
-        userId = user.id;
-      }
+  // Server-side filter + perspective application, shared between the
+  // server-paginated grid query and the in-memory (capped) query used by
+  // Kanban/Gallery/List/Hierarchy views. Returning the configured query
+  // builder keeps both code paths in lockstep so pagination stays accurate.
+  const buildFilteredQuery = async (
+    base: ReturnType<typeof supabase.from<"companies">>['select'] extends never ? never : any,
+  ) => {
+    let query = base;
 
-      let query = supabase
+    // Resolve user (respecting admin impersonation)
+    const impersonationData = sessionStorage.getItem('admin-impersonation');
+    const impersonation = impersonationData ? JSON.parse(impersonationData) : null;
+    let userId: string | null = null;
+    if (impersonation?.userId) {
+      userId = impersonation.userId;
+    } else {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      userId = user.id;
+    }
+
+    // Perspective filter
+    switch (perspective) {
+      case 'my_records':
+        query = query.eq('created_by', userId);
+        break;
+      case 'assigned_to_me':
+        query = query.eq('assigned_to', userId);
+        break;
+      case 'my_team':
+        if (userRoleData?.role === 'sales_manager') {
+          const { data: teamMembers } = await supabase
+            .from('team_memberships')
+            .select('team_member_id')
+            .eq('manager_id', userId)
+            .eq('is_active', true);
+          const teamIds = teamMembers?.map(m => m.team_member_id) || [];
+          if (teamIds.length > 0) {
+            query = query.in('created_by', teamIds);
+          } else {
+            query = query.eq('created_by', '00000000-0000-0000-0000-000000000000');
+          }
+        }
+        break;
+      case 'all_records':
+        break;
+    }
+
+    if (debouncedSearch && debouncedSearch.length >= 2) {
+      const s = debouncedSearch.replace(/[%_,]/g, "");
+      query = query.or(
+        `company_name.ilike.%${s}%,website_url.ilike.%${s}%,city.ilike.%${s}%,primary_phone.ilike.%${s}%,nest_pro_partner_id.ilike.%${s}%,linkedin_company_url.ilike.%${s}%`
+      );
+    }
+
+    if (industryTypeFilter) query = query.eq('industry_type', industryTypeFilter);
+    if (statusFilter) query = query.eq('status', statusFilter);
+    if (priorityFilter) query = query.eq('priority_tier', priorityFilter);
+    if (segmentFilter) query = query.eq('segment', segmentFilter);
+
+    if (regionFilter) {
+      const regions = regionFilter.split(',');
+      const regionStates: string[] = [];
+      regions.forEach(region => {
+        if (region === 'West') regionStates.push(...WEST_STATES);
+        if (region === 'East') regionStates.push(...EAST_STATES);
+      });
+      if (regionStates.length > 0) query = query.in('state', regionStates);
+    }
+    if (statesFilter) query = query.in('state', statesFilter.split(','));
+    if (assignedToFilter) query = query.eq('assigned_to_sales_rep_id', assignedToFilter);
+
+    // Data-completeness filters (mirror client-side behavior server-side too)
+    if (hasWebsiteFilter === 'true') query = query.not('website_url', 'is', null);
+    if (hasLinkedinFilter === 'true') query = query.not('linkedin_company_url', 'is', null);
+    if (hasPartnerFilter === 'true') query = query.not('nest_pro_partner_id', 'is', null);
+
+    if (enrichmentStatusFilter === 'enriched' || enrichmentStatusFilter === 'not-enriched') {
+      const { data: enrichedIds } = await supabase
+        .from('enrichment_logs')
+        .select('company_id')
+        .eq('status', 'success');
+      const uniqueIds = enrichedIds && enrichedIds.length > 0
+        ? [...new Set(enrichedIds.map(log => log.company_id))]
+        : [];
+      if (enrichmentStatusFilter === 'enriched') {
+        if (uniqueIds.length === 0) return { __empty: true } as any;
+        query = query.in('id', uniqueIds);
+      } else if (uniqueIds.length > 0) {
+        query = query.not('id', 'in', `(${uniqueIds.join(',')})`);
+      }
+    }
+
+    return query;
+  };
+
+  // ---------------------------------------------------------------------------
+  // GRID VIEW — true server-side pagination + sort. The DB returns exactly one
+  // page at a time, plus a total count for the pager. As the companies table
+  // grows this stays O(page size) on the wire instead of O(filtered set).
+  // ---------------------------------------------------------------------------
+  const sortColumn = sortField && sortDirection ? sortField : 'created_at';
+  const sortAscending = sortDirection === 'asc';
+
+  const { data: pageResult, isLoading: pageLoading, refetch: refetchPage } = useQuery({
+    queryKey: ["companies-page", debouncedSearch, String(statusFilter || ''), String(priorityFilter || ''), String(segmentFilter || ''), String(industryTypeFilter || ''), String(regionFilter || ''), String(statesFilter || ''), String(enrichmentStatusFilter || ''), String(assignedToFilter || ''), String(hasWebsiteFilter || ''), String(hasLinkedinFilter || ''), String(hasPartnerFilter || ''), perspective, sortColumn, sortAscending, currentPage, itemsPerPage],
+    enabled: currentView === 'grid',
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const base = supabase
         .from("companies")
         .select(`
           *,
           parent_company:companies!parent_company_id(id, company_name)
-        `)
-        .order("created_at", { ascending: false });
-
-      // Apply perspective filter
-      const hasElevatedAccess = userRoleData?.hasElevatedAccess || false;
-      switch (perspective) {
-        case 'my_records':
-          query = query.eq('created_by', userId);
-          break;
-        case 'assigned_to_me':
-          query = query.eq('assigned_to', userId);
-          break;
-        case 'my_team':
-          if (userRoleData?.role === 'sales_manager') {
-            // Get team member IDs
-            const { data: teamMembers } = await supabase
-              .from('team_memberships')
-              .select('team_member_id')
-              .eq('manager_id', userId)
-              .eq('is_active', true);
-            
-            const teamIds = teamMembers?.map(m => m.team_member_id) || [];
-            if (teamIds.length > 0) {
-              query = query.in('created_by', teamIds);
-            } else {
-              // No team members, show nothing
-              query = query.eq('created_by', '00000000-0000-0000-0000-000000000000');
-            }
-          }
-          break;
-        case 'all_records':
-          // No filtering - all authenticated users can see all companies
-          // Field-level permissions will control what data is visible
-          break;
-      }
-
-      // Apply server-side search to ensure consistency with pickers
-      if (debouncedSearch && debouncedSearch.length >= 2) {
-        const s = debouncedSearch.replace(/[%_,]/g, ""); // sanitize wildcards
-        query = query.or(
-          `company_name.ilike.%${s}%,website_url.ilike.%${s}%,city.ilike.%${s}%,primary_phone.ilike.%${s}%,nest_pro_partner_id.ilike.%${s}%,linkedin_company_url.ilike.%${s}%`
-        );
-      }
-
-      // Light server-side filtering for accuracy (mirrors UI filters)
-      if (industryTypeFilter) query = query.eq('industry_type', industryTypeFilter);
-      if (statusFilter) query = query.eq('status', statusFilter);
-      if (priorityFilter) query = query.eq('priority_tier', priorityFilter);
-      if (segmentFilter) query = query.eq('segment', segmentFilter);
-      
-      // Regional filters - convert region names to states using shared constants
-      if (regionFilter) {
-        const regions = regionFilter.split(',');
-        const regionStates: string[] = [];
-        regions.forEach(region => {
-          if (region === 'West') regionStates.push(...WEST_STATES);
-          if (region === 'East') regionStates.push(...EAST_STATES);
-        });
-        if (regionStates.length > 0) {
-          query = query.in('state', regionStates);
-        }
-      }
-      // Also support direct state filter (in addition to region)
-      if (statesFilter) {
-        const states = statesFilter.split(',');
-        query = query.in('state', states);
-      }
-
-      // Apply assignee filter
-      if (assignedToFilter) {
-        query = query.eq('assigned_to_sales_rep_id', assignedToFilter);
-      }
-
-      // Apply enrichment status filter
-      if (enrichmentStatusFilter === 'enriched') {
-        const { data: enrichedIds } = await supabase
-          .from('enrichment_logs')
-          .select('company_id')
-          .eq('status', 'success');
-        
-        if (enrichedIds && enrichedIds.length > 0) {
-          const uniqueIds = [...new Set(enrichedIds.map(log => log.company_id))];
-          query = query.in('id', uniqueIds);
-        } else {
-          return [];
-        }
-      } else if (enrichmentStatusFilter === 'not-enriched') {
-        const { data: enrichedIds } = await supabase
-          .from('enrichment_logs')
-          .select('company_id')
-          .eq('status', 'success');
-        
-        if (enrichedIds && enrichedIds.length > 0) {
-          const uniqueIds = [...new Set(enrichedIds.map(log => log.company_id))];
-          query = query.not('id', 'in', `(${uniqueIds.join(',')})`);
-        }
-      }
-
-      // Note: Advanced filters applied client-side to avoid TypeScript issues
-
-      const { data, error } = await query;
+        `, { count: 'exact' })
+        .order(sortColumn, { ascending: sortAscending })
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
+      const built: any = await buildFilteredQuery(base);
+      if (!built) return { rows: [], count: 0 };
+      if (built.__empty) return { rows: [], count: 0 };
+      const { data, error, count } = await built;
       if (error) throw error;
-      return data;
+      return { rows: data || [], count: count || 0 };
     },
   });
+
+  // ---------------------------------------------------------------------------
+  // NON-GRID VIEWS (Kanban / Gallery / List / Hierarchy) — need the whole
+  // filtered set in memory. We cap at 500 rows and surface a banner if the
+  // filtered set is larger, instead of silently fetching unbounded data.
+  // ---------------------------------------------------------------------------
+  const BULK_CAP = 500;
+  const { data: bulkResult, isLoading: bulkLoading, refetch: refetchBulk } = useQuery({
+    queryKey: ["companies-bulk", debouncedSearch, String(statusFilter || ''), String(priorityFilter || ''), String(segmentFilter || ''), String(industryTypeFilter || ''), String(regionFilter || ''), String(statesFilter || ''), String(enrichmentStatusFilter || ''), String(assignedToFilter || ''), String(hasWebsiteFilter || ''), String(hasLinkedinFilter || ''), String(hasPartnerFilter || ''), perspective],
+    enabled: currentView !== 'grid' && currentView !== 'hierarchy',
+    queryFn: async () => {
+      const base = supabase
+        .from("companies")
+        .select(`
+          *,
+          parent_company:companies!parent_company_id(id, company_name)
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .limit(BULK_CAP);
+      const built: any = await buildFilteredQuery(base);
+      if (!built) return { rows: [], count: 0 };
+      if (built.__empty) return { rows: [], count: 0 };
+      const { data, error, count } = await built;
+      if (error) throw error;
+      return { rows: data || [], count: count || 0 };
+    },
+  });
+
+  const companies = currentView === 'grid' ? pageResult?.rows : bulkResult?.rows;
+  const totalCount = currentView === 'grid' ? (pageResult?.count ?? 0) : (bulkResult?.count ?? 0);
+  const bulkTruncated = currentView !== 'grid' && currentView !== 'hierarchy' && totalCount > BULK_CAP;
+  const isLoading = currentView === 'grid' ? pageLoading : bulkLoading;
+  const refetch = () => { refetchPage(); refetchBulk(); };
+
 
   // Fetch activities for calendar view
   const { data: activities } = useQuery({
