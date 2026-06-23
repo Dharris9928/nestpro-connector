@@ -458,14 +458,17 @@ const Companies = () => {
     return filtered;
   }, [companies, debouncedSearch, statusFilter, priorityFilter, segmentFilter, industryTypeFilter, hasWebsiteFilter, hasLinkedinFilter, hasPartnerFilter, sortField, sortDirection]);
 
-  // Paginated companies
-  const paginatedCompanies = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredAndSortedCompanies.slice(startIndex, endIndex);
-  }, [filteredAndSortedCompanies, currentPage, itemsPerPage]);
+  // For the grid view, server-side pagination drives what's on screen — use
+  // the page rows directly so we don't double-slice. For other views (which
+  // need the whole filtered set in memory) keep the in-memory pagination
+  // helper available, though those views don't actually paginate.
+  const paginatedCompanies = currentView === 'grid'
+    ? (companies || [])
+    : filteredAndSortedCompanies.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const totalPages = Math.ceil(filteredAndSortedCompanies.length / itemsPerPage);
+  const totalPages = currentView === 'grid'
+    ? Math.max(1, Math.ceil(totalCount / itemsPerPage))
+    : Math.ceil(filteredAndSortedCompanies.length / itemsPerPage);
 
   const clearFilters = () => {
     const newParams = new URLSearchParams();
