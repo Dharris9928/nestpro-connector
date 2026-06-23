@@ -87,9 +87,9 @@ async function checkMXRecords(domain: string): Promise<{ valid: boolean; records
       return { valid: false, records: [] };
     }
 
-    const mxRecords = data.Answer
-      .filter((record: any) => record.type === 15) // MX records have type 15
-      .map((record: any) => record.data)
+    const mxRecords = (data.Answer as Array<{ type: number; data: string }>)
+      .filter((record) => record.type === 15) // MX records have type 15
+      .map((record) => record.data)
       .filter(Boolean);
 
     console.log(`MX records for ${domain}:`, mxRecords);
