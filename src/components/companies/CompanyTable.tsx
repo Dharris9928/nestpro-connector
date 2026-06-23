@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Edit, Star, Building2, Users, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Edit, Star, Building2, Users, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { QuickActionsMenu } from "./QuickActionsMenu";
 import { EnrichmentStatusBadge } from "./EnrichmentStatusBadge";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import {
   Table,
   TableBody,
@@ -92,11 +92,340 @@ const DEFAULT_WIDTHS: Record<string, number> = {
   actions: 60,
 };
 
-export function CompanyTable({ 
-  companies, 
-  isLoading, 
-  onEdit, 
-  selectedRows, 
+const STATUS_COLORS: Record<string, string> = {
+  Lead: "bg-status-lead",
+  Contacted: "bg-status-contacted",
+  Engaged: "bg-status-engaged",
+  Pilot: "bg-status-pilot",
+  Active: "bg-status-active",
+  Inactive: "bg-status-inactive",
+  Lost: "bg-status-lost",
+};
+
+interface CompanyRowProps {
+  company: Company;
+  columnVisibility: ColumnVisibility;
+  columnWidths: Record<string, number>;
+  isSelected: boolean;
+  isEditingStatus: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleFavorite: (id: string, current: boolean) => void;
+  onStartEditStatus: (id: string) => void;
+  onStatusChange: (id: string, value: string) => void;
+  onEdit: (company: Company) => void;
+  onCompanyUpdate: () => void;
+}
+
+// Memoized row — re-renders only when its own props change, not on every
+// parent render (e.g. typing in the search input). Selection is passed as a
+// primitive boolean rather than the full selectedRows array so unrelated
+// rows aren't invalidated when any single row's selection toggles.
+const CompanyRow = memo(function CompanyRow({
+  company,
+  columnVisibility,
+  columnWidths,
+  isSelected,
+  isEditingStatus,
+  onToggleSelect,
+  onToggleFavorite,
+  onStartEditStatus,
+  onStatusChange,
+  onEdit,
+  onCompanyUpdate,
+}: CompanyRowProps) {
+  return (
+    <TableRow
+      className="cursor-pointer hover:bg-accent/50"
+      onClick={() => onEdit(company)}
+    >
+      <TableCell style={{ width: columnWidths.checkbox, maxWidth: columnWidths.checkbox }} onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => onToggleSelect(company.id)}
+        />
+      </TableCell>
+
+      <TableCell style={{ width: columnWidths.favorite, maxWidth: columnWidths.favorite }} onClick={(e) => e.stopPropagation()}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onToggleFavorite(company.id, company.is_favorite || false)}
+            >
+              <Star
+                className={`h-4 w-4 ${
+                  company.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
+                }`}
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{company.is_favorite ? "Remove from favorites" : "Add to favorites"}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TableCell>
+
+      {columnVisibility.companyName && (
+        <TableCell style={{ width: columnWidths.company_name, maxWidth: columnWidths.company_name }} className="font-medium">
+          <div className="truncate">
+            <button
+              className="text-primary hover:underline text-left flex items-center gap-2"
+              onClick={() => onEdit(company)}
+            >
+              <ProtectedField
+                tableName="companies"
+                fieldName="company_name"
+                value={company.company_name}
+                showLockIcon={false}
+                recordId={company.id}
+                recordName={company.company_name}
+                enableAccessRequest={true}
+              />
+            </button>
+          </div>
+        </TableCell>
+      )}
+
+      <TableCell style={{ width: columnWidths.ai_status, maxWidth: columnWidths.ai_status }}>
+        <EnrichmentStatusBadge companyId={company.id} />
+      </TableCell>
+
+      {columnVisibility.type && (
+        <TableCell style={{ width: columnWidths.industry_type, maxWidth: columnWidths.industry_type }}>
+          <div className="truncate"><Badge variant="outline">{company.industry_type}</Badge></div>
+        </TableCell>
+      )}
+
+      {columnVisibility.segment && (
+        <TableCell style={{ width: columnWidths.segment, maxWidth: columnWidths.segment }} className="text-sm">
+          <div className="truncate" title={company.segment || ''}>{company.segment}</div>
+        </TableCell>
+      )}
+
+      {columnVisibility.structure && (
+        <TableCell style={{ width: columnWidths.company_type, maxWidth: columnWidths.company_type }}>
+          {company.company_type === 'parent' ? (
+            <div className="flex items-center gap-1">
+              <Building2 className="h-3 w-3 text-blue-600 shrink-0" />
+              <span className="text-xs font-semibold text-blue-600">Parent</span>
+            </div>
+          ) : company.company_type === 'subsidiary' ? (
+            <div className="flex items-center gap-1">
+              <Users className="h-3 w-3 text-purple-600 shrink-0" />
+              <span className="text-xs text-purple-600">Subsidiary</span>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      )}
+
+      {columnVisibility.parentCompany && (
+        <TableCell style={{ width: columnWidths.parent_company, maxWidth: columnWidths.parent_company }}>
+          {company.parent_company ? (
+            <div className="truncate text-sm text-primary" title={company.parent_company.company_name}>
+              {company.parent_company.company_name}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      )}
+
+      {columnVisibility.contractorSpecialty && (
+        <TableCell style={{ width: columnWidths.contractor_specialty, maxWidth: columnWidths.contractor_specialty }}>
+          {company.industry_type === 'Contractor' && company.contractor_specialty ? (
+            <div className="truncate" title={company.contractor_specialty}>
+              <span className="text-sm text-foreground">
+                {company.contractor_specialty}
+              </span>
+            </div>
+          ) : company.industry_type === 'Contractor' ? (
+            <span className="text-muted-foreground text-sm italic">Not specified</span>
+          ) : null}
+        </TableCell>
+      )}
+
+      {columnVisibility.contractorSpecialty && (
+        <TableCell style={{ width: columnWidths.nest_pro_partner_id, maxWidth: columnWidths.nest_pro_partner_id }}>
+          {company.industry_type === 'Contractor' && company.nest_pro_partner_id ? (
+            <span className="text-sm font-mono text-foreground truncate">{company.nest_pro_partner_id}</span>
+          ) : company.industry_type === 'Contractor' ? (
+            <span className="text-muted-foreground">—</span>
+          ) : null}
+        </TableCell>
+      )}
+
+      {columnVisibility.status && (
+        <TableCell style={{ width: columnWidths.status, maxWidth: columnWidths.status }} onClick={(e) => e.stopPropagation()}>
+          {isEditingStatus ? (
+            <Select
+              defaultValue={company.status}
+              onValueChange={(value) => onStatusChange(company.id, value)}
+            >
+              <SelectTrigger className="w-32 h-7">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Lead">Lead</SelectItem>
+                <SelectItem value="Contacted">Contacted</SelectItem>
+                <SelectItem value="Engaged">Engaged</SelectItem>
+                <SelectItem value="Pilot">Pilot</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+                <SelectItem value="Lost">Lost</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge
+              className={`${STATUS_COLORS[company.status] || "bg-muted"} cursor-pointer`}
+              onClick={() => onStartEditStatus(company.id)}
+            >
+              {company.status}
+            </Badge>
+          )}
+        </TableCell>
+      )}
+      {columnVisibility.score && (
+        <TableCell style={{ width: columnWidths.lead_score, maxWidth: columnWidths.lead_score }}>
+          <div
+            className={`text-center font-semibold ${
+              company.lead_score >= 80 ? 'text-priority-p1' :
+              company.lead_score >= 60 ? 'text-priority-p2' :
+              company.lead_score >= 40 ? 'text-priority-p3' :
+              'text-muted-foreground'
+            }`}
+          >
+            {company.lead_score || 0}
+          </div>
+        </TableCell>
+      )}
+
+      {columnVisibility.priority && (
+        <TableCell style={{ width: columnWidths.priority_tier, maxWidth: columnWidths.priority_tier }}>
+          <Badge
+            className={
+              company.priority_tier === 'P1' ? 'bg-priority-p1 text-priority-p1-foreground' :
+              company.priority_tier === 'P2' ? 'bg-priority-p2 text-priority-p2-foreground' :
+              company.priority_tier === 'P3' ? 'bg-priority-p3 text-priority-p3-foreground' :
+              'bg-muted text-muted-foreground'
+            }
+          >
+            {company.priority_tier || 'Unscored'}
+          </Badge>
+        </TableCell>
+      )}
+
+      {columnVisibility.annualVolume && (
+        <TableCell style={{ width: columnWidths.annual_volume, maxWidth: columnWidths.annual_volume }}>
+          <ProtectedField
+            tableName="companies"
+            fieldName="annual_volume"
+            value={company.annual_volume ? `${company.annual_volume.toLocaleString()} ${company.industry_type === 'Builder' ? 'homes' : 'calls'}/yr` : '-'}
+          >
+            {company.annual_volume ? (
+              <div className="text-sm truncate">
+                <span className="font-semibold">{company.annual_volume.toLocaleString()}</span>
+                <span className="text-muted-foreground ml-1">
+                  {company.industry_type === 'Builder' ? 'homes' : 'calls'}/yr
+                </span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </ProtectedField>
+        </TableCell>
+      )}
+
+      {columnVisibility.revenue && (
+        <TableCell style={{ width: columnWidths.annual_revenue_range, maxWidth: columnWidths.annual_revenue_range }}>
+          <ProtectedField
+            tableName="companies"
+            fieldName={company.industry_type === 'Builder' ? 'average_home_price' : 'annual_revenue_range'}
+            value={
+              company.industry_type === 'Builder' && company.average_home_price
+                ? `$${(company.average_home_price / 1000).toFixed(0)}K avg`
+                : company.industry_type === 'Contractor' && company.annual_revenue_range
+                ? company.annual_revenue_range
+                : '-'
+            }
+          >
+            {company.industry_type === 'Builder' && company.average_home_price ? (
+              <div className="text-sm truncate">
+                <span className="font-semibold">
+                  ${(company.average_home_price / 1000).toFixed(0)}K
+                </span>
+                <span className="text-muted-foreground ml-1">avg</span>
+              </div>
+            ) : company.industry_type === 'Contractor' && company.annual_revenue_range ? (
+              <span className="text-sm truncate">{company.annual_revenue_range}</span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </ProtectedField>
+        </TableCell>
+      )}
+
+      {columnVisibility.phone && (
+        <TableCell style={{ width: columnWidths.primary_phone, maxWidth: columnWidths.primary_phone }} className="text-sm">
+          <div className="truncate">
+            <ProtectedField
+              tableName="companies"
+              fieldName="primary_phone"
+              value={company.primary_phone}
+            />
+          </div>
+        </TableCell>
+      )}
+
+      {columnVisibility.website && (
+        <TableCell style={{ width: columnWidths.website_url, maxWidth: columnWidths.website_url }} onClick={(e) => e.stopPropagation()}>
+          <ProtectedField
+            tableName="companies"
+            fieldName="website_url"
+            value={company.website_url}
+          >
+            {company.website_url ? (
+              <a
+                href={company.website_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Visit
+              </a>
+            ) : <span className="text-muted-foreground">—</span>}
+          </ProtectedField>
+        </TableCell>
+      )}
+
+      {columnVisibility.franchise && (
+        <TableCell style={{ width: columnWidths.is_franchise, maxWidth: columnWidths.is_franchise }}>
+          {company.is_franchise ? (
+            <Badge variant="secondary" className="text-xs">Franchise</Badge>
+          ) : "-"}
+        </TableCell>
+      )}
+
+      <TableCell style={{ width: columnWidths.actions, maxWidth: columnWidths.actions }} onClick={(e) => e.stopPropagation()}>
+        <QuickActionsMenu
+          company={company}
+          onEdit={() => onEdit(company)}
+          onDelete={onCompanyUpdate}
+        />
+      </TableCell>
+    </TableRow>
+  );
+});
+
+export function CompanyTable({
+  companies,
+  isLoading,
+  onEdit,
+  selectedRows,
   onSelectionChange,
   onCompanyUpdate,
   columnVisibility,
@@ -118,15 +447,17 @@ export function CompanyTable({
     }
   };
 
-  const handleSelectRow = (companyId: string) => {
-    if (selectedRows.includes(companyId)) {
-      onSelectionChange(selectedRows.filter(id => id !== companyId));
-    } else {
-      onSelectionChange([...selectedRows, companyId]);
-    }
-  };
+  // Stable per-row callbacks so memoized CompanyRow doesn't re-render on
+  // unrelated parent state changes.
+  const handleSelectRow = useCallback((companyId: string) => {
+    onSelectionChange(
+      selectedRows.includes(companyId)
+        ? selectedRows.filter(id => id !== companyId)
+        : [...selectedRows, companyId]
+    );
+  }, [selectedRows, onSelectionChange]);
 
-  const handleStatusChange = async (companyId: string, newStatus: string) => {
+  const handleStatusChange = useCallback(async (companyId: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from("companies")
@@ -150,9 +481,9 @@ export function CompanyTable({
         variant: "destructive",
       });
     }
-  };
+  }, [toast, onCompanyUpdate]);
 
-  const handleFavoriteToggle = async (companyId: string, currentFavorite: boolean) => {
+  const handleFavoriteToggle = useCallback(async (companyId: string, currentFavorite: boolean) => {
     try {
       const { error } = await supabase
         .from("companies")
@@ -175,13 +506,17 @@ export function CompanyTable({
         variant: "destructive",
       });
     }
-  };
+  }, [toast, onCompanyUpdate]);
+
+  const handleStartEditStatus = useCallback((id: string) => setEditingStatus(id), []);
+  const stableOnEdit = useCallback((c: Company) => onEdit(c), [onEdit]);
+  const stableOnUpdate = useCallback(() => onCompanyUpdate(), [onCompanyUpdate]);
 
   const renderSortIcon = (field: string) => {
     if (sortField !== field) {
       return <ArrowUpDown className="ml-2 h-4 w-4" />;
     }
-    return sortDirection === 'asc' 
+    return sortDirection === 'asc'
       ? <ArrowUp className="ml-2 h-4 w-4" />
       : <ArrowDown className="ml-2 h-4 w-4" />;
   };
@@ -211,27 +546,6 @@ export function CompanyTable({
       </div>
     </TableHead>
   );
-
-  const getPriorityColor = (tier: string | null) => {
-    if (!tier) return "bg-muted";
-    if (tier.includes("P1")) return "bg-priority-p1 text-priority-p1-foreground";
-    if (tier.includes("P2")) return "bg-priority-p2 text-priority-p2-foreground";
-    if (tier.includes("P3")) return "bg-priority-p3 text-priority-p3-foreground";
-    return "bg-muted";
-  };
-
-  const getStatusColor = (status: string) => {
-    const statusMap: Record<string, string> = {
-      Lead: "bg-status-lead",
-      Contacted: "bg-status-contacted",
-      Engaged: "bg-status-engaged",
-      Pilot: "bg-status-pilot",
-      Active: "bg-status-active",
-      Inactive: "bg-status-inactive",
-      Lost: "bg-status-lost",
-    };
-    return statusMap[status] || "bg-muted";
-  };
 
   if (isLoading) {
     return (
@@ -284,294 +598,23 @@ export function CompanyTable({
             </TableHeader>
             <TableBody>
               {companies.map((company) => (
-                <TableRow 
+                <CompanyRow
                   key={company.id}
-                  className="cursor-pointer hover:bg-accent/50"
-                  onClick={() => onEdit(company)}
-                >
-                  <TableCell style={{ width: columnWidths.checkbox, maxWidth: columnWidths.checkbox }} onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedRows.includes(company.id)}
-                      onCheckedChange={() => handleSelectRow(company.id)}
-                    />
-                  </TableCell>
-                  
-                  <TableCell style={{ width: columnWidths.favorite, maxWidth: columnWidths.favorite }} onClick={(e) => e.stopPropagation()}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleFavoriteToggle(company.id, company.is_favorite || false)}
-                        >
-                          <Star
-                            className={`h-4 w-4 ${
-                              company.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
-                            }`}
-                          />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{company.is_favorite ? "Remove from favorites" : "Add to favorites"}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableCell>
-                  
-                  {columnVisibility.companyName && (
-                    <TableCell style={{ width: columnWidths.company_name, maxWidth: columnWidths.company_name }} className="font-medium">
-                      <div className="truncate">
-                        <button 
-                          className="text-primary hover:underline text-left flex items-center gap-2"
-                          onClick={() => onEdit(company)}
-                        >
-                          <ProtectedField
-                            tableName="companies"
-                            fieldName="company_name"
-                            value={company.company_name}
-                            showLockIcon={false}
-                            recordId={company.id}
-                            recordName={company.company_name}
-                            enableAccessRequest={true}
-                          />
-                        </button>
-                      </div>
-                    </TableCell>
-                  )}
-
-                  <TableCell style={{ width: columnWidths.ai_status, maxWidth: columnWidths.ai_status }}>
-                    <EnrichmentStatusBadge companyId={company.id} />
-                  </TableCell>
-                
-                {columnVisibility.type && (
-                  <TableCell style={{ width: columnWidths.industry_type, maxWidth: columnWidths.industry_type }}>
-                    <div className="truncate"><Badge variant="outline">{company.industry_type}</Badge></div>
-                  </TableCell>
-                )}
-                
-                {columnVisibility.segment && (
-                  <TableCell style={{ width: columnWidths.segment, maxWidth: columnWidths.segment }} className="text-sm">
-                    <div className="truncate" title={company.segment || ''}>{company.segment}</div>
-                  </TableCell>
-                )}
-                
-                {columnVisibility.structure && (
-                  <TableCell style={{ width: columnWidths.company_type, maxWidth: columnWidths.company_type }}>
-                    {company.company_type === 'parent' ? (
-                      <div className="flex items-center gap-1">
-                        <Building2 className="h-3 w-3 text-blue-600 shrink-0" />
-                        <span className="text-xs font-semibold text-blue-600">Parent</span>
-                      </div>
-                    ) : company.company_type === 'subsidiary' ? (
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-purple-600 shrink-0" />
-                        <span className="text-xs text-purple-600">Subsidiary</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                )}
-                
-                {columnVisibility.parentCompany && (
-                  <TableCell style={{ width: columnWidths.parent_company, maxWidth: columnWidths.parent_company }}>
-                    {company.parent_company ? (
-                      <div className="truncate text-sm text-primary" title={company.parent_company.company_name}>
-                        {company.parent_company.company_name}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                )}
-                
-                {columnVisibility.contractorSpecialty && (
-                  <TableCell style={{ width: columnWidths.contractor_specialty, maxWidth: columnWidths.contractor_specialty }}>
-                    {company.industry_type === 'Contractor' && company.contractor_specialty ? (
-                      <div className="truncate" title={company.contractor_specialty}>
-                        <span className="text-sm text-foreground">
-                          {company.contractor_specialty}
-                        </span>
-                      </div>
-                    ) : company.industry_type === 'Contractor' ? (
-                      <span className="text-muted-foreground text-sm italic">Not specified</span>
-                    ) : null}
-                  </TableCell>
-                )}
-
-                {columnVisibility.contractorSpecialty && (
-                  <TableCell style={{ width: columnWidths.nest_pro_partner_id, maxWidth: columnWidths.nest_pro_partner_id }}>
-                    {company.industry_type === 'Contractor' && company.nest_pro_partner_id ? (
-                      <span className="text-sm font-mono text-foreground truncate">{company.nest_pro_partner_id}</span>
-                    ) : company.industry_type === 'Contractor' ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : null}
-                  </TableCell>
-                )}
-                
-                {columnVisibility.status && (
-                  <TableCell style={{ width: columnWidths.status, maxWidth: columnWidths.status }} onClick={(e) => e.stopPropagation()}>
-                    {editingStatus === company.id ? (
-                      <Select
-                        defaultValue={company.status}
-                        onValueChange={(value) => handleStatusChange(company.id, value)}
-                      >
-                        <SelectTrigger className="w-32 h-7">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Lead">Lead</SelectItem>
-                          <SelectItem value="Contacted">Contacted</SelectItem>
-                          <SelectItem value="Engaged">Engaged</SelectItem>
-                          <SelectItem value="Pilot">Pilot</SelectItem>
-                          <SelectItem value="Active">Active</SelectItem>
-                          <SelectItem value="Inactive">Inactive</SelectItem>
-                          <SelectItem value="Lost">Lost</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Badge 
-                        className={`${getStatusColor(company.status)} cursor-pointer`}
-                        onClick={() => setEditingStatus(company.id)}
-                      >
-                        {company.status}
-                      </Badge>
-                    )}
-                  </TableCell>
-                )}
-                {columnVisibility.score && (
-                  <TableCell style={{ width: columnWidths.lead_score, maxWidth: columnWidths.lead_score }}>
-                    <div 
-                      className={`text-center font-semibold ${
-                        company.lead_score >= 80 ? 'text-priority-p1' :
-                        company.lead_score >= 60 ? 'text-priority-p2' :
-                        company.lead_score >= 40 ? 'text-priority-p3' :
-                        'text-muted-foreground'
-                      }`}
-                    >
-                      {company.lead_score || 0}
-                    </div>
-                  </TableCell>
-                )}
-                
-                {columnVisibility.priority && (
-                  <TableCell style={{ width: columnWidths.priority_tier, maxWidth: columnWidths.priority_tier }}>
-                    <Badge 
-                      className={
-                        company.priority_tier === 'P1' ? 'bg-priority-p1 text-priority-p1-foreground' :
-                        company.priority_tier === 'P2' ? 'bg-priority-p2 text-priority-p2-foreground' :
-                        company.priority_tier === 'P3' ? 'bg-priority-p3 text-priority-p3-foreground' :
-                        'bg-muted text-muted-foreground'
-                      }
-                    >
-                      {company.priority_tier || 'Unscored'}
-                    </Badge>
-                  </TableCell>
-                )}
-
-                {columnVisibility.annualVolume && (
-                  <TableCell style={{ width: columnWidths.annual_volume, maxWidth: columnWidths.annual_volume }}>
-                    <ProtectedField
-                      tableName="companies"
-                      fieldName="annual_volume"
-                      value={company.annual_volume ? `${company.annual_volume.toLocaleString()} ${company.industry_type === 'Builder' ? 'homes' : 'calls'}/yr` : '-'}
-                    >
-                      {company.annual_volume ? (
-                        <div className="text-sm truncate">
-                          <span className="font-semibold">{company.annual_volume.toLocaleString()}</span>
-                          <span className="text-muted-foreground ml-1">
-                            {company.industry_type === 'Builder' ? 'homes' : 'calls'}/yr
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </ProtectedField>
-                  </TableCell>
-                )}
-
-                {columnVisibility.revenue && (
-                  <TableCell style={{ width: columnWidths.annual_revenue_range, maxWidth: columnWidths.annual_revenue_range }}>
-                    <ProtectedField
-                      tableName="companies"
-                      fieldName={company.industry_type === 'Builder' ? 'average_home_price' : 'annual_revenue_range'}
-                      value={
-                        company.industry_type === 'Builder' && company.average_home_price 
-                          ? `$${(company.average_home_price / 1000).toFixed(0)}K avg`
-                          : company.industry_type === 'Contractor' && company.annual_revenue_range
-                          ? company.annual_revenue_range
-                          : '-'
-                      }
-                    >
-                      {company.industry_type === 'Builder' && company.average_home_price ? (
-                        <div className="text-sm truncate">
-                          <span className="font-semibold">
-                            ${(company.average_home_price / 1000).toFixed(0)}K
-                          </span>
-                          <span className="text-muted-foreground ml-1">avg</span>
-                        </div>
-                      ) : company.industry_type === 'Contractor' && company.annual_revenue_range ? (
-                        <span className="text-sm truncate">{company.annual_revenue_range}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </ProtectedField>
-                  </TableCell>
-                )}
-
-                {columnVisibility.phone && (
-                  <TableCell style={{ width: columnWidths.primary_phone, maxWidth: columnWidths.primary_phone }} className="text-sm">
-                    <div className="truncate">
-                      <ProtectedField
-                        tableName="companies"
-                        fieldName="primary_phone"
-                        value={company.primary_phone}
-                      />
-                    </div>
-                  </TableCell>
-                )}
-
-                {columnVisibility.website && (
-                  <TableCell style={{ width: columnWidths.website_url, maxWidth: columnWidths.website_url }} onClick={(e) => e.stopPropagation()}>
-                    <ProtectedField
-                      tableName="companies"
-                      fieldName="website_url"
-                      value={company.website_url}
-                    >
-                      {company.website_url ? (
-                        <a 
-                          href={company.website_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Visit
-                        </a>
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </ProtectedField>
-                  </TableCell>
-                )}
-
-                {columnVisibility.franchise && (
-                  <TableCell style={{ width: columnWidths.is_franchise, maxWidth: columnWidths.is_franchise }}>
-                    {company.is_franchise ? (
-                      <Badge variant="secondary" className="text-xs">Franchise</Badge>
-                    ) : "-"}
-                  </TableCell>
-                )}
-                
-                <TableCell style={{ width: columnWidths.actions, maxWidth: columnWidths.actions }} onClick={(e) => e.stopPropagation()}>
-                  <QuickActionsMenu
-                    company={company}
-                    onEdit={() => onEdit(company)}
-                    onDelete={onCompanyUpdate}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  company={company}
+                  columnVisibility={columnVisibility}
+                  columnWidths={columnWidths}
+                  isSelected={selectedRows.includes(company.id)}
+                  isEditingStatus={editingStatus === company.id}
+                  onToggleSelect={handleSelectRow}
+                  onToggleFavorite={handleFavoriteToggle}
+                  onStartEditStatus={handleStartEditStatus}
+                  onStatusChange={handleStatusChange}
+                  onEdit={stableOnEdit}
+                  onCompanyUpdate={stableOnUpdate}
+                />
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </div>
     </TooltipProvider>
