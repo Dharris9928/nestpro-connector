@@ -53,7 +53,7 @@ const Contacts = () => {
 
       let query = supabase
         .from("contacts")
-        .select("*, companies(company_name, created_by, assigned_to, state, city), assigned_profile:profiles!contacts_assigned_to_fkey(first_name, last_name)");
+        .select("id,company_id,branch_id,first_name,last_name,title,decision_tier,email,phone,mobile,linkedin_url,linkedin_connections,linkedin_activity_score,preferred_contact_method,created_at,updated_at,email_encrypted,phone_encrypted,mobile_encrypted,encryption_version,import_batch_id,assigned_to, companies(company_name, created_by, assigned_to, state, city), assigned_profile:profiles!contacts_assigned_to_fkey(first_name, last_name)");
 
       // Apply perspective filter
       if (perspective === 'my_records') {

@@ -31,7 +31,6 @@ export function useImpersonation() {
       
       // Check if impersonation session has expired
       if (data.expiresAt && Date.now() > data.expiresAt) {
-        console.log('[Impersonation] Session expired during initialization');
         sessionStorage.removeItem(IMPERSONATION_KEY);
         return null;
       }
@@ -56,15 +55,11 @@ export function useImpersonation() {
     sessionStorage.setItem(IMPERSONATION_KEY, JSON.stringify(signed));
     setImpersonation(impersonationData);
     
-    console.log(`[Impersonation] Started session for ${data.userEmail}, expires at ${new Date(impersonationData.expiresAt).toISOString()}`);
-    console.log('[Impersonation] Session signed with HMAC for tamper detection');
-    
     // Reload to apply impersonation across all hooks
     window.location.reload();
   };
 
   const stopImpersonation = () => {
-    console.log('[Impersonation] Stopping impersonation session');
     sessionStorage.removeItem(IMPERSONATION_KEY);
     setImpersonation(null);
     // Reload to clear impersonation
@@ -96,7 +91,6 @@ export function useImpersonation() {
         
         // Check expiration
         if (data.expiresAt && Date.now() > data.expiresAt) {
-          console.log('[Impersonation] Session expired, clearing');
           sessionStorage.removeItem(IMPERSONATION_KEY);
           setImpersonation(null);
           window.location.reload();
