@@ -166,7 +166,11 @@ serve(async (req) => {
 
     if (!apolloResponse.ok) {
       const errorText = await apolloResponse.text();
-      console.error('Apollo API error:', apolloResponse.status, errorText);
+      console.error('Apollo API error:', apolloResponse.status, errorText, {
+        keywordCount: searchPayload.q_organization_keyword_tags?.length || 0,
+        locationCount: (searchPayload.organization_locations?.length || 0),
+        employeeRanges: searchPayload.organization_num_employees_ranges,
+      });
       throw new Error(`Apollo API error: ${apolloResponse.status}`);
     }
 
