@@ -137,18 +137,23 @@ export default function PurgeCandidates() {
             Purge Candidates
           </CardTitle>
           <CardDescription>
-            Companies with <strong>no website URL</strong> — they fail the bare-minimum data threshold and are never queued
-            for enrichment. Review and delete to reduce database load and AI spend.
+            Companies with <strong>no website, no LinkedIn, no email</strong>, and <strong>no contacts,
+            communications, Apollo activity, opportunities, activities, job quotes, or pilot programs</strong>.
+            Anything with engagement history is automatically excluded.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-3 text-sm">
-              <Badge variant="destructive">{total.toLocaleString()} candidates</Badge>
+              <Badge variant="destructive">{total.toLocaleString()} safe to purge</Badge>
+              {excluded > 0 && (
+                <Badge variant="outline">{excluded.toLocaleString()} excluded (has signals)</Badge>
+              )}
               {selected.size > 0 && (
                 <span className="text-muted-foreground">{selected.size} selected</span>
               )}
             </div>
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm" disabled={selected.size === 0 || deleting}>
