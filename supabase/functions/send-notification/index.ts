@@ -192,7 +192,7 @@ serve(async (req) => {
           p_resend_email_id: emailData?.id || null,
           p_metadata: { notification_id }
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error sending or logging email:", error);
         
         try {
