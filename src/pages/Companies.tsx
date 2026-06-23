@@ -276,7 +276,7 @@ const Companies = () => {
       const base = supabase
         .from("companies")
         .select(`
-          *,
+          ${COMPANY_LIST_COLUMNS},
           parent_company:companies!parent_company_id(id, company_name)
         `, { count: 'exact' })
         .order(sortColumn, { ascending: sortAscending })
@@ -303,7 +303,7 @@ const Companies = () => {
       const base = supabase
         .from("companies")
         .select(`
-          *,
+          ${COMPANY_LIST_COLUMNS},
           parent_company:companies!parent_company_id(id, company_name)
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
