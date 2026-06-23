@@ -152,7 +152,7 @@ serve(async (req) => {
       searchPayload.intent_topics = buyingIntentTopics;
     }
 
-    console.log('Apollo search payload:', JSON.stringify(searchPayload, null, 2));
+    // Payload logging disabled; on error we log a short summary below.
 
     const apolloResponse = await fetch('https://api.apollo.io/v1/mixed_companies/search', {
       method: 'POST',
