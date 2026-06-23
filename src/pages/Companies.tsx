@@ -34,6 +34,35 @@ import { usePerspective } from "@/hooks/usePerspective";
 import { useUserRole } from "@/hooks/useUserRole";
 import { WEST_STATES, EAST_STATES } from "@/lib/regions/regionConstants";
 
+// Explicit column list for list/grid views. Excludes heavy fields that the
+// list views never render (notes, score_breakdown_v2, enrichment_skip_reason,
+// company_logo) — those are pulled on demand when opening a single record.
+const COMPANY_LIST_COLUMNS = [
+  'id','company_name','industry_type','segment_confidence','website_url','linkedin_company_url',
+  'primary_phone','total_employees','annual_revenue_range','years_in_business','lead_score',
+  'priority_tier','nest_pro_partner_id','status','created_by','created_at','updated_at',
+  'parent_company_id','is_franchise','franchise_name','owner_name','city','nest_pro_industry',
+  'score_calculated_at','annual_volume','address_line1','state','zip','primary_email',
+  'is_parent_company','company_type','contractor_specialty','average_home_price','price_point_category',
+  'service_area_type','maintenance_contract_percentage','emergency_service_percentage',
+  'partner_introduction_date','partner_relationship_status','last_contact_date','next_activity_date',
+  'next_activity_type','segment','website_quality','website_has_smart_home_content','website_last_updated',
+  'linkedin_followers_range','linkedin_activity_level','facebook_url','instagram_url','youtube_url',
+  'social_media_presence','current_smart_home_offerings','offers_smart_thermostats','offers_smart_security',
+  'offers_home_automation','technology_adoption_level','nest_installation_volume_range','nest_product_mix',
+  'has_google_business_profile','online_review_rating','online_review_count_range','annual_volume_range',
+  'average_home_price_range','total_employees_range','years_in_business_range','revenue_growth_trend',
+  'profitability_level','financial_health_rating','revenue_growth_indicators','multiple_active_projects',
+  'industry_awards_recognition','positive_reviews_reputation','industry_specialties','hvac_monitoring',
+  'assigned_to','assigned_to_sales_rep_id','primary_email_encrypted','primary_phone_encrypted',
+  'encryption_version','buying_intent_strength','buying_intent_topics','buying_intent_last_detected',
+  'currently_using_technologies','region','import_batch_id','builder_segment','contractor_segment',
+  'geographic_tier','smart_home_readiness','wholesale_partner_match','nest_pro_status',
+  'permits_in_pipeline','service_agreement_count','work_type_focus','competitor_status',
+  'contact_trust_level','training_readiness','tech_adoption_signal','program_readiness_stage',
+  'last_enrichment_attempt_at','enrichment_no_segment_count'
+].join(',');
+
 const Companies = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();

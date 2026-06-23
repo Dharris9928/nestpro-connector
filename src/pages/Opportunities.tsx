@@ -89,7 +89,7 @@ export default function Opportunities() {
 
       let query = supabase
         .from('opportunities' as any)
-        .select('*, companies!opportunities_company_id_fkey(company_name, state, city), profiles!opportunities_assigned_to_fkey(first_name, last_name), sales_reps!opportunities_assigned_to_sales_rep_id_fkey(first_name, last_name), opportunity_products(*)');
+        .select('id,company_id,opportunity_name,stage,amount,probability,expected_close_date,closed_date,assigned_to,created_by,created_at,updated_at,contractor_id,confidence,unit_needed_date,distributor,source,sales_personnel_contact_id,assigned_to_sales_rep_id, companies!opportunities_company_id_fkey(company_name, state, city), profiles!opportunities_assigned_to_fkey(first_name, last_name), sales_reps!opportunities_assigned_to_sales_rep_id_fkey(first_name, last_name), opportunity_products(*)');
 
       // Apply perspective filter
       if (perspective === 'my_records') {
