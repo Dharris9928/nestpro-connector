@@ -1,59 +1,69 @@
-# Performance & Storage Optimization Pass
+# Safely downsize Lovable Cloud compute
 
-Four scoped changes. No user-facing behavior changes. I'll explain tradeoffs inline as I work.
+## Why
+- Current instance: **compute large** (~28 credits/month, 21% of your spend).
+- Real load: 6/160 connections, 39% memory, 1/800 pool clients. Wildly over-provisioned.
+- But: the bulk-enrich cron is doing full table scans on `companies` (top query: 1,013 calls × 1.5s avg). Those scans currently hide behind spare CPU. If we shrink compute first, they'll become user-visible slowness.
 
-## 1. Server-side pagination for Companies list
+So: **fix the scans first, then downsize.**
 
-**File:** `src/pages/Companies.tsx`
+## Step 1 — Add indexes the cron actually needs
+One migration, plain `CREATE INDEX` (concurrent isn't allowed in migrations). Targets the exact filter combos seen in `slow_queries`:
 
-- Split into two queries keyed by active view:
-  - **Grid/Table view** → new `companiesPageQuery` using `.select('*', { count: 'exact' })`, `.order(sortField, { ascending })`, `.range((page-1)*pageSize, page*pageSize - 1)`, and push all currently-client filters (search, industry, segment, status, region, enriched flag, perspective) into `.ilike()` / `.eq()` / `.in()` / `.not()` clauses on the server.
-  - **Kanban / Gallery / List / Hierarchy views** → keep the in-memory `filteredAndSortedCompanies` path but add a hard cap (`.limit(500)`) and render a banner ("Showing first 500 of N — narrow filters to see the rest") when `count > 500`.
-- Replace client-side `paginatedCompanies` slice with the server page directly; pagination controls drive `page` state that re-runs the query.
-- Keep React Query keys including all filter/sort/page values so cache works correctly; set `placeholderData: keepPreviousData` to avoid table flicker on page change.
+```sql
+-- Cron's main "needs enrichment" filter
+CREATE INDEX IF NOT EXISTS idx_companies_enrichment_pending
+  ON public.companies (last_enrichment_attempt_at)
+  WHERE builder_segment IS NULL
+    AND segment IS NULL
+    AND enrichment_skip_reason IS NULL;
 
-**Tradeoff:** search-as-you-type becomes a network hit per keystroke — mitigated by the existing `useDebounce` hook (confirm it's wired to the search input; if not, add 250ms debounce).
+-- "Has website" variant the cron also runs
+CREATE INDEX IF NOT EXISTS idx_companies_enrichment_pending_with_site
+  ON public.companies (id)
+  WHERE builder_segment IS NULL
+    AND segment IS NULL
+    AND enrichment_skip_reason IS NULL
+    AND website_url IS NOT NULL
+    AND website_url <> '';
 
-## 2. RLS helper functions to replace inline EXISTS subqueries
+-- Generic builder_segment lookup (used by analytics + cron)
+CREATE INDEX IF NOT EXISTS idx_companies_builder_segment_null
+  ON public.companies (id)
+  WHERE builder_segment IS NULL;
+```
 
-**Where:** new migration under `supabase/migrations/`
+Partial indexes — small footprint, won't bloat the 3.84 GB DB.
 
-- Audit current policies via `pg_policies` to find recurring patterns. Expected reusable predicates:
-  - `is_manager_of(_manager_id uuid, _owner_id uuid)` — wraps the `team_memberships` lookup.
-  - `can_access_company_row(_company_id uuid)` — created_by/assigned_to/elevated check.
-  - `can_access_contact_row(_contact_id uuid)` — via parent company.
-  - Reuse existing `has_elevated_access`, `has_role`, `is_user_approved` where policies still inline them.
-- Each helper: `LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public`. `STABLE` lets the planner cache results per query; `SECURITY DEFINER` avoids recursive RLS on the lookup tables.
-- Rewrite policies on the heaviest tables first: `companies`, `contacts`, `opportunities`, `outreach_activities`, `company_communications`, `apollo_email_activities`. Drop + recreate each policy in the same migration to keep behavior identical.
-- Migration will be presented for approval before running.
+## Step 2 — Verify the indexes are used
+Run `EXPLAIN (ANALYZE, BUFFERS)` on the two top offenders. Confirm `Index Scan` (not `Seq Scan`) and that mean time drops from ~1,500 ms to under ~50 ms.
 
-**Tradeoff:** `SECURITY DEFINER` helpers must be written carefully — they bypass RLS on the tables they read, so each one will only expose a boolean, never row data.
+## Step 3 — Quiet the cron noise
+The bulk-enrich cron is firing every ~60 seconds (visible in edge function logs — boot/shutdown every minute). Stretch it to every 5 minutes in `supabase/config.toml`. Enrichment is not a sub-minute requirement, and this alone removes ~80% of repeat scans.
 
-## 3. Memoize table rows
+## Step 4 — Downsize compute
+Two safe options:
 
-**Files:** `src/components/companies/CompanyTable.tsx`, `src/components/contacts/ContactTable.tsx`, `src/components/opportunities/OpportunitiesTable.tsx`
+- **Aggressive (recommended)**: `large` → `small`. Saves ~22 credits/month. Headroom check: peak connections 6, peak memory 39% — both fit small comfortably.
+- **Conservative**: `large` → `medium`. Saves ~12 credits/month. Use if you'd rather watch one tier at a time.
 
-For each:
-- Extract `<CompanyRow>` / `<ContactRow>` / `<OpportunityRow>` as a separate component in the same file (or sibling file) wrapped in `React.memo` with a custom comparator if needed (shallow compare on the row object + selected flag is usually enough).
-- In the parent, wrap `onEdit`, `onDelete`, `onSelect`, `onRowClick`, etc. in `useCallback` with stable deps. Any object/array props (e.g. column config) memoized with `useMemo`.
-- Verify selection state is passed as a primitive boolean per row (not the whole `selectedIds` Set) so unrelated rows don't invalidate.
+User does this manually: **Cloud → Overview → Advanced settings → change instance size.** Resize takes a few minutes and the DB is briefly unavailable.
 
-**Tradeoff:** Slight code churn; memo only pays off when row count > ~50, which is the case here.
+## Step 5 — Monitor for 48 hours
+Re-check `db_health` afterward. Watch memory, connections, OOM kills. If memory > 75% sustained or any OOM kill appears, bump back up one tier. Easy to reverse.
 
-## 4. Remove duplicate import dialogs
+## Step 6 — Stop the bleeding regardless of compute
+Set credit alerts so this can't sneak up again:
+- **Settings → Plans & Credits → Alerts & limits**
+- Notify at 75% and 90%
+- Optional block at 100% (build pauses instead of overflowing)
 
-**Files:** `src/components/contacts/ImportContactsDialog.tsx` vs `ImportContactsDialogEnhanced.tsx`
+## What this should save
+- Compute downsize: ~22 credits / month (large → small)
+- Cron slowdown + indexes: removes a multi-hour/day CPU sink (indirect — lets small actually hold up)
+- Combined: brings the Cloud-compute share of your bill from ~21% to ~5%
 
-- `rg` for imports of both. Delete whichever is unreferenced. If both are referenced from different places, consolidate to the Enhanced one and update call sites.
-- Same scan for companies/communications import pairs; if duplicates exist, same treatment.
-
-## Out of scope (already done, per your note)
-
-QueryClient defaults, Vite chunking, dynamic xlsx import, dedup of enriched filter query.
-
-## Verification
-
-- After each change: read relevant file(s) to confirm structure, run typecheck via the harness build.
-- For pagination: manually page through in preview; confirm network panel shows ~50-row payloads.
-- For RLS: re-run a representative `SELECT` from `companies` as a sales_rep user via `supabase--read_query` with role impersonation, confirm row count matches pre-migration.
-- For memo: React DevTools Profiler is overkill for a verification pass — instead, add a temporary `console.count` in a row component, type in the search box, confirm count doesn't grow per keystroke for unrelated rows, then remove.
+## Out of scope (intentionally)
+- Data disk: leave at current size, 65% is fine.
+- AI Gateway: 0.0007 credits last week, ignore.
+- Build/Plan mode credits (74% of spend): behavior change on your side, not a code fix.
