@@ -445,11 +445,10 @@ export default function JobQuotes() {
               defaultMonth={customRange.from || new Date()}
               selected={{ from: customRange.from, to: customRange.to }}
               onSelect={(range) => {
+                setCustomRange({ from: range?.from, to: range?.to });
                 if (range?.from && range?.to) {
-                  setCustomRange({ from: range.from, to: range.to });
                   setDatePreset("custom");
                 } else if (!range?.from && !range?.to) {
-                  setCustomRange({});
                   setDatePreset("all");
                 }
               }}
