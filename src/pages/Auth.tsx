@@ -224,7 +224,7 @@ const Auth = () => {
       }
 
       toast.success("Successfully logged in!");
-      navigate("/");
+      goNext();
     } catch (error: any) {
       toast.error(error.message || "Failed to login");
     } finally {
@@ -259,7 +259,7 @@ const Auth = () => {
     }
 
     toast.success("Successfully logged in!");
-    navigate("/");
+    goNext();
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -419,7 +419,7 @@ const Auth = () => {
         setTempPassword("");
         setNewPassword("");
         setConfirmPassword("");
-        navigate("/");
+        goNext();
         return;
       }
 
