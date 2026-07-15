@@ -62,6 +62,15 @@ const markMfaTrusted = async (userId: string, trustWindowMs: number) => {
 
 const Auth = () => {
   const navigate = useNavigate();
+  // Preserve OAuth consent redirect: /auth?next=/.lovable/oauth/consent?...
+  const getNextPath = (): string => {
+    const raw = new URLSearchParams(window.location.search).get("next");
+    if (!raw) return "/";
+    // Same-origin relative path only
+    if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+    return "/";
+  };
+  const goNext = () => navigate(getNextPath(), { replace: true });
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -215,7 +224,7 @@ const Auth = () => {
       }
 
       toast.success("Successfully logged in!");
-      navigate("/");
+      goNext();
     } catch (error: any) {
       toast.error(error.message || "Failed to login");
     } finally {
@@ -250,7 +259,7 @@ const Auth = () => {
     }
 
     toast.success("Successfully logged in!");
-    navigate("/");
+    goNext();
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -410,7 +419,7 @@ const Auth = () => {
         setTempPassword("");
         setNewPassword("");
         setConfirmPassword("");
-        navigate("/");
+        goNext();
         return;
       }
 
