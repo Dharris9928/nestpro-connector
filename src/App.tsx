@@ -30,6 +30,7 @@ const PresentationView = lazy(() => import("./pages/PresentationView"));
 const PipelineAnalytics = lazy(() => import("./pages/PipelineAnalytics"));
 const JobQuotes = lazy(() => import("./pages/JobQuotes"));
 const PurgeCandidates = lazy(() => import("./pages/PurgeCandidates"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route
               path="/"
               element={
