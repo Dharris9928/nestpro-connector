@@ -6786,6 +6786,7 @@ export type Database = {
         Returns: undefined
       }
       disable_all_automation: { Args: { reason?: string }; Returns: number }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       enable_automation_rule: {
         Args: { _mode?: string; _rule_key: string }
         Returns: boolean
