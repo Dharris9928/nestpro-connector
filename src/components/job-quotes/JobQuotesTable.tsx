@@ -358,12 +358,39 @@ export function JobQuotesTable({
                         : "-"}
                     </div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.comments, maxWidth: columnWidths.comments }}>
-                    <div className="whitespace-pre-wrap break-words text-sm">{quote.comments || "-"}</div>
+                  <TableCell style={{ width: columnWidths.comments, maxWidth: columnWidths.comments }} className="align-top">
+                    {quote.comments ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="line-clamp-3 break-words text-sm text-left cursor-help">
+                            {quote.comments}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm whitespace-pre-wrap">
+                          {quote.comments}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-sm">-</span>
+                    )}
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.notes, maxWidth: columnWidths.notes }}>
-                    <div className="whitespace-pre-wrap break-words text-sm">{quote.notes || "-"}</div>
+                  <TableCell style={{ width: columnWidths.notes, maxWidth: columnWidths.notes }} className="align-top">
+                    {quote.notes ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="line-clamp-3 break-words text-sm text-left cursor-help">
+                            {quote.notes}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm whitespace-pre-wrap">
+                          {quote.notes}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-sm">-</span>
+                    )}
                   </TableCell>
+
                   <TableCell style={{ width: columnWidths.contacts, maxWidth: columnWidths.contacts }}>
                     <div className="flex flex-wrap gap-1">
                       {quote.job_quote_contacts?.slice(0, 2).map((jqc: any) => (
