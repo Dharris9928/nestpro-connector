@@ -29,6 +29,7 @@ const TABLE_TO_QUERY_KEYS: Record<string, QueryKeyLike[]> = {
   contacts: [["contacts"], ["contacts-count"]],
   opportunities: [["opportunities"], ["pipeline-analytics"], ["communications-funnel"]],
   outreach_activities: [["activities"], ["monthly-activities"], ["pipeline-analytics"], ["communications-funnel"]],
+  job_quotes: [["job-quotes"], ["job-quotes-trends"], ["job-quotes-submission-trends"]],
 
   // Company AI status badge
   enrichment_logs: [["enrichment-status"]],
