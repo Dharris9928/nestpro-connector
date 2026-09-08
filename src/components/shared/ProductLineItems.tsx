@@ -115,21 +115,33 @@ export function ProductLineItems({ items, setItems }: ProductLineItemsProps) {
               <div className="flex-1 grid grid-cols-6 gap-3">
                 <div className="col-span-2 space-y-2">
                   <Label className="text-xs">Product</Label>
-                  <Select
-                    value={item.product_name}
-                    onValueChange={(value) => updateItem(index, "product_name", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PRODUCT_CATALOG.map((p) => (
-                        <SelectItem key={p.name} value={p.name}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const raw = item.product_name || "";
+                    const match = PRODUCT_CATALOG.find(
+                      (p) => p.name.toLowerCase() === raw.toLowerCase()
+                    );
+                    const selected = match ? match.name : raw;
+                    return (
+                      <Select
+                        value={selected}
+                        onValueChange={(value) => updateItem(index, "product_name", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {!match && raw && (
+                            <SelectItem value={raw}>{raw}</SelectItem>
+                          )}
+                          {PRODUCT_CATALOG.map((p) => (
+                            <SelectItem key={p.name} value={p.name}>
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-2">
