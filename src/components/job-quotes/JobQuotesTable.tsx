@@ -92,6 +92,14 @@ const accessors: Record<string, (q: any) => any> = {
   po_number: (q) => q.po_number || "",
 };
 
+const formatSubmissionDate = (value: string) => {
+  const date = new Date(value);
+  return format(
+    new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12),
+    "MMM d, yyyy"
+  );
+};
+
 export function JobQuotesTable({
   quotes,
   isLoading,
@@ -333,7 +341,7 @@ export function JobQuotesTable({
                           </TooltipContent>
                         </Tooltip>
                       )}
-                      <span className="truncate">{quote.date_received ? format(new Date(quote.date_received), "MMM d, yyyy") : "-"}</span>
+                      <span className="truncate">{quote.date_received ? formatSubmissionDate(quote.date_received) : "-"}</span>
                     </div>
                   </TableCell>
                   <TableCell style={{ width: columnWidths.product, maxWidth: columnWidths.product }} className="font-medium">
