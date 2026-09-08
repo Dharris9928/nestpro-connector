@@ -53,7 +53,10 @@ export default function JobQuotes() {
   const quarterOptions = getQuarterOptions();
 
   const { data: quotes = [], isLoading } = useQuery({
-    queryKey: ["job-quotes", statusFilter, datePreset, customRange.from?.toISOString(), customRange.to?.toISOString()],
+    // Pricing version forces open sessions to discard quote data cached before
+    // imported product totals were rolled up to job_quotes.price.
+    queryKey: ["job-quotes", "pricing-v2", statusFilter, datePreset, customRange.from?.toISOString(), customRange.to?.toISOString()],
+    refetchOnMount: "always",
     queryFn: async () => {
       let query = supabase
         .from("job_quotes")
