@@ -114,7 +114,7 @@ export default function JobQuotes() {
       if (repIds.length > 0) {
         const { data: reps } = await supabase
           .from("sales_reps" as any)
-          .select("id, first_name, last_name, territory")
+          .select("id, first_name, last_name, is_firm")
           .in("id", repIds);
         for (const rep of (reps || []) as any[]) {
           repMap[rep.id] = rep;
@@ -496,14 +496,29 @@ export default function JobQuotes() {
         </Popover>
       </div>
 
-      {/* Table */}
-      <JobQuotesTable
-        quotes={quotes}
-        isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={(id) => deleteMutation.mutate(id)}
-        staleQuoteIds={staleQuotes.map((q: any) => q.id)}
-      />
+      {/* Table grouped by assignee */}
+      <Tabs defaultValue="all">
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="all">
+            All <Badge variant="secondary" className="ml-2">{quotes.length}</Badge>
+          </TabsTrigger>
+          {assigneeTabs.map((tab) => (
+            <TabsTrigger key={tab.label} value={tab.label}>
+              {tab.label} <Badge variant="secondary" className="ml-2">{tab.quotes.length}</Badge>
+            </TabsTrigger>
+          ))}
+          <TabsTrigger value="unassigned">
+            Unassigned <Badge variant="secondary" className="ml-2">{unassignedQuotes.length}</Badge>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="all">{renderQuotesTable(quotes)}</TabsContent>
+        {assigneeTabs.map((tab) => (
+          <TabsContent key={tab.label} value={tab.label}>
+            {renderQuotesTable(tab.quotes)}
+          </TabsContent>
+        ))}
+        <TabsContent value="unassigned">{renderQuotesTable(unassignedQuotes)}</TabsContent>
+      </Tabs>
 
       {/* Dialogs */}
       <AddJobQuoteDialog
