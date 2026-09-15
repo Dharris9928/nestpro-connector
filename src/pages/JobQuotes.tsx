@@ -41,6 +41,7 @@ export default function JobQuotes() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
