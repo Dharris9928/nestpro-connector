@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Filter, Calendar, Upload } from "lucide-react";
+import { Plus, AlertTriangle, Filter, Calendar, Upload, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { AddJobQuoteDialog } from "@/components/job-quotes/AddJobQuoteDialog";
 import { EditJobQuoteDialog } from "@/components/job-quotes/EditJobQuoteDialog";
@@ -40,6 +41,7 @@ export default function JobQuotes() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -203,6 +205,41 @@ export default function JobQuotes() {
     ? quotesWithPrice.reduce((sum: number, q: any) => sum + (parseFloat(q.price) || 0), 0) / quotesWithPrice.length
     : null;
 
+  // Global text search across all visible fields
+  const searchLower = searchQuery.trim().toLowerCase();
+  const matchesSearch = (q: any): boolean => {
+    if (!searchLower) return true;
+    const haystack = [
+      q.product,
+      q.po_number,
+      q.comments,
+      q.notes,
+      q.status,
+      q.distributor?.company_name,
+      q.wholesaler?.company_name,
+      q.contractor?.company_name,
+      q.assignee_profile
+        ? `${q.assignee_profile.first_name} ${q.assignee_profile.last_name}`
+        : "",
+      q.assignee_sales_rep
+        ? `${q.assignee_sales_rep.first_name} ${q.assignee_sales_rep.last_name}`
+        : "",
+      ...(q.job_quote_contacts || []).map((c: any) =>
+        `${c.contact?.first_name || ""} ${c.contact?.last_name || ""} ${c.contact?.title || ""}`
+      ),
+      q.date_received ? format(new Date(q.date_received), "MMM d, yyyy") : "",
+      q.date_won ? format(new Date(q.date_won), "MMM d, yyyy") : "",
+      String(q.quantity ?? ""),
+      String(q.price ?? ""),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(searchLower);
+  };
+
+  const displayQuotes = searchLower ? quotes.filter(matchesSearch) : quotes;
+
   // Group quotes by assignee for tabbed view
   const getAssigneeLabel = (q: any): string | null => {
     if (q.assignee_sales_rep) {
@@ -214,14 +251,14 @@ export default function JobQuotes() {
     }
     return null;
   };
-  const assigneeGroups = quotes.reduce((acc: Record<string, any[]>, q: any) => {
+  const assigneeGroups = displayQuotes.reduce((acc: Record<string, any[]>, q: any) => {
     const label = getAssigneeLabel(q);
     if (label) {
       (acc[label] = acc[label] || []).push(q);
     }
     return acc;
   }, {});
-  const unassignedQuotes = quotes.filter((q: any) => !getAssigneeLabel(q));
+  const unassignedQuotes = displayQuotes.filter((q: any) => !getAssigneeLabel(q));
   const assigneeTabs = Object.entries(assigneeGroups)
     .map(([label, qs]) => ({ label, quotes: qs as any[] }))
     .sort((a, b) => b.quotes.length - a.quotes.length);
@@ -394,6 +431,26 @@ export default function JobQuotes() {
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search quotes (product, PO #, comments, notes, company, contact…)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              onClick={() => setSearchQuery("")}
+            >
+              <Plus className="h-4 w-4 rotate-45" />
+            </Button>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -500,7 +557,7 @@ export default function JobQuotes() {
       <Tabs defaultValue="all">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="all">
-            All <Badge variant="secondary" className="ml-2">{quotes.length}</Badge>
+            All <Badge variant="secondary" className="ml-2">{displayQuotes.length}</Badge>
           </TabsTrigger>
           {assigneeTabs.map((tab) => (
             <TabsTrigger key={tab.label} value={tab.label}>
@@ -511,7 +568,7 @@ export default function JobQuotes() {
             Unassigned <Badge variant="secondary" className="ml-2">{unassignedQuotes.length}</Badge>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="all">{renderQuotesTable(quotes)}</TabsContent>
+        <TabsContent value="all">{renderQuotesTable(displayQuotes)}</TabsContent>
         {assigneeTabs.map((tab) => (
           <TabsContent key={tab.label} value={tab.label}>
             {renderQuotesTable(tab.quotes)}
