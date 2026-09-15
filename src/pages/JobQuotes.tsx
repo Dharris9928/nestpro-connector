@@ -113,7 +113,7 @@ export default function JobQuotes() {
       if (repIds.length > 0) {
         const { data: reps } = await supabase
           .from("sales_reps" as any)
-          .select("id, first_name, last_name")
+          .select("id, first_name, last_name, territory")
           .in("id", repIds);
         for (const rep of (reps || []) as any[]) {
           repMap[rep.id] = rep;
