@@ -26,6 +26,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getQuarterOptions } from "@/lib/dates/quarterUtils";
 
@@ -201,6 +202,39 @@ export default function JobQuotes() {
   const avgQuoteSize = quotesWithPrice.length > 0
     ? quotesWithPrice.reduce((sum: number, q: any) => sum + (parseFloat(q.price) || 0), 0) / quotesWithPrice.length
     : null;
+
+  // Group quotes by assignee for tabbed view
+  const getAssigneeLabel = (q: any): string | null => {
+    if (q.assignee_sales_rep) {
+      const rep = q.assignee_sales_rep;
+      return rep.is_firm ? rep.first_name : `${rep.first_name} ${rep.last_name}`.trim();
+    }
+    if (q.assignee_profile) {
+      return `${q.assignee_profile.first_name || ""} ${q.assignee_profile.last_name || ""}`.trim() || null;
+    }
+    return null;
+  };
+  const assigneeGroups = quotes.reduce((acc: Record<string, any[]>, q: any) => {
+    const label = getAssigneeLabel(q);
+    if (label) {
+      (acc[label] = acc[label] || []).push(q);
+    }
+    return acc;
+  }, {});
+  const unassignedQuotes = quotes.filter((q: any) => !getAssigneeLabel(q));
+  const assigneeTabs = Object.entries(assigneeGroups)
+    .map(([label, qs]) => ({ label, quotes: qs as any[] }))
+    .sort((a, b) => b.quotes.length - a.quotes.length);
+
+  const renderQuotesTable = (list: any[]) => (
+    <JobQuotesTable
+      quotes={list}
+      isLoading={isLoading}
+      onEdit={handleEdit}
+      onDelete={(id) => deleteMutation.mutate(id)}
+      staleQuoteIds={staleQuotes.map((q: any) => q.id)}
+    />
+  );
 
   return (
     <div className="container mx-auto py-6 space-y-6">
