@@ -205,6 +205,41 @@ export default function JobQuotes() {
     ? quotesWithPrice.reduce((sum: number, q: any) => sum + (parseFloat(q.price) || 0), 0) / quotesWithPrice.length
     : null;
 
+  // Global text search across all visible fields
+  const searchLower = searchQuery.trim().toLowerCase();
+  const matchesSearch = (q: any): boolean => {
+    if (!searchLower) return true;
+    const haystack = [
+      q.product,
+      q.po_number,
+      q.comments,
+      q.notes,
+      q.status,
+      q.distributor?.company_name,
+      q.wholesaler?.company_name,
+      q.contractor?.company_name,
+      q.assignee_profile
+        ? `${q.assignee_profile.first_name} ${q.assignee_profile.last_name}`
+        : "",
+      q.assignee_sales_rep
+        ? `${q.assignee_sales_rep.first_name} ${q.assignee_sales_rep.last_name}`
+        : "",
+      ...(q.job_quote_contacts || []).map((c: any) =>
+        `${c.contact?.first_name || ""} ${c.contact?.last_name || ""} ${c.contact?.title || ""}`
+      ),
+      q.date_received ? format(new Date(q.date_received), "MMM d, yyyy") : "",
+      q.date_won ? format(new Date(q.date_won), "MMM d, yyyy") : "",
+      String(q.quantity ?? ""),
+      String(q.price ?? ""),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(searchLower);
+  };
+
+  const displayQuotes = searchLower ? quotes.filter(matchesSearch) : quotes;
+
   // Group quotes by assignee for tabbed view
   const getAssigneeLabel = (q: any): string | null => {
     if (q.assignee_sales_rep) {
@@ -216,14 +251,14 @@ export default function JobQuotes() {
     }
     return null;
   };
-  const assigneeGroups = quotes.reduce((acc: Record<string, any[]>, q: any) => {
+  const assigneeGroups = displayQuotes.reduce((acc: Record<string, any[]>, q: any) => {
     const label = getAssigneeLabel(q);
     if (label) {
       (acc[label] = acc[label] || []).push(q);
     }
     return acc;
   }, {});
-  const unassignedQuotes = quotes.filter((q: any) => !getAssigneeLabel(q));
+  const unassignedQuotes = displayQuotes.filter((q: any) => !getAssigneeLabel(q));
   const assigneeTabs = Object.entries(assigneeGroups)
     .map(([label, qs]) => ({ label, quotes: qs as any[] }))
     .sort((a, b) => b.quotes.length - a.quotes.length);
