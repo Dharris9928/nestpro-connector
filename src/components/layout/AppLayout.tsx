@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
@@ -132,7 +133,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="min-h-screen flex w-full bg-background">
           <AppSidebar />
           <div className="flex-1 flex flex-col">
-            <header className="h-14 border-b border-border flex items-center justify-end px-4 bg-card">
+            <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card">
+              <SidebarTrigger />
               <div className="flex items-center gap-2">
                 <NotificationBell />
               </div>
