@@ -537,7 +537,7 @@ export default function JobQuotes() {
       <Tabs defaultValue="all">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="all">
-            All <Badge variant="secondary" className="ml-2">{quotes.length}</Badge>
+            All <Badge variant="secondary" className="ml-2">{displayQuotes.length}</Badge>
           </TabsTrigger>
           {assigneeTabs.map((tab) => (
             <TabsTrigger key={tab.label} value={tab.label}>
@@ -548,7 +548,7 @@ export default function JobQuotes() {
             Unassigned <Badge variant="secondary" className="ml-2">{unassignedQuotes.length}</Badge>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="all">{renderQuotesTable(quotes)}</TabsContent>
+        <TabsContent value="all">{renderQuotesTable(displayQuotes)}</TabsContent>
         {assigneeTabs.map((tab) => (
           <TabsContent key={tab.label} value={tab.label}>
             {renderQuotesTable(tab.quotes)}
