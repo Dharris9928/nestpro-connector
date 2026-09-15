@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
