@@ -13,7 +13,7 @@ const fmt = (n: number | null) =>
   n ? n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }) : "—";
 
 export function JobQuotesRecentActivity() {
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, error } = useQuery({
     queryKey: ["job-quotes", "recent-activity"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -36,6 +36,8 @@ export function JobQuotesRecentActivity() {
       <CardContent>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : error ? (
+          <p className="text-sm text-destructive">Could not load recent changes: {(error as Error).message}</p>
         ) : data.length === 0 ? (
           <p className="text-sm text-muted-foreground">No recent activity.</p>
         ) : (
