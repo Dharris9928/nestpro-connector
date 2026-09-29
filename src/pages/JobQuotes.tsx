@@ -14,6 +14,7 @@ import { ImportJobQuotesDialog } from "@/components/job-quotes/ImportJobQuotesDi
 import { JobQuotesTable } from "@/components/job-quotes/JobQuotesTable";
 import { JobQuotesTrends } from "@/components/job-quotes/JobQuotesTrends";
 import { JobQuotesSubmissionTrends } from "@/components/job-quotes/JobQuotesSubmissionTrends";
+import { JobQuotesRecentActivity } from "@/components/job-quotes/JobQuotesRecentActivity";
 import {
   Select,
   SelectContent,
@@ -423,6 +424,7 @@ export default function JobQuotes() {
       </div>
 
       {/* Submission Trends */}
+      <JobQuotesRecentActivity />
       <JobQuotesSubmissionTrends />
 
       {/* Volume & Value Trends */}
