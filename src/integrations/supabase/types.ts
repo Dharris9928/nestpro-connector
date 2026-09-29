@@ -3635,6 +3635,41 @@ export type Database = {
           },
         ]
       }
+      job_quote_change_log: {
+        Row: {
+          change_type: string
+          changed_at: string
+          changed_by: string | null
+          changes: Json
+          id: string
+          job_quote_id: string
+        }
+        Insert: {
+          change_type: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          job_quote_id: string
+        }
+        Update: {
+          change_type?: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          job_quote_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_quote_change_log_job_quote_id_fkey"
+            columns: ["job_quote_id"]
+            isOneToOne: false
+            referencedRelation: "job_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_quote_contacts: {
         Row: {
           contact_id: string
