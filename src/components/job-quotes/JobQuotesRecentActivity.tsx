@@ -13,14 +13,14 @@ const fmt = (n: number | null) =>
   n ? n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }) : "—";
 
 export function JobQuotesRecentActivity() {
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, error } = useQuery({
     queryKey: ["job-quotes", "recent-activity"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_quotes")
-        .select("id, quote_number, status, product, quantity, total_price, created_at, updated_at, comments, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name)")
+        .select("id, quote_number, status, product, quantity, price, date_received, created_at, updated_at, comments, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name)")
         .order("updated_at", { ascending: false })
-        .limit(15);
+        .limit(30);
       if (error) throw error;
       return data as any[];
     },
@@ -30,12 +30,14 @@ export function JobQuotesRecentActivity() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <History className="h-4 w-4" /> Recent Updates & Changes
+          <History className="h-4 w-4" /> Recent Updates & Changes (last 30)
         </CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : error ? (
+          <p className="text-sm text-destructive">Could not load recent changes: {(error as Error).message}</p>
         ) : data.length === 0 ? (
           <p className="text-sm text-muted-foreground">No recent activity.</p>
         ) : (
@@ -59,14 +61,19 @@ export function JobQuotesRecentActivity() {
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {q.wholesaler?.company_name ? `${q.wholesaler.company_name} · ` : ""}
-                        {q.product || "—"} × {q.quantity} · {fmt(q.total_price)}
+                        {q.product || "—"} × {q.quantity} · {fmt(q.price)}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <Badge variant={statusVariant(q.status)} className="capitalize">{q.status}</Badge>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(q.updated_at), { addSuffix: true })}
+                        Changed {formatDistanceToNow(new Date(q.updated_at), { addSuffix: true })}
                       </p>
+                      {q.date_received && (
+                        <p className="text-xs text-muted-foreground">
+                          Submitted {new Date(q.date_received).toLocaleDateString("en-US", { timeZone: "UTC" })}
+                        </p>
+                      )}
                     </div>
                   </li>
                 );
