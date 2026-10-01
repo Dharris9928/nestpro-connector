@@ -344,120 +344,64 @@ export default function JobQuotes() {
         </Card>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Submissions (Last 30 Days)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-primary">{submissionsLast30}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Quotes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{quotes.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-warning">{pendingCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Won
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-success">{wonCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Lost
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-destructive">{lostCount}</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* KPI strip */}
+      <Card className="py-3">
+        <CardContent className="px-4 py-0">
+          <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
+            {[
+              { label: "Submissions 30d", value: String(submissionsLast30), tone: "text-primary" },
+              { label: "Total", value: String(quotes.length), tone: "" },
+              { label: "Pending", value: String(pendingCount), tone: "text-warning" },
+              { label: "Won", value: String(wonCount), tone: "text-success" },
+              { label: "Lost", value: String(lostCount), tone: "text-destructive" },
+              {
+                label: "Win rate",
+                value: winLossRatio !== null ? `${winLossRatio}%` : "—",
+                tone: "text-success",
+              },
+              {
+                label: "Avg close",
+                value: avgTimeToClose !== null ? `${avgTimeToClose} days` : "—",
+                tone: "",
+              },
+              {
+                label: "Avg pending",
+                value: avgTimePending !== null ? `${avgTimePending} days` : "—",
+                tone: "text-warning",
+              },
+              {
+                label: "Avg quote size",
+                value: avgQuoteSize !== null
+                  ? new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                      maximumFractionDigits: 0,
+                    }).format(avgQuoteSize)
+                  : "—",
+                tone: "",
+              },
+            ].map((kpi) => (
+              <div key={kpi.label} className="flex items-baseline gap-1.5">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {kpi.label}
+                </span>
+                <span className={cn("text-base font-semibold tabular-nums", kpi.tone)}>
+                  {kpi.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Time to Close
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {avgTimeToClose !== null ? `${avgTimeToClose} days` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Time Pending
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-warning">
-              {avgTimePending !== null ? `${avgTimePending} days` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Win/Loss Ratio
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-success">
-              {winLossRatio !== null ? `${winLossRatio}%` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Quote Size
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {avgQuoteSize !== null
-                ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(avgQuoteSize)
-                : "—"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Submission Trends */}
-      <JobQuotesRecentActivity />
-      <JobQuotesSubmissionTrends />
-
-      {/* Volume & Value Trends */}
-      <JobQuotesTrends />
+      {/* Overview panels: recent updates, submission trends, volume & value */}
+      {overviewOpen && (
+        <div className="space-y-6">
+          <JobQuotesRecentActivity />
+          <JobQuotesSubmissionTrends />
+          <JobQuotesTrends />
+        </div>
+      )}
 
 
       {/* Filters */}
