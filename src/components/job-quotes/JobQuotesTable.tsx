@@ -43,6 +43,7 @@ interface JobQuotesTableProps {
   onEdit: (quote: any) => void;
   onDelete: (id: string) => void;
   staleQuoteIds: string[];
+  density: Density;
 }
 
 const DEFAULT_WIDTHS: Record<string, number> = {
@@ -63,9 +64,9 @@ const DEFAULT_WIDTHS: Record<string, number> = {
 };
 
 type SortDir = "asc" | "desc" | null;
-type Density = "compact" | "comfortable";
+export type Density = "compact" | "comfortable";
 
-const DENSITY_KEY = "job-quotes-row-density";
+export const DENSITY_KEY = "job-quotes-row-density";
 const TIP_WIDTH = 340;
 
 type TipRow = [string, string | number | null | undefined | false];
@@ -278,31 +279,18 @@ export function JobQuotesTable({
   onEdit,
   onDelete,
   staleQuoteIds,
+  density,
 }: JobQuotesTableProps) {
   const { columnWidths, handleMouseDown, totalWidth } = useResizableColumns(DEFAULT_WIDTHS);
   const [sortField, setSortField] = useState<string | null>("date_received");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [filters, setFilters] = useState<Record<string, string>>({});
-  const [density, setDensity] = useState<Density>(() =>
-    typeof window !== "undefined" && window.localStorage.getItem(DENSITY_KEY) === "comfortable"
-      ? "comfortable"
-      : "compact"
-  );
   const [hover, setHover] = useState<HoverState | null>(null);
 
   const boxRef = useRef<HTMLDivElement>(null);
   const [boxHeight, setBoxHeight] = useState<number>(480);
 
   const compact = density === "compact";
-
-  const changeDensity = (next: Density) => {
-    setDensity(next);
-    try {
-      window.localStorage.setItem(DENSITY_KEY, next);
-    } catch {
-      // storage unavailable (private mode) — density just won't persist
-    }
-  };
 
   // Keep the table area pinned to the remaining window height so the column
   // headers and assignee tabs stay on screen while the rows scroll.
@@ -311,7 +299,7 @@ export function JobQuotesTable({
       const el = boxRef.current;
       if (!el) return;
       const top = el.getBoundingClientRect().top;
-      setBoxHeight(Math.max(320, Math.round(window.innerHeight - top - 16)));
+      setBoxHeight(Math.max(300, Math.round(window.innerHeight - top - 8)));
     };
     measure();
     const timer = window.setTimeout(measure, 250);
