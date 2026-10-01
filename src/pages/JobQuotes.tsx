@@ -320,6 +320,20 @@ export default function JobQuotes() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-bold">Job Quotes</h1>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-card p-0.5">
+            {(["compact", "comfortable"] as Density[]).map((option) => (
+              <Button
+                key={option}
+                type="button"
+                size="sm"
+                variant={density === option ? "secondary" : "ghost"}
+                className="h-7 px-2 text-xs"
+                onClick={() => changeDensity(option)}
+              >
+                {option === "compact" ? "Compact" : "Comfortable"}
+              </Button>
+            ))}
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -532,40 +546,19 @@ export default function JobQuotes() {
 
       {/* Table grouped by assignee */}
       <Tabs defaultValue="all">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <TabsList className="flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="all" className="h-7 px-2.5 text-xs">
-              All <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{displayQuotes.length}</Badge>
+        <TabsList className="flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="all" className="h-7 px-2 text-xs">
+            All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{displayQuotes.length}</Badge>
+          </TabsTrigger>
+          {assigneeTabs.map((tab) => (
+            <TabsTrigger key={tab.label} value={tab.label} className="h-7 px-2 text-xs">
+              {tab.label} <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{tab.quotes.length}</Badge>
             </TabsTrigger>
-            {assigneeTabs.map((tab) => (
-              <TabsTrigger key={tab.label} value={tab.label} className="h-7 px-2.5 text-xs">
-                {tab.label} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{tab.quotes.length}</Badge>
-              </TabsTrigger>
-            ))}
-            <TabsTrigger value="unassigned" className="h-7 px-2.5 text-xs">
-              Unassigned <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{unassignedQuotes.length}</Badge>
-            </TabsTrigger>
-          </TabsList>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {displayQuotes.length} of {quotes.length} quotes
-            </span>
-            <div className="flex items-center gap-1 rounded-md border bg-card p-0.5">
-              {(["compact", "comfortable"] as Density[]).map((option) => (
-                <Button
-                  key={option}
-                  type="button"
-                  size="sm"
-                  variant={density === option ? "secondary" : "ghost"}
-                  className="h-6 px-2 text-xs"
-                  onClick={() => changeDensity(option)}
-                >
-                  {option === "compact" ? "Compact" : "Comfortable"}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
+          ))}
+          <TabsTrigger value="unassigned" className="h-7 px-2 text-xs">
+            Unassigned <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{unassignedQuotes.length}</Badge>
+          </TabsTrigger>
+        </TabsList>
         <TabsContent value="all">{renderQuotesTable(displayQuotes)}</TabsContent>
         {assigneeTabs.map((tab) => (
           <TabsContent key={tab.label} value={tab.label}>
