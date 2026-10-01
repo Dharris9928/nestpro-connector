@@ -11,7 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { AddJobQuoteDialog } from "@/components/job-quotes/AddJobQuoteDialog";
 import { EditJobQuoteDialog } from "@/components/job-quotes/EditJobQuoteDialog";
 import { ImportJobQuotesDialog } from "@/components/job-quotes/ImportJobQuotesDialog";
-import { JobQuotesTable } from "@/components/job-quotes/JobQuotesTable";
+import {
+  JobQuotesTable,
+  DENSITY_KEY,
+  type Density,
+} from "@/components/job-quotes/JobQuotesTable";
 import { JobQuotesTrends } from "@/components/job-quotes/JobQuotesTrends";
 import { JobQuotesSubmissionTrends } from "@/components/job-quotes/JobQuotesSubmissionTrends";
 import { JobQuotesRecentActivity } from "@/components/job-quotes/JobQuotesRecentActivity";
@@ -58,6 +62,25 @@ export default function JobQuotes() {
       // storage unavailable (private browsing) — the preference just won't persist
     }
   }, [overviewOpen]);
+
+  const [density, setDensity] = useState<Density>(() => {
+    try {
+      return window.localStorage.getItem(DENSITY_KEY) === "comfortable"
+        ? "comfortable"
+        : "compact";
+    } catch {
+      return "compact";
+    }
+  });
+
+  const changeDensity = (next: Density) => {
+    setDensity(next);
+    try {
+      window.localStorage.setItem(DENSITY_KEY, next);
+    } catch {
+      // storage unavailable (private browsing) — the preference just won't persist
+    }
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -282,6 +305,7 @@ export default function JobQuotes() {
 
   const renderQuotesTable = (list: any[]) => (
     <JobQuotesTable
+      density={density}
       quotes={list}
       isLoading={isLoading}
       onEdit={handleEdit}
@@ -291,16 +315,25 @@ export default function JobQuotes() {
   );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-4 pt-3 pb-6 space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Job Quotes</h1>
-          <p className="text-muted-foreground">
-            Track and manage incoming job quotes
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-lg font-bold">Job Quotes</h1>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-card p-0.5">
+            {(["compact", "comfortable"] as Density[]).map((option) => (
+              <Button
+                key={option}
+                type="button"
+                size="sm"
+                variant={density === option ? "secondary" : "ghost"}
+                className="h-7 px-2 text-xs"
+                onClick={() => changeDensity(option)}
+              >
+                {option === "compact" ? "Compact" : "Comfortable"}
+              </Button>
+            ))}
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -314,11 +347,11 @@ export default function JobQuotes() {
             )}
             {overviewOpen ? "Hide overview" : "Show overview"}
           </Button>
-          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import CSV
           </Button>
-          <Button onClick={() => setAddDialogOpen(true)}>
+          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Quote
           </Button>
@@ -326,9 +359,9 @@ export default function JobQuotes() {
       </div>
 
       {/* KPI strip */}
-      <Card className="py-3">
-        <CardContent className="px-4 py-0">
-          <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
+      <Card className="py-1.5">
+        <CardContent className="px-3 py-0">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             {[
               { label: "Submissions 30d", value: String(submissionsLast30), tone: "text-primary" },
               { label: "Total", value: String(quotes.length), tone: "" },
@@ -371,11 +404,11 @@ export default function JobQuotes() {
                   ]
                 : []),
             ].map((kpi) => (
-              <div key={kpi.label} className="flex items-baseline gap-1.5">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
+              <div key={kpi.label} className="flex items-baseline gap-1">
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                   {kpi.label}
                 </span>
-                <span className={cn("text-base font-semibold tabular-nums", kpi.tone)}>
+                <span className={cn("text-sm font-semibold tabular-nums", kpi.tone)}>
                   {kpi.value}
                 </span>
               </div>
@@ -387,20 +420,20 @@ export default function JobQuotes() {
 
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-md">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-[360px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search quotes (product, PO #, comments, notes, company, contact…)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-sm"
           />
           {searchQuery && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
               onClick={() => setSearchQuery("")}
             >
               <Plus className="h-4 w-4 rotate-45" />
@@ -411,7 +444,7 @@ export default function JobQuotes() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="h-8 w-[120px] text-sm">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -435,6 +468,7 @@ export default function JobQuotes() {
               key={preset.value}
               variant={datePreset === preset.value ? "default" : "outline"}
               size="sm"
+              className="h-6 px-1.5 text-[11px]"
               onClick={() => {
                 setDatePreset(preset.value);
                 setCustomRange({});
@@ -457,7 +491,7 @@ export default function JobQuotes() {
               }
             }}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="h-8 w-[130px] text-sm">
               <SelectValue placeholder="Quarter" />
             </SelectTrigger>
             <SelectContent>
@@ -477,7 +511,7 @@ export default function JobQuotes() {
             <Button
               variant={customRange.from && customRange.to ? "default" : "outline"}
               size="sm"
-              className={cn("min-w-[180px] justify-start text-left font-normal")}
+              className={cn("h-8 min-w-[150px] justify-start text-left font-normal text-xs")}
             >
               <Calendar className="mr-2 h-4 w-4" />
               {customRange.from && customRange.to ? (
@@ -512,17 +546,17 @@ export default function JobQuotes() {
 
       {/* Table grouped by assignee */}
       <Tabs defaultValue="all">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="all">
-            All <Badge variant="secondary" className="ml-2">{displayQuotes.length}</Badge>
+        <TabsList className="flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="all" className="h-7 px-2 text-xs">
+            All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{displayQuotes.length}</Badge>
           </TabsTrigger>
           {assigneeTabs.map((tab) => (
-            <TabsTrigger key={tab.label} value={tab.label}>
-              {tab.label} <Badge variant="secondary" className="ml-2">{tab.quotes.length}</Badge>
+            <TabsTrigger key={tab.label} value={tab.label} className="h-7 px-2 text-xs">
+              {tab.label} <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{tab.quotes.length}</Badge>
             </TabsTrigger>
           ))}
-          <TabsTrigger value="unassigned">
-            Unassigned <Badge variant="secondary" className="ml-2">{unassignedQuotes.length}</Badge>
+          <TabsTrigger value="unassigned" className="h-7 px-2 text-xs">
+            Unassigned <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{unassignedQuotes.length}</Badge>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all">{renderQuotesTable(displayQuotes)}</TabsContent>
