@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Filter, Calendar, Upload, Search } from "lucide-react";
+import { Plus, AlertTriangle, Filter, Calendar, Upload, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { AddJobQuoteDialog } from "@/components/job-quotes/AddJobQuoteDialog";
@@ -43,6 +43,21 @@ export default function JobQuotes() {
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [overviewOpen, setOverviewOpen] = useState(() => {
+    try {
+      return window.localStorage.getItem("job-quotes-overview") !== "closed";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("job-quotes-overview", overviewOpen ? "open" : "closed");
+    } catch {
+      // storage unavailable (private browsing) — the preference just won't persist
+    }
+  }, [overviewOpen]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -66,10 +81,11 @@ export default function JobQuotes() {
         .from("job_quotes")
         .select(`
           *,
-          distributor:companies!job_quotes_distributor_id_fkey(id, company_name),
-          wholesaler:companies!job_quotes_wholesaler_id_fkey(id, company_name),
-          contractor:companies!job_quotes_contractor_id_fkey(id, company_name),
-          assignee_profile:profiles!job_quotes_assigned_to_fkey(id, first_name, last_name),
+          distributor:companies!job_quotes_distributor_id_fkey(id, company_name, status, segment, city, state),
+          wholesaler:companies!job_quotes_wholesaler_id_fkey(id, company_name, status, segment, city, state),
+          contractor:companies!job_quotes_contractor_id_fkey(id, company_name, status, segment, city, state),
+          assignee_profile:profiles!job_quotes_assigned_to_fkey(id, first_name, last_name, role),
+          job_quote_products(id, product_name, quantity, unit_price, total_price),
           job_quote_contacts(
             id,
             contact_type,
@@ -117,7 +133,7 @@ export default function JobQuotes() {
       if (repIds.length > 0) {
         const { data: reps } = await supabase
           .from("sales_reps" as any)
-          .select("id, first_name, last_name, is_firm")
+          .select("id, first_name, last_name, email, territory, covered_states, active, is_firm")
           .in("id", repIds);
         for (const rep of (reps || []) as any[]) {
           repMap[rep.id] = rep;
