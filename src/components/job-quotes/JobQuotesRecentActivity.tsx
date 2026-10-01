@@ -38,15 +38,29 @@ function describeChanges(changes: Record<string, { from: any; to: any }>): strin
 
 export function JobQuotesRecentActivity() {
   const { data = [], isLoading, error } = useQuery({
-    queryKey: ["job-quotes", "recent-activity-v2"],
+    queryKey: ["job-quotes", "recent-activity-v3"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_quote_change_log")
-        .select("id, change_type, changes, changed_at, job_quote:job_quotes!job_quote_change_log_job_quote_id_fkey(id, quote_number, status, product, quantity, price, date_received, comments, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name))")
+        .select("id, change_type, changes, changed_at, job_quote:job_quotes!job_quote_change_log_job_quote_id_fkey(id, quote_number, status, product, quantity, price, date_received, comments, notes, assigned_to_sales_rep_id, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name), assignee_profile:profiles!job_quotes_assigned_to_fkey(first_name, last_name))")
         .order("changed_at", { ascending: false })
         .limit(30);
       if (error) throw error;
-      return data as any[];
+      const repIds = (data || []).map((e: any) => e.job_quote?.assigned_to_sales_rep_id).filter(Boolean);
+      const repMap: Record<string, any> = {};
+      if (repIds.length > 0) {
+        const { data: reps } = await supabase
+          .from("sales_reps" as any)
+          .select("id, first_name, last_name")
+          .in("id", repIds);
+        for (const rep of (reps || []) as any[]) repMap[rep.id] = rep;
+      }
+      return (data || []).map((e: any) => ({
+        ...e,
+        job_quote: e.job_quote
+          ? { ...e.job_quote, assignee_sales_rep: e.job_quote.assigned_to_sales_rep_id ? repMap[e.job_quote.assigned_to_sales_rep_id] || null : null }
+          : e.job_quote,
+      })) as any[];
     },
   });
 
@@ -65,7 +79,7 @@ export function JobQuotesRecentActivity() {
         ) : data.length === 0 ? (
           <p className="text-sm text-muted-foreground">No recent activity.</p>
         ) : (
-          <ScrollArea className="h-80 pr-3">
+          <ScrollArea className="h-96 pr-3">
             <ul className="divide-y">
               {data.map((entry) => {
                 const q = entry.job_quote;
@@ -89,6 +103,19 @@ export function JobQuotesRecentActivity() {
                         {q.wholesaler?.company_name ? `${q.wholesaler.company_name} · ` : ""}
                         {q.product || "—"} × {q.quantity} · {fmt(q.price)}
                       </p>
+                      {(q.assignee_profile || q.assignee_sales_rep) && (
+                        <p className="text-xs mt-0.5 truncate">
+                          <span className="text-muted-foreground">Assignee: </span>
+                          {q.assignee_profile
+                            ? `${q.assignee_profile.first_name} ${q.assignee_profile.last_name}`
+                            : `${q.assignee_sales_rep.first_name} ${q.assignee_sales_rep.last_name}`}
+                        </p>
+                      )}
+                      {q.notes && (
+                        <p className="text-xs mt-0.5 text-muted-foreground line-clamp-2 break-words">
+                          <span className="text-foreground/70">Notes: </span>{q.notes}
+                        </p>
+                      )}
                       {changeDescriptions.length > 0 && (
                         <p className="text-xs mt-0.5 text-foreground/80">
                           {changeDescriptions.join(" · ")}
