@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Filter, Calendar, Upload, Search } from "lucide-react";
+import { Plus, AlertTriangle, Filter, Calendar, Upload, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { AddJobQuoteDialog } from "@/components/job-quotes/AddJobQuoteDialog";
@@ -43,6 +43,21 @@ export default function JobQuotes() {
   const [datePreset, setDatePreset] = useState<DatePreset>("all");
   const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [overviewOpen, setOverviewOpen] = useState(() => {
+    try {
+      return window.localStorage.getItem("job-quotes-overview") !== "closed";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("job-quotes-overview", overviewOpen ? "open" : "closed");
+    } catch {
+      // storage unavailable (private browsing) — the preference just won't persist
+    }
+  }, [overviewOpen]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -66,10 +81,11 @@ export default function JobQuotes() {
         .from("job_quotes")
         .select(`
           *,
-          distributor:companies!job_quotes_distributor_id_fkey(id, company_name),
-          wholesaler:companies!job_quotes_wholesaler_id_fkey(id, company_name),
-          contractor:companies!job_quotes_contractor_id_fkey(id, company_name),
-          assignee_profile:profiles!job_quotes_assigned_to_fkey(id, first_name, last_name),
+          distributor:companies!job_quotes_distributor_id_fkey(id, company_name, status, segment, city, state),
+          wholesaler:companies!job_quotes_wholesaler_id_fkey(id, company_name, status, segment, city, state),
+          contractor:companies!job_quotes_contractor_id_fkey(id, company_name, status, segment, city, state),
+          assignee_profile:profiles!job_quotes_assigned_to_fkey(id, first_name, last_name, role),
+          job_quote_products(id, product_name, quantity, unit_price, total_price),
           job_quote_contacts(
             id,
             contact_type,
@@ -117,7 +133,7 @@ export default function JobQuotes() {
       if (repIds.length > 0) {
         const { data: reps } = await supabase
           .from("sales_reps" as any)
-          .select("id, first_name, last_name, is_firm")
+          .select("id, first_name, last_name, email, territory, covered_states, active, is_firm")
           .in("id", repIds);
         for (const rep of (reps || []) as any[]) {
           repMap[rep.id] = rep;
@@ -285,6 +301,19 @@ export default function JobQuotes() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => setOverviewOpen((open) => !open)}
+          >
+            {overviewOpen ? (
+              <ChevronUp className="h-4 w-4 mr-1" />
+            ) : (
+              <ChevronDown className="h-4 w-4 mr-1" />
+            )}
+            {overviewOpen ? "Hide overview" : "Show overview"}
+          </Button>
           <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import CSV
@@ -296,139 +325,65 @@ export default function JobQuotes() {
         </div>
       </div>
 
-      {/* Stale Quotes Alert */}
-      {staleQuotes.length > 0 && (
-        <Card className="border-warning bg-warning/10">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              <div>
-                <p className="font-medium text-warning">
-                  {staleQuotes.length} quote{staleQuotes.length > 1 ? "s" : ""} pending for 3+ months
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Consider following up or updating the status
-                </p>
+      {/* KPI strip */}
+      <Card className="py-3">
+        <CardContent className="px-4 py-0">
+          <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
+            {[
+              { label: "Submissions 30d", value: String(submissionsLast30), tone: "text-primary" },
+              { label: "Total", value: String(quotes.length), tone: "" },
+              { label: "Pending", value: String(pendingCount), tone: "text-warning" },
+              { label: "Won", value: String(wonCount), tone: "text-success" },
+              { label: "Lost", value: String(lostCount), tone: "text-destructive" },
+              {
+                label: "Win rate",
+                value: winLossRatio !== null ? `${winLossRatio}%` : "—",
+                tone: "text-success",
+              },
+              {
+                label: "Avg close",
+                value: avgTimeToClose !== null ? `${avgTimeToClose} days` : "—",
+                tone: "",
+              },
+              {
+                label: "Avg pending",
+                value: avgTimePending !== null ? `${avgTimePending} days` : "—",
+                tone: "text-warning",
+              },
+              {
+                label: "Avg quote size",
+                value: avgQuoteSize !== null
+                  ? new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                      maximumFractionDigits: 0,
+                    }).format(avgQuoteSize)
+                  : "—",
+                tone: "",
+              },
+              ...(staleQuotes.length > 0
+                ? [
+                    {
+                      label: "Pending 3+ months",
+                      value: String(staleQuotes.length),
+                      tone: "text-warning",
+                    },
+                  ]
+                : []),
+            ].map((kpi) => (
+              <div key={kpi.label} className="flex items-baseline gap-1.5">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {kpi.label}
+                </span>
+                <span className={cn("text-base font-semibold tabular-nums", kpi.tone)}>
+                  {kpi.value}
+                </span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Submissions (Last 30 Days)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-primary">{submissionsLast30}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Quotes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{quotes.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-warning">{pendingCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Won
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-success">{wonCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Lost
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-destructive">{lostCount}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Time to Close
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {avgTimeToClose !== null ? `${avgTimeToClose} days` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Time Pending
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-warning">
-              {avgTimePending !== null ? `${avgTimePending} days` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Win/Loss Ratio
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-success">
-              {winLossRatio !== null ? `${winLossRatio}%` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Quote Size
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {avgQuoteSize !== null
-                ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(avgQuoteSize)
-                : "—"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Submission Trends */}
-      <JobQuotesRecentActivity />
-      <JobQuotesSubmissionTrends />
-
-      {/* Volume & Value Trends */}
-      <JobQuotesTrends />
 
 
       {/* Filters */}
@@ -578,6 +533,15 @@ export default function JobQuotes() {
         ))}
         <TabsContent value="unassigned">{renderQuotesTable(unassignedQuotes)}</TabsContent>
       </Tabs>
+
+      {/* Overview panels: recent updates, submission trends, volume & value */}
+      {overviewOpen && (
+        <div className="space-y-6">
+          <JobQuotesRecentActivity />
+          <JobQuotesSubmissionTrends />
+          <JobQuotesTrends />
+        </div>
+      )}
 
       {/* Dialogs */}
       <AddJobQuoteDialog
