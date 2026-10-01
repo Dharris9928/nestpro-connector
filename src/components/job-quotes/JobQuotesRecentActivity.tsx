@@ -79,7 +79,7 @@ export function JobQuotesRecentActivity() {
         ) : data.length === 0 ? (
           <p className="text-sm text-muted-foreground">No recent activity.</p>
         ) : (
-          <ScrollArea className="h-80 pr-3">
+          <ScrollArea className="h-96 pr-3">
             <ul className="divide-y">
               {data.map((entry) => {
                 const q = entry.job_quote;
