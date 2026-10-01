@@ -406,20 +406,20 @@ export default function JobQuotes() {
 
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search quotes (product, PO #, comments, notes, company, contact…)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-sm"
           />
           {searchQuery && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
               onClick={() => setSearchQuery("")}
             >
               <Plus className="h-4 w-4 rotate-45" />
@@ -430,7 +430,7 @@ export default function JobQuotes() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="h-8 w-[130px] text-sm">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -454,6 +454,7 @@ export default function JobQuotes() {
               key={preset.value}
               variant={datePreset === preset.value ? "default" : "outline"}
               size="sm"
+              className="h-7 px-2 text-xs"
               onClick={() => {
                 setDatePreset(preset.value);
                 setCustomRange({});
@@ -476,7 +477,7 @@ export default function JobQuotes() {
               }
             }}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="h-8 w-[150px] text-sm">
               <SelectValue placeholder="Quarter" />
             </SelectTrigger>
             <SelectContent>
@@ -496,7 +497,7 @@ export default function JobQuotes() {
             <Button
               variant={customRange.from && customRange.to ? "default" : "outline"}
               size="sm"
-              className={cn("min-w-[180px] justify-start text-left font-normal")}
+              className={cn("h-8 min-w-[170px] justify-start text-left font-normal text-xs")}
             >
               <Calendar className="mr-2 h-4 w-4" />
               {customRange.from && customRange.to ? (
@@ -531,19 +532,40 @@ export default function JobQuotes() {
 
       {/* Table grouped by assignee */}
       <Tabs defaultValue="all">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="all">
-            All <Badge variant="secondary" className="ml-2">{displayQuotes.length}</Badge>
-          </TabsTrigger>
-          {assigneeTabs.map((tab) => (
-            <TabsTrigger key={tab.label} value={tab.label}>
-              {tab.label} <Badge variant="secondary" className="ml-2">{tab.quotes.length}</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsList className="flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="all" className="h-7 px-2.5 text-xs">
+              All <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{displayQuotes.length}</Badge>
             </TabsTrigger>
-          ))}
-          <TabsTrigger value="unassigned">
-            Unassigned <Badge variant="secondary" className="ml-2">{unassignedQuotes.length}</Badge>
-          </TabsTrigger>
-        </TabsList>
+            {assigneeTabs.map((tab) => (
+              <TabsTrigger key={tab.label} value={tab.label} className="h-7 px-2.5 text-xs">
+                {tab.label} <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{tab.quotes.length}</Badge>
+              </TabsTrigger>
+            ))}
+            <TabsTrigger value="unassigned" className="h-7 px-2.5 text-xs">
+              Unassigned <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">{unassignedQuotes.length}</Badge>
+            </TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {displayQuotes.length} of {quotes.length} quotes
+            </span>
+            <div className="flex items-center gap-1 rounded-md border bg-card p-0.5">
+              {(["compact", "comfortable"] as Density[]).map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  size="sm"
+                  variant={density === option ? "secondary" : "ghost"}
+                  className="h-6 px-2 text-xs"
+                  onClick={() => changeDensity(option)}
+                >
+                  {option === "compact" ? "Compact" : "Comfortable"}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
         <TabsContent value="all">{renderQuotesTable(displayQuotes)}</TabsContent>
         {assigneeTabs.map((tab) => (
           <TabsContent key={tab.label} value={tab.label}>
