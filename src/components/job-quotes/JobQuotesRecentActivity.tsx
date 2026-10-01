@@ -42,7 +42,7 @@ export function JobQuotesRecentActivity() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_quote_change_log")
-        .select("id, change_type, changes, changed_at, job_quote:job_quotes!job_quote_change_log_job_quote_id_fkey(id, quote_number, status, product, quantity, price, date_received, comments, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name))")
+        .select("id, change_type, changes, changed_at, job_quote:job_quotes!job_quote_change_log_job_quote_id_fkey(id, quote_number, status, product, quantity, price, date_received, comments, notes, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name), assignee_profile:profiles!job_quotes_assigned_to_fkey(first_name, last_name), assignee_sales_rep:sales_reps!job_quotes_assigned_to_sales_rep_id_fkey(first_name, last_name))")
         .order("changed_at", { ascending: false })
         .limit(30);
       if (error) throw error;
