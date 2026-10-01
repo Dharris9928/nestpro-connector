@@ -103,6 +103,19 @@ export function JobQuotesRecentActivity() {
                         {q.wholesaler?.company_name ? `${q.wholesaler.company_name} · ` : ""}
                         {q.product || "—"} × {q.quantity} · {fmt(q.price)}
                       </p>
+                      {(q.assignee_profile || q.assignee_sales_rep) && (
+                        <p className="text-xs mt-0.5 truncate">
+                          <span className="text-muted-foreground">Assignee: </span>
+                          {q.assignee_profile
+                            ? `${q.assignee_profile.first_name} ${q.assignee_profile.last_name}`
+                            : `${q.assignee_sales_rep.first_name} ${q.assignee_sales_rep.last_name}`}
+                        </p>
+                      )}
+                      {q.notes && (
+                        <p className="text-xs mt-0.5 text-muted-foreground line-clamp-2 break-words">
+                          <span className="text-foreground/70">Notes: </span>{q.notes}
+                        </p>
+                      )}
                       {changeDescriptions.length > 0 && (
                         <p className="text-xs mt-0.5 text-foreground/80">
                           {changeDescriptions.join(" · ")}
