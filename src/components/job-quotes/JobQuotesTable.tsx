@@ -432,7 +432,7 @@ export function JobQuotesTable({
           compact && "h-9 px-3 text-xs"
         )}
       >
-        <div className="flex items-center justify-between pr-2 gap-1">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             disabled={!sortable}
@@ -444,7 +444,8 @@ export function JobQuotesTable({
           </button>
 
           {filterable && (
-            <Popover>
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex">
+              <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
@@ -479,7 +480,8 @@ export function JobQuotesTable({
                   )}
                 </div>
               </PopoverContent>
-            </Popover>
+              </Popover>
+            </div>
           )}
 
           <div
