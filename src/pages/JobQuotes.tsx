@@ -325,25 +325,6 @@ export default function JobQuotes() {
         </div>
       </div>
 
-      {/* Stale Quotes Alert */}
-      {staleQuotes.length > 0 && (
-        <Card className="border-warning bg-warning/10">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              <div>
-                <p className="font-medium text-warning">
-                  {staleQuotes.length} quote{staleQuotes.length > 1 ? "s" : ""} pending for 3+ months
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Consider following up or updating the status
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* KPI strip */}
       <Card className="py-3">
         <CardContent className="px-4 py-0">
@@ -380,6 +361,15 @@ export default function JobQuotes() {
                   : "—",
                 tone: "",
               },
+              ...(staleQuotes.length > 0
+                ? [
+                    {
+                      label: "Pending 3+ months",
+                      value: String(staleQuotes.length),
+                      tone: "text-warning",
+                    },
+                  ]
+                : []),
             ].map((kpi) => (
               <div key={kpi.label} className="flex items-baseline gap-1.5">
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
