@@ -35,6 +35,12 @@ All colors MUST be HSL.
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
+    /* Outcome colors: won / at-risk (pending) */
+    --success: 142 71% 30%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 90% 38%;
+    --warning-foreground: 0 0% 100%;
+
     --border: 214 20% 88%;
     --input: 214 20% 88%;
     --ring: 222 47% 11%;

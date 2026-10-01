@@ -68,6 +68,14 @@ export default {
           p3: "hsl(var(--priority-p3))",
           "p3-foreground": "hsl(var(--priority-p3-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
         status: {
           lead: "hsl(var(--status-lead))",
           contacted: "hsl(var(--status-contacted))",
