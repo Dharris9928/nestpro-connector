@@ -38,15 +38,29 @@ function describeChanges(changes: Record<string, { from: any; to: any }>): strin
 
 export function JobQuotesRecentActivity() {
   const { data = [], isLoading, error } = useQuery({
-    queryKey: ["job-quotes", "recent-activity-v2"],
+    queryKey: ["job-quotes", "recent-activity-v3"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_quote_change_log")
-        .select("id, change_type, changes, changed_at, job_quote:job_quotes!job_quote_change_log_job_quote_id_fkey(id, quote_number, status, product, quantity, price, date_received, comments, notes, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name), assignee_profile:profiles!job_quotes_assigned_to_fkey(first_name, last_name), assignee_sales_rep:sales_reps!job_quotes_assigned_to_sales_rep_id_fkey(first_name, last_name))")
+        .select("id, change_type, changes, changed_at, job_quote:job_quotes!job_quote_change_log_job_quote_id_fkey(id, quote_number, status, product, quantity, price, date_received, comments, notes, assigned_to_sales_rep_id, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name), assignee_profile:profiles!job_quotes_assigned_to_fkey(first_name, last_name))")
         .order("changed_at", { ascending: false })
         .limit(30);
       if (error) throw error;
-      return data as any[];
+      const repIds = (data || []).map((e: any) => e.job_quote?.assigned_to_sales_rep_id).filter(Boolean);
+      const repMap: Record<string, any> = {};
+      if (repIds.length > 0) {
+        const { data: reps } = await supabase
+          .from("sales_reps" as any)
+          .select("id, first_name, last_name")
+          .in("id", repIds);
+        for (const rep of (reps || []) as any[]) repMap[rep.id] = rep;
+      }
+      return (data || []).map((e: any) => ({
+        ...e,
+        job_quote: e.job_quote
+          ? { ...e.job_quote, assignee_sales_rep: e.job_quote.assigned_to_sales_rep_id ? repMap[e.job_quote.assigned_to_sales_rep_id] || null : null }
+          : e.job_quote,
+      })) as any[];
     },
   });
 
