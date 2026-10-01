@@ -507,39 +507,23 @@ export function JobQuotesTable({
   const textCell = compact ? "truncate" : "line-clamp-3 break-words text-sm text-left cursor-help";
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="space-y-1">
+      {activeFilterCount > 0 && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>
             {processed.length} of {quotes.length} quotes
           </span>
-          {activeFilterCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2"
-              onClick={() => setFilters({})}
-            >
-              <X className="h-3 w-3 mr-1" />
-              Clear all filters
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={() => setFilters({})}
+          >
+            <X className="h-3 w-3 mr-1" />
+            Clear all filters
+          </Button>
         </div>
-        <div className="flex items-center gap-1 rounded-md border bg-card p-0.5">
-          {(["compact", "comfortable"] as Density[]).map((option) => (
-            <Button
-              key={option}
-              type="button"
-              size="sm"
-              variant={density === option ? "secondary" : "ghost"}
-              className="h-6 px-2 text-xs"
-              onClick={() => changeDensity(option)}
-            >
-              {option === "compact" ? "Compact" : "Comfortable"}
-            </Button>
-          ))}
-        </div>
-      </div>
+      )}
 
       <div
         ref={boxRef}
