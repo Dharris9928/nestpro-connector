@@ -315,7 +315,7 @@ export default function JobQuotes() {
   );
 
   return (
-    <div className="container mx-auto px-4 pt-3 pb-6 space-y-3">
+    <div className="w-full max-w-none px-2 pt-3 pb-6 space-y-3">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-bold">Job Quotes</h1>
