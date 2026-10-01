@@ -394,14 +394,6 @@ export default function JobQuotes() {
         </CardContent>
       </Card>
 
-      {/* Overview panels: recent updates, submission trends, volume & value */}
-      {overviewOpen && (
-        <div className="space-y-6">
-          <JobQuotesRecentActivity />
-          <JobQuotesSubmissionTrends />
-          <JobQuotesTrends />
-        </div>
-      )}
 
 
       {/* Filters */}
@@ -551,6 +543,15 @@ export default function JobQuotes() {
         ))}
         <TabsContent value="unassigned">{renderQuotesTable(unassignedQuotes)}</TabsContent>
       </Tabs>
+
+      {/* Overview panels: recent updates, submission trends, volume & value */}
+      {overviewOpen && (
+        <div className="space-y-6">
+          <JobQuotesRecentActivity />
+          <JobQuotesSubmissionTrends />
+          <JobQuotesTrends />
+        </div>
+      )}
 
       {/* Dialogs */}
       <AddJobQuoteDialog
