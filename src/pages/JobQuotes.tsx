@@ -11,7 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { AddJobQuoteDialog } from "@/components/job-quotes/AddJobQuoteDialog";
 import { EditJobQuoteDialog } from "@/components/job-quotes/EditJobQuoteDialog";
 import { ImportJobQuotesDialog } from "@/components/job-quotes/ImportJobQuotesDialog";
-import { JobQuotesTable } from "@/components/job-quotes/JobQuotesTable";
+import {
+  JobQuotesTable,
+  DENSITY_KEY,
+  type Density,
+} from "@/components/job-quotes/JobQuotesTable";
 import { JobQuotesTrends } from "@/components/job-quotes/JobQuotesTrends";
 import { JobQuotesSubmissionTrends } from "@/components/job-quotes/JobQuotesSubmissionTrends";
 import { JobQuotesRecentActivity } from "@/components/job-quotes/JobQuotesRecentActivity";
@@ -58,6 +62,25 @@ export default function JobQuotes() {
       // storage unavailable (private browsing) — the preference just won't persist
     }
   }, [overviewOpen]);
+
+  const [density, setDensity] = useState<Density>(() => {
+    try {
+      return window.localStorage.getItem(DENSITY_KEY) === "comfortable"
+        ? "comfortable"
+        : "compact";
+    } catch {
+      return "compact";
+    }
+  });
+
+  const changeDensity = (next: Density) => {
+    setDensity(next);
+    try {
+      window.localStorage.setItem(DENSITY_KEY, next);
+    } catch {
+      // storage unavailable (private browsing) — the preference just won't persist
+    }
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -282,6 +305,7 @@ export default function JobQuotes() {
 
   const renderQuotesTable = (list: any[]) => (
     <JobQuotesTable
+      density={density}
       quotes={list}
       isLoading={isLoading}
       onEdit={handleEdit}
@@ -291,15 +315,10 @@ export default function JobQuotes() {
   );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-4 pt-3 pb-6 space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Job Quotes</h1>
-          <p className="text-muted-foreground">
-            Track and manage incoming job quotes
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-lg font-bold">Job Quotes</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -314,11 +333,11 @@ export default function JobQuotes() {
             )}
             {overviewOpen ? "Hide overview" : "Show overview"}
           </Button>
-          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => setImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Import CSV
           </Button>
-          <Button onClick={() => setAddDialogOpen(true)}>
+          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Quote
           </Button>
@@ -326,9 +345,9 @@ export default function JobQuotes() {
       </div>
 
       {/* KPI strip */}
-      <Card className="py-3">
-        <CardContent className="px-4 py-0">
-          <div className="flex flex-wrap items-center gap-x-7 gap-y-2">
+      <Card className="py-1.5">
+        <CardContent className="px-3 py-0">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             {[
               { label: "Submissions 30d", value: String(submissionsLast30), tone: "text-primary" },
               { label: "Total", value: String(quotes.length), tone: "" },
@@ -371,11 +390,11 @@ export default function JobQuotes() {
                   ]
                 : []),
             ].map((kpi) => (
-              <div key={kpi.label} className="flex items-baseline gap-1.5">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
+              <div key={kpi.label} className="flex items-baseline gap-1">
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                   {kpi.label}
                 </span>
-                <span className={cn("text-base font-semibold tabular-nums", kpi.tone)}>
+                <span className={cn("text-sm font-semibold tabular-nums", kpi.tone)}>
                   {kpi.value}
                 </span>
               </div>
