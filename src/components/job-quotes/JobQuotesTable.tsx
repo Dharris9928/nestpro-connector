@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
   Table,
@@ -34,12 +34,8 @@ import {
   X,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
+import { cn } from "@/lib/utils";
 
 interface JobQuotesTableProps {
   quotes: any[];
@@ -67,6 +63,14 @@ const DEFAULT_WIDTHS: Record<string, number> = {
 };
 
 type SortDir = "asc" | "desc" | null;
+type Density = "compact" | "comfortable";
+
+const DENSITY_KEY = "job-quotes-row-density";
+const TIP_WIDTH = 340;
+
+type TipRow = [string, string | number | null | undefined | false];
+type TipData = { title?: string; rows?: TipRow[]; text?: string };
+type HoverState = TipData & { x: number; yTop: number; yBottom: number };
 
 const accessors: Record<string, (q: any) => any> = {
   date_received: (q) => (q.date_received ? new Date(q.date_received).getTime() : 0),
@@ -100,6 +104,174 @@ const formatSubmissionDate = (value: string) => {
   );
 };
 
+const money = (n: number | null | undefined) =>
+  n === null || n === undefined || Number.isNaN(n)
+    ? "-"
+    : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+
+const fmtDate = (value: string | null | undefined) =>
+  value ? format(new Date(value), "MMM d, yyyy") : "-";
+
+const contactTypeLabel = (type: string) => {
+  switch (type) {
+    case "wholesale_personnel":
+      return "Wholesale";
+    case "nest_field_team":
+      return "Nest field team";
+    case "distributor_personnel":
+      return "Distributor";
+    default:
+      return "Customer";
+  }
+};
+
+/**
+ * Descriptive facts for a quote, used by the shared hover card so a truncated
+ * cell can still surface everything known about that field.
+ */
+function quoteTips(quote: any, stale: boolean) {
+  const price = parseFloat(quote.price);
+  const hasPrice = Number.isFinite(price);
+  const qty = Number(quote.quantity) || 0;
+  const unit = hasPrice && qty > 0 ? price / qty : null;
+  const purchase = Number.parseFloat(quote.purchase_price);
+  const hasPurchase = Number.isFinite(purchase);
+  const margin = hasPrice && hasPurchase && price > 0 ? ((price - purchase) / price) * 100 : null;
+  const received = quote.date_received ? new Date(quote.date_received) : null;
+  const won = quote.date_won ? new Date(quote.date_won) : null;
+  const isPending = quote.status === "pending";
+  const daysPending =
+    received && isPending ? Math.max(0, Math.round((Date.now() - received.getTime()) / 86400000)) : null;
+  const cycle = received && won ? Math.round((won.getTime() - received.getTime()) / 86400000) : null;
+  const products: any[] = quote.job_quote_products || [];
+  const contacts: any[] = quote.job_quote_contacts || [];
+  const rep = quote.assignee_sales_rep;
+  const profile = quote.assignee_profile;
+  const assigneeName = profile
+    ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+    : rep
+    ? rep.is_firm
+      ? rep.first_name
+      : `${rep.first_name || ""} ${rep.last_name || ""}`.trim()
+    : "";
+
+  const companyRows = (c: any): TipRow[] =>
+    c
+      ? [
+          ["Company", c.company_name],
+          ["CRM status", c.status],
+          ["Segment", c.segment],
+          ["Location", [c.city, c.state].filter(Boolean).join(", ")],
+        ]
+      : [];
+
+  return {
+    date: {
+      title: quote.quote_number ? `Quote #${quote.quote_number}` : "Quote",
+      rows: [
+        ["Date received", quote.date_received ? formatSubmissionDate(quote.date_received) : "-"],
+        ["Added to CRM", fmtDate(quote.created_at)],
+        ["Last changed", fmtDate(quote.updated_at)],
+        daysPending !== null ? ["Days pending", `${daysPending} days`] : null,
+        cycle !== null ? ["Days to decision", `${cycle} days`] : null,
+        stale ? ["Flagged", "Pending 3+ months"] : null,
+      ].filter(Boolean) as TipRow[],
+    } as TipData,
+    product: {
+      title: quote.product || "Product",
+      rows: [
+        ["Line items", products.length ? `${products.length}` : "1 (quote header only)"],
+        ...products.map((p: any, i: number) => [
+          `Line ${i + 1}`,
+          `${p.product_name} · ${p.quantity} × ${money(p.unit_price)} = ${money(p.total_price)}`,
+        ]),
+      ].filter(Boolean) as TipRow[],
+    } as TipData,
+    quantity: {
+      title: `Quantity: ${qty || "-"}`,
+      rows: [
+        ["Units", qty || "-"],
+        ["Unit price (from total)", money(unit)],
+        ["Quote total", hasPrice ? money(price) : "-"],
+        ["Line items", products.length || "-"],
+      ] as TipRow[],
+    } as TipData,
+    price: {
+      title: `Total: ${hasPrice ? money(price) : "-"}`,
+      rows: [
+        ["Units", qty || "-"],
+        ["Unit price (from total)", money(unit)],
+        ["Purchase price", hasPurchase ? money(purchase) : "not recorded"],
+        ["Margin", margin !== null ? `${margin.toFixed(1)}%` : "-"],
+        ["PO number", quote.po_number || "none"],
+      ] as TipRow[],
+    } as TipData,
+    distributor: {
+      title: quote.distributor?.company_name || "No distributor linked",
+      rows: companyRows(quote.distributor),
+    } as TipData,
+    wholesaler: {
+      title: quote.wholesaler?.company_name || "No wholesaler linked",
+      rows: companyRows(quote.wholesaler),
+    } as TipData,
+    assignee: {
+      title: assigneeName || "Unassigned",
+      rows: (profile
+        ? [
+            ["Type", "Team member"],
+            ["Role", profile.role],
+          ]
+        : rep
+        ? [
+            ["Type", rep.is_firm ? "Rep firm" : "Sales rep"],
+            ["Email", rep.email],
+            ["Territory", rep.territory],
+            ["States covered", rep.covered_states],
+            ["Active", rep.active === false ? "No" : "Yes"],
+          ]
+        : [["Note", "No assignee set — edit the quote to assign one"]]
+      ) as TipRow[],
+    } as TipData,
+    contacts: {
+      title: contacts.length ? `${contacts.length} contact${contacts.length > 1 ? "s" : ""}` : "No contacts linked",
+      rows: contacts.map((c: any) => {
+        const name = `${c.contact?.first_name || ""} ${c.contact?.last_name || ""}`.trim() || "Unknown";
+        const title = c.contact?.title ? ` — ${c.contact.title}` : "";
+        return [contactTypeLabel(c.contact_type), `${name}${title}`] as TipRow;
+      }),
+    } as TipData,
+    status: {
+      title: `${quote.status ? quote.status[0].toUpperCase() + quote.status.slice(1) : "Pending"}`,
+      rows: [
+        ["Status", quote.status],
+        daysPending !== null ? ["Days pending", `${daysPending} days`] : null,
+        cycle !== null ? ["Days to decision", `${cycle} days`] : null,
+        ["Won on", won ? fmtDate(quote.date_won) : "-"],
+        ["PO on file", quote.po_file_url ? "Yes" : "No"],
+      ].filter(Boolean) as TipRow[],
+    } as TipData,
+    date_won: {
+      title: won ? `Won ${fmtDate(quote.date_won)}` : "Not yet won",
+      rows: [
+        ["Date won", won ? fmtDate(quote.date_won) : "-"],
+        ["Date received", received ? formatSubmissionDate(quote.date_received) : "-"],
+        cycle !== null ? ["Days to decision", `${cycle} days`] : null,
+      ].filter(Boolean) as TipRow[],
+    } as TipData,
+    po_number: {
+      title: quote.po_number ? `PO ${quote.po_number}` : "No PO number",
+      rows: [
+        ["PO number", quote.po_number || "-"],
+        ["Quote number", quote.quote_number || "-"],
+        ["PO file", quote.po_file_url ? "Uploaded" : "Not uploaded"],
+        ["Total", hasPrice ? money(price) : "-"],
+      ] as TipRow[],
+    } as TipData,
+    comments: { text: quote.comments || "", title: "Comments" } as TipData,
+    notes: { text: quote.notes || "", title: "Notes" } as TipData,
+  };
+}
+
 export function JobQuotesTable({
   quotes,
   isLoading,
@@ -111,6 +283,59 @@ export function JobQuotesTable({
   const [sortField, setSortField] = useState<string | null>("date_received");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [density, setDensity] = useState<Density>(() =>
+    typeof window !== "undefined" && window.localStorage.getItem(DENSITY_KEY) === "comfortable"
+      ? "comfortable"
+      : "compact"
+  );
+  const [hover, setHover] = useState<HoverState | null>(null);
+
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [boxHeight, setBoxHeight] = useState<number>(480);
+
+  const compact = density === "compact";
+
+  const changeDensity = (next: Density) => {
+    setDensity(next);
+    try {
+      window.localStorage.setItem(DENSITY_KEY, next);
+    } catch {
+      // storage unavailable (private mode) — density just won't persist
+    }
+  };
+
+  // Keep the table area pinned to the remaining window height so the column
+  // headers and assignee tabs stay on screen while the rows scroll.
+  useEffect(() => {
+    const measure = () => {
+      const el = boxRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      setBoxHeight(Math.max(320, Math.round(window.innerHeight - top - 16)));
+    };
+    measure();
+    const timer = window.setTimeout(measure, 250);
+    window.addEventListener("resize", measure);
+    // Re-measure when the panels above collapse/expand (page height changes).
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", measure);
+      observer.disconnect();
+    };
+  }, []);
+
+  const tip = (get: () => TipData) => ({
+    onMouseEnter: (e: React.MouseEvent) => {
+      const data = get();
+      const hasRows = (data.rows || []).length > 0;
+      if (!data.text && !hasRows) return;
+      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setHover({ ...data, x: r.left, yTop: r.top, yBottom: r.bottom });
+    },
+    onMouseLeave: () => setHover(null),
+  });
 
   const toggleSort = (field: string) => {
     if (sortField !== field) {
@@ -202,7 +427,10 @@ export function JobQuotesTable({
     return (
       <TableHead
         style={{ width: columnWidths[field], minWidth: 60, maxWidth: columnWidths[field], position: "relative" }}
-        className="group select-none"
+        className={cn(
+          "group select-none sticky top-0 z-20 bg-card border-b",
+          compact && "h-9 px-3 text-xs"
+        )}
       >
         <div className="flex items-center justify-between pr-2 gap-1">
           <button
@@ -285,164 +513,211 @@ export function JobQuotesTable({
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
+  const cellBase = compact ? "px-3 py-1 text-xs" : "";
+  const textCell = compact ? "truncate" : "line-clamp-3 break-words text-sm text-left cursor-help";
+
   return (
     <div className="space-y-2">
-      {activeFilterCount > 0 && (
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{processed.length} of {quotes.length} rows shown</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            onClick={() => setFilters({})}
-          >
-            <X className="h-3 w-3 mr-1" />
-            Clear all filters
-          </Button>
+          <span>
+            {processed.length} of {quotes.length} quotes
+          </span>
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setFilters({})}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear all filters
+            </Button>
+          )}
         </div>
-      )}
-      <div className="rounded-md border">
-        <div className="overflow-x-auto">
-          <Table style={{ tableLayout: 'fixed', width: totalWidth }}>
-            <TableHeader>
-              <TableRow>
-                <ResizableHeader field="date_received">Date Received</ResizableHeader>
-                <ResizableHeader field="product">Product</ResizableHeader>
-                <ResizableHeader field="quantity">Qty</ResizableHeader>
-                <ResizableHeader field="price">Total Price</ResizableHeader>
-                <ResizableHeader field="distributor">Distributor</ResizableHeader>
-                <ResizableHeader field="wholesaler">Wholesaler</ResizableHeader>
-                <ResizableHeader field="assignee">Assignee</ResizableHeader>
-                <ResizableHeader field="comments">Comments</ResizableHeader>
-                <ResizableHeader field="notes">Notes</ResizableHeader>
-                <ResizableHeader field="contacts">Contacts</ResizableHeader>
-                <ResizableHeader field="status">Status</ResizableHeader>
-                <ResizableHeader field="date_won">Date Won</ResizableHeader>
-                <ResizableHeader field="po_number">PO Number</ResizableHeader>
-                <ResizableHeader field="actions" sortable={false} filterable={false}></ResizableHeader>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {processed.map((quote) => (
+        <div className="flex items-center gap-1 rounded-md border bg-card p-0.5">
+          {(["compact", "comfortable"] as Density[]).map((option) => (
+            <Button
+              key={option}
+              type="button"
+              size="sm"
+              variant={density === option ? "secondary" : "ghost"}
+              className="h-6 px-2 text-xs"
+              onClick={() => changeDensity(option)}
+            >
+              {option === "compact" ? "Compact" : "Comfortable"}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        ref={boxRef}
+        className="rounded-md border bg-card overflow-hidden [&>div]:h-full"
+        style={{ height: boxHeight }}
+      >
+        <Table style={{ tableLayout: "fixed", width: totalWidth }}>
+          <TableHeader>
+            <TableRow>
+              <ResizableHeader field="date_received">Date Received</ResizableHeader>
+              <ResizableHeader field="product">Product</ResizableHeader>
+              <ResizableHeader field="quantity">Qty</ResizableHeader>
+              <ResizableHeader field="price">Total Price</ResizableHeader>
+              <ResizableHeader field="distributor">Distributor</ResizableHeader>
+              <ResizableHeader field="wholesaler">Wholesaler</ResizableHeader>
+              <ResizableHeader field="assignee">Assignee</ResizableHeader>
+              <ResizableHeader field="comments">Comments</ResizableHeader>
+              <ResizableHeader field="notes">Notes</ResizableHeader>
+              <ResizableHeader field="contacts">Contacts</ResizableHeader>
+              <ResizableHeader field="status">Status</ResizableHeader>
+              <ResizableHeader field="date_won">Date Won</ResizableHeader>
+              <ResizableHeader field="po_number">PO Number</ResizableHeader>
+              <ResizableHeader field="actions" sortable={false} filterable={false}></ResizableHeader>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {processed.map((quote) => {
+              const stale = staleQuoteIds.includes(quote.id);
+              const tips = quoteTips(quote, stale);
+              const contacts: any[] = quote.job_quote_contacts || [];
+              const maxContactBadges = compact ? 1 : 2;
+              return (
                 <TableRow
                   key={quote.id}
                   onClick={() => onEdit(quote)}
                   className="cursor-pointer hover:bg-muted/50"
                 >
-                  <TableCell style={{ width: columnWidths.date_received, maxWidth: columnWidths.date_received }}>
+                  <TableCell
+                    style={{ width: columnWidths.date_received, maxWidth: columnWidths.date_received }}
+                    className={cellBase}
+                    {...tip(() => tips.date)}
+                  >
                     <div className="flex items-center gap-2">
-                      {staleQuoteIds.includes(quote.id) && (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Pending for 3+ months
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                      {stale && <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />}
                       <span className="truncate">{quote.date_received ? formatSubmissionDate(quote.date_received) : "-"}</span>
                     </div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.product, maxWidth: columnWidths.product }} className="font-medium">
-                    <div className="truncate" title={quote.product || ''}>{quote.product || "-"}</div>
+                  <TableCell
+                    style={{ width: columnWidths.product, maxWidth: columnWidths.product }}
+                    className={cn("font-medium", cellBase)}
+                    {...tip(() => tips.product)}
+                  >
+                    <div className="truncate">{quote.product || "-"}</div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.quantity, maxWidth: columnWidths.quantity }}>{quote.quantity || "-"}</TableCell>
-                  <TableCell style={{ width: columnWidths.price, maxWidth: columnWidths.price }} className="font-medium">
+                  <TableCell
+                    style={{ width: columnWidths.quantity, maxWidth: columnWidths.quantity }}
+                    className={cellBase}
+                    {...tip(() => tips.quantity)}
+                  >
+                    <div className="truncate">{quote.quantity || "-"}</div>
+                  </TableCell>
+                  <TableCell
+                    style={{ width: columnWidths.price, maxWidth: columnWidths.price }}
+                    className={cn("font-medium", cellBase)}
+                    {...tip(() => tips.price)}
+                  >
                     <div className="truncate">{formatPrice(quote.price)}</div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.distributor, maxWidth: columnWidths.distributor }}>
-                    <div className="truncate" title={quote.distributor?.company_name || ''}>{quote.distributor?.company_name || "-"}</div>
+                  <TableCell
+                    style={{ width: columnWidths.distributor, maxWidth: columnWidths.distributor }}
+                    className={cellBase}
+                    {...tip(() => tips.distributor)}
+                  >
+                    <div className="truncate">{quote.distributor?.company_name || "-"}</div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.wholesaler, maxWidth: columnWidths.wholesaler }}>
-                    <div className="truncate" title={quote.wholesaler?.company_name || ''}>{quote.wholesaler?.company_name || "-"}</div>
+                  <TableCell
+                    style={{ width: columnWidths.wholesaler, maxWidth: columnWidths.wholesaler }}
+                    className={cellBase}
+                    {...tip(() => tips.wholesaler)}
+                  >
+                    <div className="truncate">{quote.wholesaler?.company_name || "-"}</div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.assignee, maxWidth: columnWidths.assignee }}>
+                  <TableCell
+                    style={{ width: columnWidths.assignee, maxWidth: columnWidths.assignee }}
+                    className={cellBase}
+                    {...tip(() => tips.assignee)}
+                  >
                     <div className="truncate">
                       {quote.assignee_profile
                         ? `${quote.assignee_profile.first_name} ${quote.assignee_profile.last_name}`
                         : quote.assignee_sales_rep
-                        ? `${quote.assignee_sales_rep.first_name} ${quote.assignee_sales_rep.last_name}`
+                        ? quote.assignee_sales_rep.is_firm
+                          ? quote.assignee_sales_rep.first_name
+                          : `${quote.assignee_sales_rep.first_name} ${quote.assignee_sales_rep.last_name}`
                         : "-"}
                     </div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.comments, maxWidth: columnWidths.comments }} className="align-top">
+                  <TableCell
+                    style={{ width: columnWidths.comments, maxWidth: columnWidths.comments }}
+                    className={cn("align-top", cellBase)}
+                    {...tip(() => tips.comments)}
+                  >
                     {quote.comments ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="line-clamp-3 break-words text-sm text-left cursor-help">
-                            {quote.comments}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-sm whitespace-pre-wrap">
-                          {quote.comments}
-                        </TooltipContent>
-                      </Tooltip>
+                      <div className={textCell}>{quote.comments}</div>
                     ) : (
                       <span className="text-sm">-</span>
                     )}
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.notes, maxWidth: columnWidths.notes }} className="align-top">
+                  <TableCell
+                    style={{ width: columnWidths.notes, maxWidth: columnWidths.notes }}
+                    className={cn("align-top", cellBase)}
+                    {...tip(() => tips.notes)}
+                  >
                     {quote.notes ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="line-clamp-3 break-words text-sm text-left cursor-help">
-                            {quote.notes}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-sm whitespace-pre-wrap">
-                          {quote.notes}
-                        </TooltipContent>
-                      </Tooltip>
+                      <div className={textCell}>{quote.notes}</div>
                     ) : (
                       <span className="text-sm">-</span>
                     )}
                   </TableCell>
-
-                  <TableCell style={{ width: columnWidths.contacts, maxWidth: columnWidths.contacts }}>
-                    <div className="flex flex-wrap gap-1">
-                      {quote.job_quote_contacts?.slice(0, 2).map((jqc: any) => (
-                        <Tooltip key={jqc.id}>
-                          <TooltipTrigger>
-                            <Badge variant="outline" className="text-xs">
-                              {jqc.contact?.first_name} {jqc.contact?.last_name?.[0]}.
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="space-y-1">
-                              <p>{jqc.contact?.first_name} {jqc.contact?.last_name}</p>
-                              {getContactTypeBadge(jqc.contact_type)}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
+                  <TableCell
+                    style={{ width: columnWidths.contacts, maxWidth: columnWidths.contacts }}
+                    className={cellBase}
+                    {...tip(() => tips.contacts)}
+                  >
+                    <div className={compact ? "flex flex-nowrap gap-1 overflow-hidden" : "flex flex-wrap gap-1"}>
+                      {contacts.slice(0, maxContactBadges).map((jqc: any) => (
+                        <Badge key={jqc.id} variant="outline" className="text-xs whitespace-nowrap">
+                          {jqc.contact?.first_name} {jqc.contact?.last_name?.[0]}.
+                        </Badge>
                       ))}
-                      {quote.job_quote_contacts?.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{quote.job_quote_contacts.length - 2}
+                      {contacts.length > maxContactBadges && (
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                          +{contacts.length - maxContactBadges}
                         </Badge>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.status, maxWidth: columnWidths.status }}>{getStatusBadge(quote.status)}</TableCell>
-                  <TableCell style={{ width: columnWidths.date_won, maxWidth: columnWidths.date_won }}>
+                  <TableCell
+                    style={{ width: columnWidths.status, maxWidth: columnWidths.status }}
+                    className={cellBase}
+                    {...tip(() => tips.status)}
+                  >
+                    {getStatusBadge(quote.status)}
+                  </TableCell>
+                  <TableCell
+                    style={{ width: columnWidths.date_won, maxWidth: columnWidths.date_won }}
+                    className={cellBase}
+                    {...tip(() => tips.date_won)}
+                  >
                     <div className="truncate">
-                      {quote.date_won
-                        ? format(new Date(quote.date_won), "MMM d, yyyy")
-                        : "-"}
+                      {quote.date_won ? format(new Date(quote.date_won), "MMM d, yyyy") : "-"}
                     </div>
                   </TableCell>
-                  <TableCell style={{ width: columnWidths.po_number, maxWidth: columnWidths.po_number }}>
-                    <div className="truncate font-medium" title={quote.po_number || ''}>
-                      {quote.po_number || "-"}
-                    </div>
+                  <TableCell
+                    style={{ width: columnWidths.po_number, maxWidth: columnWidths.po_number }}
+                    className={cn("font-medium", cellBase)}
+                    {...tip(() => tips.po_number)}
+                  >
+                    <div className="truncate">{quote.po_number || "-"}</div>
                   </TableCell>
                   <TableCell
                     style={{ width: columnWidths.actions, maxWidth: columnWidths.actions }}
                     onClick={(e) => e.stopPropagation()}
+                    className={cellBase}
                   >
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -462,11 +737,45 @@ export function JobQuotesTable({
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
+
+      {hover && (
+        <div
+          className="fixed z-[80] pointer-events-none rounded-md border bg-popover text-popover-foreground shadow-lg p-2.5 text-xs max-w-[340px]"
+          style={{
+            width: TIP_WIDTH,
+            maxWidth: TIP_WIDTH,
+            left: Math.min(Math.max(8, hover.x), Math.max(8, window.innerWidth - TIP_WIDTH - 8)),
+            top:
+              hover.yBottom + 220 < window.innerHeight
+                ? hover.yBottom + 6
+                : undefined,
+            bottom:
+              hover.yBottom + 220 < window.innerHeight
+                ? undefined
+                : Math.max(8, window.innerHeight - hover.yTop + 6),
+          }}
+        >
+          {hover.title && <p className="font-semibold mb-1 whitespace-pre-wrap">{hover.title}</p>}
+          {hover.text && (
+            <p className="whitespace-pre-wrap break-words text-popover-foreground/90">{hover.text}</p>
+          )}
+          {(hover.rows || []).length > 0 && (
+            <div className="space-y-0.5">
+              {(hover.rows || []).map(([label, value], i) => (
+                <div key={`${label}-${i}`} className="flex gap-2">
+                  <span className="text-muted-foreground shrink-0">{label}</span>
+                  <span className="break-words">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
