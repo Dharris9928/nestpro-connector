@@ -407,7 +407,7 @@ export default function JobQuotes() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-md">
+        <div className="relative flex-1 min-w-[200px] max-w-[360px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search quotes (product, PO #, comments, notes, company, contact…)"
@@ -430,7 +430,7 @@ export default function JobQuotes() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 w-[130px] text-sm">
+            <SelectTrigger className="h-8 w-[120px] text-sm">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -454,7 +454,7 @@ export default function JobQuotes() {
               key={preset.value}
               variant={datePreset === preset.value ? "default" : "outline"}
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-6 px-1.5 text-[11px]"
               onClick={() => {
                 setDatePreset(preset.value);
                 setCustomRange({});
@@ -477,7 +477,7 @@ export default function JobQuotes() {
               }
             }}
           >
-            <SelectTrigger className="h-8 w-[150px] text-sm">
+            <SelectTrigger className="h-8 w-[130px] text-sm">
               <SelectValue placeholder="Quarter" />
             </SelectTrigger>
             <SelectContent>
@@ -497,7 +497,7 @@ export default function JobQuotes() {
             <Button
               variant={customRange.from && customRange.to ? "default" : "outline"}
               size="sm"
-              className={cn("h-8 min-w-[170px] justify-start text-left font-normal text-xs")}
+              className={cn("h-8 min-w-[150px] justify-start text-left font-normal text-xs")}
             >
               <Calendar className="mr-2 h-4 w-4" />
               {customRange.from && customRange.to ? (
