@@ -426,7 +426,7 @@ export function JobQuotesTable({
     const activeFilter = filters[field];
     return (
       <TableHead
-        style={{ width: columnWidths[field], minWidth: 60, maxWidth: columnWidths[field], position: "relative" }}
+        style={{ width: columnWidths[field], minWidth: 60, maxWidth: columnWidths[field] }}
         className={cn(
           "group select-none sticky top-0 z-20 bg-card border-b",
           compact && "h-9 px-3 text-xs"
