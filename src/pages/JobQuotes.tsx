@@ -36,6 +36,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getQuarterOptions } from "@/lib/dates/quarterUtils";
 
+// Format a stored timestamp by its UTC calendar date (matches how dates are
+// entered and shown in the table), avoiding the local-timezone day shift.
+const formatUtcDate = (value: string) => {
+  const date = new Date(value);
+  return format(
+    new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12),
+    "MMM d, yyyy"
+  );
+};
+
 type DatePreset = "all" | "30" | "60" | "90" | string;
 
 export default function JobQuotes() {
