@@ -267,8 +267,8 @@ export default function JobQuotes() {
       ...(q.job_quote_contacts || []).map((c: any) =>
         `${c.contact?.first_name || ""} ${c.contact?.last_name || ""} ${c.contact?.title || ""}`
       ),
-      q.date_received ? format(new Date(q.date_received), "MMM d, yyyy") : "",
-      q.date_won ? format(new Date(q.date_won), "MMM d, yyyy") : "",
+      q.date_received ? formatUtcDate(q.date_received) : "",
+      q.date_won ? formatUtcDate(q.date_won) : "",
       String(q.quantity ?? ""),
       String(q.price ?? ""),
     ]
