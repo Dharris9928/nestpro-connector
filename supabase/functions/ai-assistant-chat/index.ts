@@ -16,6 +16,22 @@ const TOOLS = [
   {
     type: "function",
     function: {
+      name: "analyze_section",
+      description: "Pull data from a CRM section for analysis. Returns aggregate stats (counts by status/stage/type/assignee, totals, averages) plus up to 60 recent records. Use for any analytical question about job quotes, opportunities/pipeline, activities/meetings, companies/leads, or communications/emails.",
+      parameters: {
+        type: "object",
+        properties: {
+          section: { type: "string", enum: ["job_quotes", "opportunities", "activities", "companies", "communications"] },
+          days: { type: "number", description: "Look-back window in days on the record's main date (0 = all time). Default 30." },
+          search: { type: "string", description: "Optional text filter (name/product/notes)." },
+        },
+        required: ["section"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "list_my_hot_leads",
       description: "List the current user's hot leads (P1 priority companies). Returns top 10 by score.",
       parameters: { type: "object", properties: { limit: { type: "number", description: "Max results, default 10" } } },
@@ -121,7 +137,7 @@ Deno.serve(async (req) => {
 
     // ===== Chat =====
     const messages: Msg[] = body.messages ?? [];
-    const systemPrompt = `You are the Nest Pro AI Assistant inside a CRM. You help the logged-in sales user manage hot leads, overdue meetings, and notifications.
+    const systemPrompt = `You are the Nest Pro AI Assistant inside a CRM. You help the logged-in sales user analyze CRM data (job quotes, opportunities/pipeline, activities, companies/leads, communications) and manage hot leads, overdue meetings, and notifications.
 
 You have read-only tools that execute immediately and "propose_*" tools that require human confirmation before any change is made.
 
@@ -130,13 +146,14 @@ Rules:
 - When the user asks to take an action that modifies data (mark read, reassign, enrich), call the matching "propose_*" tool. Do NOT pretend you completed the action.
 - Always include the record name / title alongside the id in your replies.
 - If the user asks "what's hot" or "what needs attention", call list_my_hot_leads and list_overdue_meetings.
+- For any analytical question (overview, trends, win rates, who/what is top, comparisons), call analyze_section for the relevant section(s), then give a short summary with concrete numbers, highlights, and notable records. Never say you lack access to these sections.
 - Today is ${new Date().toISOString().slice(0, 10)}.`;
 
     const fullMessages: Msg[] = [{ role: "system", content: systemPrompt }, ...messages];
 
     // Tool-loop: at most 3 rounds
     const proposedActions: any[] = [];
-    for (let round = 0; round < 3; round++) {
+    for (let round = 0; round < 5; round++) {
       const resp = await fetch(LOVABLE_AI_URL, {
         method: "POST",
         headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -186,14 +203,14 @@ Rules:
 
         let toolResult: any = {};
         try {
-          toolResult = await runTool(serviceClient, user.id, name, args, proposedActions);
+          toolResult = await name === "analyze_section" ? await analyzeSection(userClient, args) : await runTool(serviceClient, user.id, name, args, proposedActions);
         } catch (e) {
           toolResult = { error: String(e) };
         }
         fullMessages.push({
           role: "tool",
           tool_call_id: tc.id,
-          content: JSON.stringify(toolResult).slice(0, 8000),
+          content: JSON.stringify(toolResult).slice(0, 24000),
         });
       }
     }
@@ -366,4 +383,75 @@ async function executeAction(client: any, userId: string, actionId: string) {
   }).eq("id", actionId);
 
   return result;
+}
+
+
+const SECTIONS: Record<string, { table: string; select: string; date: string; group: string[]; sum?: string; search?: string[] }> = {
+  job_quotes: { table: "job_quotes", select: "id, quote_number, date_received, date_won, status, product, quantity, price, notes, comments, assigned_to_sales_rep_id, wholesaler:companies!job_quotes_wholesaler_id_fkey(company_name), distributor:companies!job_quotes_distributor_id_fkey(company_name)", date: "date_received", group: ["status", "product", "assigned_to_sales_rep_id"], sum: "price", search: ["product", "comments", "notes", "quote_number"] },
+  opportunities: { table: "opportunities", select: "id, opportunity_name, stage, amount, probability, expected_close_date, closed_date, source, distributor, assigned_to_sales_rep_id, created_at, company:companies!opportunities_company_id_fkey(company_name)", date: "created_at", group: ["stage", "source", "assigned_to_sales_rep_id"], sum: "amount", search: ["opportunity_name", "notes"] },
+  activities: { table: "outreach_activities", select: "id, activity_type, outcome, status, subject_line, scheduled_date, completed_date, created_at, assigned_to, company:companies!outreach_activities_company_id_fkey(company_name)", date: "created_at", group: ["activity_type", "outcome", "status"], search: ["subject_line", "notes"] },
+  companies: { table: "companies", select: "id, company_name, industry_type, segment, status, priority_tier, lead_score, city, state, created_at", date: "created_at", group: ["industry_type", "priority_tier", "status", "state"], search: ["company_name"] },
+  communications: { table: "company_communications", select: "id, communication_type, subject, sent_at, email_opened_at, email_responded_at, created_at, company:companies!company_communications_company_id_fkey(company_name)", date: "created_at", group: ["communication_type"], search: ["subject"] },
+};
+
+async function analyzeSection(client: any, args: any) {
+  const cfg = SECTIONS[args.section];
+  if (!cfg) return { error: "unknown section" };
+  const days = args.days === undefined ? 30 : Math.max(0, Number(args.days) || 0);
+  const run = async (select: string) => {
+    let q = client.from(cfg.table).select(select).order(cfg.date, { ascending: false }).limit(1000);
+    if (days > 0) q = q.gte(cfg.date, new Date(Date.now() - days * 86400000).toISOString());
+    const term = String(args.search ?? "").replace(/[,()%*]/g, " ").trim().slice(0, 80);
+    if (term && cfg.search) q = q.or(cfg.search.map((c) => `${c}.ilike.%${term}%`).join(","));
+    return await q;
+  };
+  let { data, error } = await run(cfg.select);
+  if (error) ({ data, error } = await run(cfg.select.replace(/, \w+:companies![^)]+\([^)]*\)/g, "")));
+  if (error) return { error: error.message };
+  const rows: any[] = data ?? [];
+  const repIds = [...new Set(rows.map((r) => r.assigned_to_sales_rep_id).filter(Boolean))];
+  const reps: Record<string, string> = {};
+  if (repIds.length) {
+    const { data: rs } = await client.from("sales_reps").select("id, first_name, last_name, is_firm").in("id", repIds);
+    for (const r of rs ?? []) reps[r.id] = r.is_firm ? r.first_name : `${r.first_name ?? ""} ${r.last_name ?? ""}`.trim();
+    const missing = repIds.filter((i) => !reps[i]);
+    if (missing.length) {
+      const { data: ps } = await client.from("profiles").select("id, first_name, last_name").in("id", missing);
+      for (const p of ps ?? []) reps[p.id] = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim();
+    }
+    for (const r of rows) if (r.assigned_to_sales_rep_id) r.assignee = reps[r.assigned_to_sales_rep_id] ?? "Unknown";
+  }
+  const breakdowns: Record<string, Record<string, number>> = {};
+  for (const g of cfg.group) {
+    const key = g === "assigned_to_sales_rep_id" ? "assignee" : g;
+    const m: Record<string, number> = {};
+    for (const r of rows) { const v = String((key === "assignee" ? r.assignee : r[g]) ?? "none"); m[v] = (m[v] ?? 0) + 1; }
+    breakdowns[key] = m;
+  }
+  const stats: any = { count: rows.length, window: days > 0 ? `last ${days} days` : "all time", breakdowns };
+  if (cfg.sum) {
+    const vals = rows.map((r) => Number(r[cfg.sum!])).filter((n) => !isNaN(n) && n > 0);
+    stats[`total_${cfg.sum}`] = Math.round(vals.reduce((a, b) => a + b, 0));
+    stats[`avg_${cfg.sum}`] = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+    const byStatus: Record<string, number> = {};
+    const gk = cfg.group[0];
+    for (const r of rows) byStatus[r[gk] ?? "none"] = (byStatus[r[gk] ?? "none"] ?? 0) + (Number(r[cfg.sum]) || 0);
+    stats[`${cfg.sum}_by_${gk}`] = byStatus;
+  }
+  if (args.section === "job_quotes") {
+    const won = rows.filter((r) => r.status === "won").length, lost = rows.filter((r) => r.status === "lost").length;
+    stats.win_rate = won + lost ? Math.round((won / (won + lost)) * 100) + "%" : null;
+  }
+  if (args.section === "communications") {
+    stats.opened = rows.filter((r) => r.email_opened_at).length;
+    stats.replied = rows.filter((r) => r.email_responded_at).length;
+  }
+  const records = rows.slice(0, 60).map((r) => {
+    const o: any = { ...r };
+    delete o.id; delete o.assigned_to_sales_rep_id;
+    for (const k of ["wholesaler", "distributor", "company"]) if (o[k]) o[k] = o[k].company_name;
+    for (const k of ["notes", "comments"]) if (typeof o[k] === "string") o[k] = o[k].slice(0, 160);
+    return o;
+  });
+  return { stats, records };
 }
