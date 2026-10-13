@@ -254,7 +254,7 @@ function quoteTips(quote: any, stale: boolean) {
     date_won: {
       title: won ? `Won ${formatSubmissionDate(quote.date_won)}` : "Not yet won",
       rows: [
-        ["Date won", won ? fmtDate(quote.date_won) : "-"],
+        ["Date won", won ? formatSubmissionDate(quote.date_won) : "-"],
         ["Date received", received ? formatSubmissionDate(quote.date_received) : "-"],
         cycle !== null ? ["Days to decision", `${cycle} days`] : null,
       ].filter(Boolean) as TipRow[],
@@ -674,7 +674,7 @@ export function JobQuotesTable({
                     {...tip(() => tips.date_won)}
                   >
                     <div className="truncate">
-                      {quote.date_won ? format(new Date(quote.date_won), "MMM d, yyyy") : "-"}
+                      {quote.date_won ? formatSubmissionDate(quote.date_won) : "-"}
                     </div>
                   </TableCell>
                   <TableCell
