@@ -247,12 +247,12 @@ function quoteTips(quote: any, stale: boolean) {
         ["Status", quote.status],
         daysPending !== null ? ["Days pending", `${daysPending} days`] : null,
         cycle !== null ? ["Days to decision", `${cycle} days`] : null,
-        ["Won on", won ? fmtDate(quote.date_won) : "-"],
+        ["Won on", won ? formatSubmissionDate(quote.date_won) : "-"],
         ["PO on file", quote.po_file_url ? "Yes" : "No"],
       ].filter(Boolean) as TipRow[],
     } as TipData,
     date_won: {
-      title: won ? `Won ${fmtDate(quote.date_won)}` : "Not yet won",
+      title: won ? `Won ${formatSubmissionDate(quote.date_won)}` : "Not yet won",
       rows: [
         ["Date won", won ? fmtDate(quote.date_won) : "-"],
         ["Date received", received ? formatSubmissionDate(quote.date_received) : "-"],
