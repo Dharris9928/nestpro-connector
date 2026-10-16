@@ -57,6 +57,7 @@ Deno.serve(async (req) => {
           geo_id: state, permit_from: fmt(from), permit_to: fmt(to), size: String(Math.min(perQuery, 100)),
         });
         p.append("property_type", "residential");
+        p.set("permit_has_contractor", "true");
         if (f === "large_residential") p.set("property_min_unit_count", String(minUnits));
         if (f === "hvac") p.append("permit_tags", "hvac");
         if (f === "new_construction") p.append("permit_tags", "new_construction");
