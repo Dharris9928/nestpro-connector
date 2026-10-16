@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,12 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DevelopmentDiscoveryPanel } from "./DevelopmentDiscoveryPanel";
 import { ChevronDown, Loader2, Search, X } from "lucide-react";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSearchComplete: () => void;
+  initialMode?: "permits" | "developments";
 }
 
 const US_STATES = [
@@ -34,7 +37,9 @@ const FOCUS = [
   { id: "addition", label: "Addition", hint: "Square footage added to an existing home" },
 ] as const;
 
-export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchComplete }: Props) => {
+export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchComplete, initialMode = "permits" }: Props) => {
+  const [mode, setMode] = useState(initialMode);
+  useEffect(() => { if (open) setMode(initialMode); }, [open, initialMode]);
   const [states, setStates] = useState<string[]>([]);
   const [focus, setFocus] = useState<string[]>(["new_construction"]);
   const [minUnits, setMinUnits] = useState(50);
@@ -128,10 +133,21 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Search Permits with Shovels</DialogTitle>
+          <DialogTitle>{mode === "developments" ? "Find Multi-Home Developments" : "Search Permits with Shovels"}</DialogTitle>
           <DialogDescription>Pull real permit records and the contractors behind them.</DialogDescription>
         </DialogHeader>
 
+        <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="permits">Search Permits</TabsTrigger>
+            <TabsTrigger value="developments">Find Developments</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {mode === "developments" ? (
+          <DevelopmentDiscoveryPanel remaining={remaining}
+            onDone={() => { refetchUsage(); onSearchComplete(); }} onCancel={() => onOpenChange(false)} />
+        ) : (
         <div className="space-y-5">
           <div className="space-y-2">
             <Label>States</Label>
@@ -277,6 +293,7 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
             </Button>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

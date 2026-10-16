@@ -18,6 +18,7 @@ import { PermitExportButton } from "@/components/permits/PermitExportButton";
 
 const BuildingPermits = () => {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [searchMode, setSearchMode] = useState<"permits" | "developments">("permits");
   const [perspective] = useState<'my_records' | 'all_records'>('my_records');
   const [statusFilter, setStatusFilter] = useState<'all' | 'in_review' | 'active' | 'final' | 'inactive'>('all');
 
@@ -132,10 +133,16 @@ const BuildingPermits = () => {
             Find and track large-scale residential development permits across multiple markets
           </p>
         </div>
-        <Button onClick={() => setSearchDialogOpen(true)} size="lg">
-          <Search className="mr-2 h-4 w-4" />
-          Search Permits
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="lg" onClick={() => { setSearchMode("developments"); setSearchDialogOpen(true); }}>
+            <Building2 className="mr-2 h-4 w-4" />
+            Find Developments
+          </Button>
+          <Button onClick={() => { setSearchMode("permits"); setSearchDialogOpen(true); }} size="lg">
+            <Search className="mr-2 h-4 w-4" />
+            Search Permits
+          </Button>
+        </div>
       </div>
 
       {stats && (
@@ -303,9 +310,10 @@ const BuildingPermits = () => {
       <PermitGeographicSearchDialog
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
+        initialMode={searchMode}
         onSearchComplete={() => {
           refetch();
-          setSearchDialogOpen(false);
+          if (searchMode === "permits") setSearchDialogOpen(false);
         }}
       />
     </div>
