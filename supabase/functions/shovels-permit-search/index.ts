@@ -54,39 +54,42 @@ Deno.serve(async (req) => {
     const from = new Date(Date.now() - days * 86400000);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-    // One Shovels query per (state, focus). Each record returned costs 1 credit.
+    // Residential and mixed-use only. Shovels treats repeated property_type values in a single
+    // request as an AND, so each property type needs its own query. A query that returns no
+    // records costs no credits, and mixed-use permits are rare enough today that this is free.
+    const PROPERTY_TYPES = ["residential", "mixed_use"];
     const perQuery = Math.max(1, Math.ceil(maxResults / (states.length * focus.length)));
     const found = new Map<string, any>();
     let creditsRemaining: string | null = null;
 
     for (const state of states) {
       for (const f of focus) {
-        const p = new URLSearchParams({
-          geo_id: state, permit_from: fmt(from), permit_to: fmt(to), size: String(Math.min(perQuery, 100)),
-        });
-        // Residential and mixed-use only. Repeating the key is an OR inside the same
-        // request, so adding mixed_use costs no extra credit or query.
-        p.append("property_type", "residential");
-        p.append("property_type", "mixed_use");
-        p.set("permit_has_contractor", "true");
-        if (f === "large_residential") p.set("property_min_unit_count", String(minUnits));
-        if (f === "hvac") p.append("permit_tags", "hvac");
-        if (f === "new_construction") p.append("permit_tags", "new_construction");
-        statuses?.forEach((s) => p.append("permit_status", s));
+        for (const pt of PROPERTY_TYPES) {
+          if (found.size >= maxResults) break; // stop buying once the cap is full
+          const p = new URLSearchParams({
+            geo_id: state, permit_from: fmt(from), permit_to: fmt(to), size: String(Math.min(perQuery, 100)),
+          });
+          p.append("property_type", pt);
+          p.set("permit_has_contractor", "true");
+          if (f === "large_residential") p.set("property_min_unit_count", String(minUnits));
+          if (f === "hvac") p.append("permit_tags", "hvac");
+          if (f === "new_construction") p.append("permit_tags", "new_construction");
+          statuses?.forEach((s) => p.append("permit_status", s));
 
-        const r = await fetch(`${SHOVELS}/permits/search?${p}`, { headers: { "X-API-Key": apiKey } });
-        creditsRemaining = r.headers.get("x-credits-remaining") ?? creditsRemaining;
-        if (!r.ok) {
-          const details = await r.text();
-          console.error(`Shovels search failed [${r.status}]: ${details}`);
-          const msg = r.status === 402 ? "Your Shovels credits are used up for this month."
-            : r.status === 401 ? "Shovels rejected the API key." : `Shovels error ${r.status}`;
-          return json({ error: msg, details }, r.status);
-        }
-        const data = await r.json();
-        for (const item of data.items ?? []) {
-          if (!found.has(item.id)) found.set(item.id, { ...item, _focus: f });
-          if (found.size >= maxResults) break;
+          const r = await fetch(`${SHOVELS}/permits/search?${p}`, { headers: { "X-API-Key": apiKey } });
+          creditsRemaining = r.headers.get("x-credits-remaining") ?? creditsRemaining;
+          if (!r.ok) {
+            const details = await r.text();
+            console.error(`Shovels search failed [${r.status}]: ${details}`);
+            const msg = r.status === 402 ? "Your Shovels credits are used up for this month."
+              : r.status === 401 ? "Shovels rejected the API key." : `Shovels error ${r.status}`;
+            return json({ error: msg, details }, r.status);
+          }
+          const data = await r.json();
+          for (const item of data.items ?? []) {
+            if (!found.has(item.id)) found.set(item.id, { ...item, _focus: f, _property_type: pt });
+            if (found.size >= maxResults) break;
+          }
         }
       }
     }
