@@ -20,6 +20,7 @@ const AIFeatures = lazy(() => import("./pages/AIFeatures"));
 const ProspectingDashboard = lazy(() => import("./pages/ProspectingDashboard"));
 const Communications = lazy(() => import("./pages/Communications"));
 const BuildingPermits = lazy(() => import("./pages/BuildingPermits"));
+const InstantOutreach = lazy(() => import("./pages/InstantOutreach"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Help = lazy(() => import("./pages/Help"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -126,6 +127,14 @@ const App = () => (
               element={
                 <AppLayout>
                   <ProspectingDashboard />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/instant-outreach"
+              element={
+                <AppLayout>
+                  <InstantOutreach />
                 </AppLayout>
               }
             />
