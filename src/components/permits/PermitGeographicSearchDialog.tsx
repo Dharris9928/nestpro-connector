@@ -25,14 +25,14 @@ const US_STATES = [
 ];
 
 const FOCUS = [
+  { id: "new_construction", label: "New construction", hint: "New builds — searched by default" },
   { id: "large_residential", label: "Large residential", hint: "Multi-family / big developments" },
   { id: "hvac", label: "HVAC / thermostat", hint: "Permits tagged HVAC" },
-  { id: "new_construction", label: "New construction", hint: "New builds" },
 ] as const;
 
 export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchComplete }: Props) => {
   const [states, setStates] = useState<string[]>([]);
-  const [focus, setFocus] = useState<string[]>(["large_residential", "hvac", "new_construction"]);
+  const [focus, setFocus] = useState<string[]>(["new_construction"]);
   const [minUnits, setMinUnits] = useState(50);
   const [days, setDays] = useState("90");
   const [maxResults, setMaxResults] = useState(10);
