@@ -173,6 +173,65 @@ export const PermitDetailsDialog = ({
                 </dl>
               </div>
 
+              {contractor && (
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <HardHat className="h-4 w-4" />
+                    Contractor
+                  </h3>
+                  <dl className="space-y-2 text-sm">
+                    {(contractor.business_name || contractor.name) && (
+                      <>
+                        <dt className="text-muted-foreground">Name</dt>
+                        <dd className="font-medium">{contractor.business_name || contractor.name}</dd>
+                      </>
+                    )}
+                    {contractor.permit_count != null && (
+                      <>
+                        <dt className="text-muted-foreground">Permits named on (all time)</dt>
+                        <dd className="font-medium">{Number(contractor.permit_count).toLocaleString()}</dd>
+                      </>
+                    )}
+                    {localPermitCount != null && (
+                      <>
+                        <dt className="text-muted-foreground">In your Permits list</dt>
+                        <dd className="font-medium">{localPermitCount.toLocaleString()}</dd>
+                      </>
+                    )}
+                    {contractor.license && (
+                      <>
+                        <dt className="text-muted-foreground">License</dt>
+                        <dd className="font-medium">{contractor.license}</dd>
+                      </>
+                    )}
+                    {contractor.primary_phone && (
+                      <>
+                        <dt className="text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" /> Phone
+                        </dt>
+                        <dd className="font-medium">{contractor.primary_phone}</dd>
+                      </>
+                    )}
+                    {contractor.primary_email && (
+                      <>
+                        <dt className="text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" /> Email
+                        </dt>
+                        <dd className="font-medium">{contractor.primary_email}</dd>
+                      </>
+                    )}
+                    {contractor.website && (
+                      <>
+                        <dt className="text-muted-foreground flex items-center gap-1">
+                          <Globe className="h-3 w-3" /> Website
+                        </dt>
+                        <dd className="font-medium truncate">{contractor.website}</dd>
+                      </>
+                    )}
+                  </dl>
+                </div>
+              )}
+
               {(permit.applicant_name || permit.applicant_phone || permit.applicant_email) && (
                 <div>
                   <h3 className="font-semibold mb-2">Contact Information</h3>
