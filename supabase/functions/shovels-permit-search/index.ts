@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
       else console.error(`Shovels contractors failed [${r.status}]: ${await r.text()}`);
     }
 
-    let matched = 0, created = 0, imported = 0;
+    let matched = 0, created = 0, imported = 0, greenLit = 0;
     for (const p of fresh) {
       const c = p.contractor_id ? contractors.get(p.contractor_id) : null;
       const contractorName = titleCase(c?.business_name || c?.name || null);
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
         : p._focus === "large_residential" ? "multi_family"
         : p._focus === "new_construction" ? "new_construction" : "hvac";
 
-      let companyId: string | null = null, confidence: number | null = null;
+      let companyId: string | null = null, confidence: number | null = null, wasNew = false;
       if (contractorName) {
         const { data: m } = await supabase.from("companies").select("id, tags")
           .ilike("company_name", contractorName).limit(1);
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
             created_by: user.id,
           }).select("id").single();
           if (ce) console.error("Company insert failed:", ce.message);
-          if (nc) { companyId = nc.id; created++; }
+          if (nc) { companyId = nc.id; created++; wasNew = true; }
         }
       }
 
@@ -174,6 +174,7 @@ Deno.serve(async (req) => {
         builder_name: contractorName,
         builder_company_id: companyId,
         is_matched_to_company: !!companyId,
+        contractor_was_new: wasNew,
         match_confidence: confidence,
         address_line1: street || null,
         city: titleCase(addr.city), state: addr.state, zip: addr.zip_code, county: titleCase(addr.county),
@@ -194,9 +195,10 @@ Deno.serve(async (req) => {
         raw_data: { permit: p, contractor: c ?? null },
         scraped_at: new Date().toISOString(),
         created_by: user.id,
-      }).select("id").single();
+      }).select("id, green_light").single();
       if (ie) { console.error("Permit insert failed:", ie.message); continue; }
       imported++;
+      if (ins?.green_light) greenLit++;
 
       if (isHighValue && ins) {
         await supabase.from("permit_alerts").insert({
@@ -216,7 +218,7 @@ Deno.serve(async (req) => {
 
     return json({
       success: true, permitsFound: permits.length, alreadyHad: permits.length - fresh.length,
-      permitsImported: imported, permitsMatched: matched, newCompaniesCreated: created,
+      permitsImported: imported, permitsMatched: matched, newCompaniesCreated: created, greenLightLeads: greenLit,
       creditsRemaining: creditsRemaining ? Number(creditsRemaining) : null,
     });
   } catch (e) {
