@@ -35,7 +35,7 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
   const [focus, setFocus] = useState<string[]>(["large_residential", "hvac", "new_construction"]);
   const [minUnits, setMinUnits] = useState(50);
   const [days, setDays] = useState("90");
-  const [maxResults, setMaxResults] = useState(25);
+  const [maxResults, setMaxResults] = useState(10);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
@@ -48,11 +48,29 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
     }
   });
 
+  const { data: usage, refetch: refetchUsage } = useQuery({
+    queryKey: ['shovels-usage'],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('shovels-permit-search', { body: { action: 'usage' } });
+      if (error) return null;
+      return data as { used: number | null; limit: number | null; remaining: number | null };
+    },
+  });
+  // Worst case: every permit plus a new contractor lookup for each
+  const worstCase = maxResults * 2;
+  const remaining = usage?.remaining ?? null;
+  const tooBig = remaining != null && worstCase > remaining;
+
   const addStates = (list: string[]) => setStates((s) => [...new Set([...s, ...list])].slice(0, 15));
 
   const handleSearch = async () => {
     if (!states.length || !focus.length) {
       toast({ title: "Pick at least one state and one permit type", variant: "destructive" });
+      return;
+    }
+    if (tooBig) {
+      toast({ title: "Not enough Shovels credits", description: `This search could use up to ${worstCase} credits; you have ${remaining} left. Lower Max permits.`, variant: "destructive" });
       return;
     }
     setIsSearching(true);
@@ -69,8 +87,9 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
       }
       toast({
         title: "Shovels search complete",
-        description: `Found ${data.permitsFound} (${data.permitsImported} new). ${data.permitsMatched} matched existing companies, ${data.newCompaniesCreated} new leads.${data.creditsRemaining != null ? ` ${data.creditsRemaining} Shovels credits left.` : ""}`,
+        description: `Used ${data.creditsUsed} credits. Found ${data.permitsFound} (${data.permitsImported} new). ${data.permitsMatched} matched existing companies, ${data.newCompaniesCreated} new leads.${data.creditsRemaining != null ? ` ${data.creditsRemaining} Shovels credits left.` : ""}`,
       });
+      refetchUsage();
       onSearchComplete();
     } catch (e: any) {
       toast({ title: "Search failed", description: e.message, variant: "destructive" });
@@ -149,14 +168,23 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
             </div>
             <div className="space-y-2">
               <Label>Max permits: {maxResults}</Label>
-              <Slider value={[maxResults]} onValueChange={([v]) => setMaxResults(v)} min={5} max={200} step={5} />
-              <p className="text-xs text-muted-foreground">Each permit and contractor uses one Shovels credit.</p>
+              <Slider value={[maxResults]} onValueChange={([v]) => setMaxResults(v)} min={5} max={100} step={5} />
+              <p className="text-xs text-muted-foreground">
+                Uses up to {worstCase} credits (1 per permit + 1 per new contractor; contractors you already have are free).
+              </p>
             </div>
+          </div>
+
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+            {remaining != null
+              ? <>Shovels credits left this month: <span className="font-semibold">{remaining}</span>{usage?.limit ? ` of ${usage.limit}` : ""}</>
+              : "Checking Shovels credits..."}
+            {tooBig && <p className="text-destructive text-xs mt-1">This search could exceed your remaining credits — lower Max permits.</p>}
           </div>
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSearching}>Cancel</Button>
-            <Button onClick={handleSearch} disabled={isSearching}>
+            <Button onClick={handleSearch} disabled={isSearching || tooBig}>
               {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
               {isSearching ? "Searching..." : "Search Permits"}
             </Button>
