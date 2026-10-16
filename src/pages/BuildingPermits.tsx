@@ -14,6 +14,7 @@ import { PermitAlertsPanel } from "@/components/permits/PermitAlertsPanel";
 import { PermitStats } from "@/components/permits/PermitStats";
 import { usePerspective } from "@/hooks/usePerspective";
 import { summarizePermitUnits } from "@/lib/permits/permitUnits";
+import { PermitExportButton } from "@/components/permits/PermitExportButton";
 
 const BuildingPermits = () => {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
@@ -85,10 +86,42 @@ const BuildingPermits = () => {
   });
 
   // Totals for what's actually on screen (respects the status filter and perspective)
-  const resultTotals = useMemo(() => {
+  const { data: repFirms } = useQuery({
+    queryKey: ['permit-rep-firms'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales_reps')
+        .select('id, first_name, last_name, is_firm, covered_states')
+        .eq('active', true)
+        .order('first_name');
+      if (error) throw error;
+      return (data ?? []).filter((r: any) => (r.covered_states ?? []).length > 0);
+    },
+  });
+
+  const [repTab, setRepTab] = useState<string>('all');
+  const coveredSet = useMemo(
+    () => new Set((repFirms ?? []).flatMap((r: any) => (r.covered_states ?? []).map((s: string) => s.toUpperCase()))),
+    [repFirms]
+  );
+  const repLabel = (r: any) => (r.is_firm ? r.first_name : `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim());
+
+  const listFor = (key: string) => {
     const list = permits ?? [];
+    if (key === 'all') return list;
+    if (key === 'grey') return list.filter((p: any) => !coveredSet.has((p.state ?? '').toUpperCase()));
+    const rep = (repFirms ?? []).find((r: any) => r.id === key);
+    const states = new Set((rep?.covered_states ?? []).map((s: string) => s.toUpperCase()));
+    return list.filter((p: any) => states.has((p.state ?? '').toUpperCase()));
+  };
+  const visiblePermits = useMemo(() => listFor(repTab), [repTab, permits, repFirms, coveredSet]);
+  const repTabName = repTab === 'all' ? 'All' : repTab === 'grey' ? 'Grey States'
+    : repLabel((repFirms ?? []).find((r: any) => r.id === repTab) ?? { first_name: 'Rep' });
+
+  const resultTotals = useMemo(() => {
+    const list = visiblePermits;
     return { count: list.length, ...summarizePermitUnits(list) };
-  }, [permits]);
+  }, [visiblePermits]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -218,12 +251,29 @@ const BuildingPermits = () => {
             </CardContent>
           </Card>
 
-          {!permits || permits.length === 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Tabs value={repTab} onValueChange={setRepTab}>
+              <TabsList className="flex-wrap h-auto">
+                <TabsTrigger value="all">All ({listFor('all').length})</TabsTrigger>
+                {(repFirms ?? []).map((r: any) => (
+                  <TabsTrigger key={r.id} value={r.id} title={(r.covered_states ?? []).join(', ')}>
+                    {repLabel(r)} ({listFor(r.id).length})
+                  </TabsTrigger>
+                ))}
+                <TabsTrigger value="grey">Grey States ({listFor('grey').length})</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <PermitExportButton permits={visiblePermits} listName={repTabName} />
+          </div>
+
+          {visiblePermits.length === 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>No Permits Found</CardTitle>
                 <CardDescription>
-                  Start by searching for building permits in your target markets
+                  {permits && permits.length > 0
+                    ? `No permits in ${repTabName} yet.`
+                    : 'Start by searching for building permits in your target markets'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -237,7 +287,7 @@ const BuildingPermits = () => {
               </CardContent>
             </Card>
           ) : (
-            <PermitTable permits={permits} onRefetch={refetch} />
+            <PermitTable permits={visiblePermits} onRefetch={refetch} />
           )}
         </TabsContent>
 
