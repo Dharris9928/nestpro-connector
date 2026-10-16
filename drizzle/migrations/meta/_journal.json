@@ -15,6 +15,13 @@
       "when": 1792165306906,
       "tag": "0001_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792166340942,
+      "tag": "0002_green_light_leads",
+      "breakpoints": true
     }
   ]
 }

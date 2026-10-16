@@ -1,4 +1,4 @@
-import { Home, Building2, Users, Activity, BarChart3, Brain, Target, Settings, LogOut, HelpCircle, MessageSquare, DollarSign, FileText, Presentation, TrendingUp, ClipboardList } from "lucide-react";
+import { Home, Building2, Users, Activity, BarChart3, Brain, Target, Settings, LogOut, HelpCircle, MessageSquare, DollarSign, FileText, Presentation, TrendingUp, ClipboardList, Zap } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -27,6 +27,7 @@ const menuItems = [
   { title: "AI Features", url: "/ai-features", icon: Brain },
   { title: "Presentations", url: "/presentation", icon: Presentation },
   { title: "Prospecting", url: "/prospecting", icon: Target },
+  { title: "Instant Outreach", url: "/instant-outreach", icon: Zap },
   { title: "Building Permits", url: "/permits", icon: FileText },
   { title: "Help", url: "/help", icon: HelpCircle },
   { title: "Settings", url: "/settings", icon: Settings },

@@ -24,6 +24,7 @@ import { PriorityDistributionCard } from "@/components/dashboard/PriorityDistrib
 import { EnrichmentAnalyticsCard } from "@/components/dashboard/EnrichmentAnalyticsCard";
 import { SmartEnrichmentRecommendations } from "@/components/companies/SmartEnrichmentRecommendations";
 import { BuyingIntentAnalytics } from "@/components/dashboard/BuyingIntentAnalytics";
+import { GreenLightLeadsCard } from "@/components/dashboard/GreenLightLeadsCard";
 import { CommunicationsCard } from "@/components/dashboard/CommunicationsCard";
 
 const Dashboard = () => {
@@ -255,6 +256,8 @@ const Dashboard = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <GreenLightLeadsCard />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Pipeline Summary Card */}

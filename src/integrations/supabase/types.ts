@@ -1042,6 +1042,7 @@ export type Database = {
           builder_name: string | null
           city: string
           contractor_license: string | null
+          contractor_was_new: boolean
           contractor_website: string | null
           county: string | null
           created_at: string
@@ -1050,6 +1051,10 @@ export type Database = {
           estimated_value: number | null
           external_id: string | null
           filed_date: string | null
+          green_light: boolean
+          green_light_reasons: string[]
+          green_light_rep_id: string | null
+          green_lit_at: string | null
           id: string
           is_high_value: boolean | null
           is_matched_to_company: boolean | null
@@ -1059,6 +1064,7 @@ export type Database = {
           metro_area: string | null
           notes: string | null
           num_units: number | null
+          outreach_status: string
           permit_number: string | null
           permit_tags: string[] | null
           permit_type: string | null
@@ -1084,6 +1090,7 @@ export type Database = {
           builder_name?: string | null
           city: string
           contractor_license?: string | null
+          contractor_was_new?: boolean
           contractor_website?: string | null
           county?: string | null
           created_at?: string
@@ -1092,6 +1099,10 @@ export type Database = {
           estimated_value?: number | null
           external_id?: string | null
           filed_date?: string | null
+          green_light?: boolean
+          green_light_reasons?: string[]
+          green_light_rep_id?: string | null
+          green_lit_at?: string | null
           id?: string
           is_high_value?: boolean | null
           is_matched_to_company?: boolean | null
@@ -1101,6 +1112,7 @@ export type Database = {
           metro_area?: string | null
           notes?: string | null
           num_units?: number | null
+          outreach_status?: string
           permit_number?: string | null
           permit_tags?: string[] | null
           permit_type?: string | null
@@ -1126,6 +1138,7 @@ export type Database = {
           builder_name?: string | null
           city?: string
           contractor_license?: string | null
+          contractor_was_new?: boolean
           contractor_website?: string | null
           county?: string | null
           created_at?: string
@@ -1134,6 +1147,10 @@ export type Database = {
           estimated_value?: number | null
           external_id?: string | null
           filed_date?: string | null
+          green_light?: boolean
+          green_light_reasons?: string[]
+          green_light_rep_id?: string | null
+          green_lit_at?: string | null
           id?: string
           is_high_value?: boolean | null
           is_matched_to_company?: boolean | null
@@ -1143,6 +1160,7 @@ export type Database = {
           metro_area?: string | null
           notes?: string | null
           num_units?: number | null
+          outreach_status?: string
           permit_number?: string | null
           permit_tags?: string[] | null
           permit_type?: string | null
@@ -1179,6 +1197,13 @@ export type Database = {
             columns: ["builder_company_id"]
             isOneToOne: false
             referencedRelation: "companies_financial_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_permits_green_light_rep_id_fkey"
+            columns: ["green_light_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -3435,6 +3460,45 @@ export type Database = {
           masking_pattern?: string | null
           min_role_required?: string
           table_name?: string
+        }
+        Relationships: []
+      }
+      green_light_settings: {
+        Row: {
+          enabled: boolean
+          id: number
+          min_units: number
+          min_value: number
+          require_big_project: boolean
+          require_contact: boolean
+          require_new_contractor: boolean
+          require_territory: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id?: number
+          min_units?: number
+          min_value?: number
+          require_big_project?: boolean
+          require_contact?: boolean
+          require_new_contractor?: boolean
+          require_territory?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: number
+          min_units?: number
+          min_value?: number
+          require_big_project?: boolean
+          require_contact?: boolean
+          require_new_contractor?: boolean
+          require_territory?: boolean
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -6708,6 +6772,63 @@ export type Database = {
           table_name: string
         }[]
       }
+      apply_green_light: {
+        Args: { p: Database["public"]["Tables"]["building_permits"]["Row"] }
+        Returns: {
+          address_line1: string | null
+          applicant_email: string | null
+          applicant_name: string | null
+          applicant_phone: string | null
+          builder_company_id: string | null
+          builder_name: string | null
+          city: string
+          contractor_license: string | null
+          contractor_was_new: boolean
+          contractor_website: string | null
+          county: string | null
+          created_at: string
+          created_by: string
+          data_source: string | null
+          estimated_value: number | null
+          external_id: string | null
+          filed_date: string | null
+          green_light: boolean
+          green_light_reasons: string[]
+          green_light_rep_id: string | null
+          green_lit_at: string | null
+          id: string
+          is_high_value: boolean | null
+          is_matched_to_company: boolean | null
+          issued_date: string | null
+          jurisdiction: string | null
+          match_confidence: number | null
+          metro_area: string | null
+          notes: string | null
+          num_units: number | null
+          outreach_status: string
+          permit_number: string | null
+          permit_tags: string[] | null
+          permit_type: string | null
+          project_description: string | null
+          project_name: string
+          project_type: string | null
+          property_type: string | null
+          raw_data: Json | null
+          region: string | null
+          scraped_at: string | null
+          search_vector: unknown
+          state: string
+          status: string | null
+          updated_at: string
+          zip: string | null
+        }
+        SetofOptions: {
+          from: "building_permits"
+          to: "building_permits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       approve_access_request: {
         Args: { _access_level?: string; _request_id: string }
         Returns: boolean
@@ -7139,6 +7260,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      refresh_green_lights: { Args: never; Returns: number }
       reverify_all_active_domains: { Args: never; Returns: Json }
       revoke_api_key: {
         Args: { _key_id: string; _reason?: string }
