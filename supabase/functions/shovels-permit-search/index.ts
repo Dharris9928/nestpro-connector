@@ -6,7 +6,7 @@ const SHOVELS = "https://api.shovels.ai/v2";
 
 const Body = z.object({
   states: z.array(z.string().regex(/^[A-Z]{2}$/)).min(1).max(15),
-  focus: z.array(z.enum(["large_residential", "hvac", "new_construction"])).min(1),
+  focus: z.array(z.enum(["new_construction", "large_residential", "hvac"])).min(1).default(["new_construction"]),
   minUnits: z.number().int().min(2).max(2000).default(50),
   days: z.number().int().min(1).max(365).default(30),
   maxResults: z.number().int().min(1).max(200).default(25),
@@ -54,36 +54,42 @@ Deno.serve(async (req) => {
     const from = new Date(Date.now() - days * 86400000);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-    // One Shovels query per (state, focus). Each record returned costs 1 credit.
+    // Residential and mixed-use only. Shovels treats repeated property_type values in a single
+    // request as an AND, so each property type needs its own query. A query that returns no
+    // records costs no credits, and mixed-use permits are rare enough today that this is free.
+    const PROPERTY_TYPES = ["residential", "mixed_use"];
     const perQuery = Math.max(1, Math.ceil(maxResults / (states.length * focus.length)));
     const found = new Map<string, any>();
     let creditsRemaining: string | null = null;
 
     for (const state of states) {
       for (const f of focus) {
-        const p = new URLSearchParams({
-          geo_id: state, permit_from: fmt(from), permit_to: fmt(to), size: String(Math.min(perQuery, 100)),
-        });
-        p.append("property_type", "residential");
-        p.set("permit_has_contractor", "true");
-        if (f === "large_residential") p.set("property_min_unit_count", String(minUnits));
-        if (f === "hvac") p.append("permit_tags", "hvac");
-        if (f === "new_construction") p.append("permit_tags", "new_construction");
-        statuses?.forEach((s) => p.append("permit_status", s));
+        for (const pt of PROPERTY_TYPES) {
+          if (found.size >= maxResults) break; // stop buying once the cap is full
+          const p = new URLSearchParams({
+            geo_id: state, permit_from: fmt(from), permit_to: fmt(to), size: String(Math.min(perQuery, 100)),
+          });
+          p.append("property_type", pt);
+          p.set("permit_has_contractor", "true");
+          if (f === "large_residential") p.set("property_min_unit_count", String(minUnits));
+          if (f === "hvac") p.append("permit_tags", "hvac");
+          if (f === "new_construction") p.append("permit_tags", "new_construction");
+          statuses?.forEach((s) => p.append("permit_status", s));
 
-        const r = await fetch(`${SHOVELS}/permits/search?${p}`, { headers: { "X-API-Key": apiKey } });
-        creditsRemaining = r.headers.get("x-credits-remaining") ?? creditsRemaining;
-        if (!r.ok) {
-          const details = await r.text();
-          console.error(`Shovels search failed [${r.status}]: ${details}`);
-          const msg = r.status === 402 ? "Your Shovels credits are used up for this month."
-            : r.status === 401 ? "Shovels rejected the API key." : `Shovels error ${r.status}`;
-          return json({ error: msg, details }, r.status);
-        }
-        const data = await r.json();
-        for (const item of data.items ?? []) {
-          if (!found.has(item.id)) found.set(item.id, { ...item, _focus: f });
-          if (found.size >= maxResults) break;
+          const r = await fetch(`${SHOVELS}/permits/search?${p}`, { headers: { "X-API-Key": apiKey } });
+          creditsRemaining = r.headers.get("x-credits-remaining") ?? creditsRemaining;
+          if (!r.ok) {
+            const details = await r.text();
+            console.error(`Shovels search failed [${r.status}]: ${details}`);
+            const msg = r.status === 402 ? "Your Shovels credits are used up for this month."
+              : r.status === 401 ? "Shovels rejected the API key." : `Shovels error ${r.status}`;
+            return json({ error: msg, details }, r.status);
+          }
+          const data = await r.json();
+          for (const item of data.items ?? []) {
+            if (!found.has(item.id)) found.set(item.id, { ...item, _focus: f, _property_type: pt });
+            if (found.size >= maxResults) break;
+          }
         }
       }
     }
@@ -122,7 +128,8 @@ Deno.serve(async (req) => {
       const addr = p.address ?? {};
       const units = p.property_unit_count ?? null;
       const value = p.job_value != null ? p.job_value / 100 : null;
-      const projectType = p._focus === "large_residential" ? "multi_family"
+      const projectType = (p._property_type ?? p.property_type) === "mixed_use" ? "mixed_use"
+        : p._focus === "large_residential" ? "multi_family"
         : p._focus === "new_construction" ? "new_construction" : "hvac";
 
       let companyId: string | null = null, confidence: number | null = null;
@@ -201,7 +208,7 @@ Deno.serve(async (req) => {
 
     await supabase.from("permit_scraping_logs").insert({
       data_source: "shovels",
-      search_params: { states, focus, minUnits, days, maxResults, statuses },
+      search_params: { states, focus, minUnits, days, maxResults, statuses, propertyTypes: PROPERTY_TYPES },
       permits_found: permits.length, permits_imported: imported, permits_matched: matched,
       new_companies_created: created, status: "success", created_by: user.id,
       completed_at: new Date().toISOString(),

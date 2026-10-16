@@ -25,14 +25,14 @@ const US_STATES = [
 ];
 
 const FOCUS = [
+  { id: "new_construction", label: "New construction", hint: "New builds — searched by default" },
   { id: "large_residential", label: "Large residential", hint: "Multi-family / big developments" },
   { id: "hvac", label: "HVAC / thermostat", hint: "Permits tagged HVAC" },
-  { id: "new_construction", label: "New construction", hint: "New builds" },
 ] as const;
 
 export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchComplete }: Props) => {
   const [states, setStates] = useState<string[]>([]);
-  const [focus, setFocus] = useState<string[]>(["large_residential", "hvac", "new_construction"]);
+  const [focus, setFocus] = useState<string[]>(["new_construction"]);
   const [minUnits, setMinUnits] = useState(50);
   const [days, setDays] = useState("90");
   const [maxResults, setMaxResults] = useState(10);
@@ -135,6 +135,10 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
 
           <div className="space-y-2">
             <Label>Permit types</Label>
+            <p className="text-xs text-muted-foreground">
+              Only residential and mixed-use permits are pulled — commercial, office and industrial
+              permits are skipped. New construction is the default; the others add extra queries.
+            </p>
             {FOCUS.map((f) => (
               <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox
@@ -165,6 +169,10 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
                   <SelectItem value="180">Last 6 months</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                New-construction permits are tagged about 45–60 days after filing, so short windows
+                often come back empty — 90 days or more works best.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Max permits: {maxResults}</Label>
