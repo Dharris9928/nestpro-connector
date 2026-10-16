@@ -20,6 +20,7 @@ interface Permit {
   is_matched_to_company: boolean;
   is_high_value: boolean;
   builder_company: any;
+  raw_data?: any;
 }
 
 interface PermitTableProps {
@@ -189,6 +190,11 @@ export const PermitTable = ({ permits, onRefetch }: PermitTableProps) => {
                             Unmatched
                           </Badge>
                         </>
+                      )}
+                      {permit.raw_data?.contractor?.permit_count != null && (
+                        <div className="text-xs text-muted-foreground">
+                          {Number(permit.raw_data.contractor.permit_count).toLocaleString()} permits on record
+                        </div>
                       )}
                     </div>
                   </TableCell>
