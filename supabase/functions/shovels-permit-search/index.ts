@@ -50,6 +50,15 @@ Deno.serve(async (req) => {
     if (!parsed.success) return json({ error: parsed.error.flatten().fieldErrors }, 400);
     const { states, focus, minUnits, days, maxResults, statuses } = parsed.data;
 
+    // Credits before the search, so the result message can say what the search actually cost
+    let creditsBefore: number | null = null;
+    const u0 = await fetch(`${SHOVELS}/usage`, { headers: { "X-API-Key": apiKey } });
+    if (u0.ok) {
+      const j0 = await u0.json();
+      if (j0.credit_limit != null) creditsBefore = j0.credit_limit - (j0.credits_used ?? 0);
+    }
+
+
     const to = new Date();
     const from = new Date(Date.now() - days * 86400000);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
@@ -96,6 +105,8 @@ Deno.serve(async (req) => {
     }
 
     const permits = [...found.values()];
+    const unitsFound = permits.reduce((s: number, p: any) => s + (p.property_unit_count ?? 0), 0);
+
 
     // Skip permits we already have
     const { data: existing } = await supabase.from("building_permits").select("external_id")
@@ -122,7 +133,7 @@ Deno.serve(async (req) => {
       else console.error(`Shovels contractors failed [${r.status}]: ${await r.text()}`);
     }
 
-    let matched = 0, created = 0, imported = 0, greenLit = 0;
+    let matched = 0, created = 0, imported = 0, greenLit = 0, unitsImported = 0;
     for (const p of fresh) {
       const c = p.contractor_id ? contractors.get(p.contractor_id) : null;
       const contractorName = titleCase(c?.business_name || c?.name || null);
@@ -200,6 +211,8 @@ Deno.serve(async (req) => {
       }).select("id, green_light").single();
       if (ie) { console.error("Permit insert failed:", ie.message); continue; }
       imported++;
+      unitsImported += units ?? 0;
+
       if (ins?.green_light) greenLit++;
 
       if (isHighValue && ins) {
@@ -221,7 +234,10 @@ Deno.serve(async (req) => {
     return json({
       success: true, permitsFound: permits.length, alreadyHad: permits.length - fresh.length,
       permitsImported: imported, permitsMatched: matched, newCompaniesCreated: created, greenLightLeads: greenLit,
+      unitsFound, unitsImported,
       creditsRemaining: creditsRemaining ? Number(creditsRemaining) : null,
+      creditsUsed: creditsBefore != null && creditsRemaining ? creditsBefore - Number(creditsRemaining) : null,
+
     });
   } catch (e) {
     console.error("shovels-permit-search error:", e);

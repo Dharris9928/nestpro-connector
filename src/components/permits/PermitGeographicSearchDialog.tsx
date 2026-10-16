@@ -113,7 +113,7 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
       }
       toast({
         title: "Shovels search complete",
-        description: `Used ${data.creditsUsed} credits. Found ${data.permitsFound} (${data.permitsImported} new). ${data.permitsMatched} matched existing companies, ${data.newCompaniesCreated} new leads.${data.greenLightLeads ? ` 🟢 ${data.greenLightLeads} green-light lead(s) sent to Instant Outreach.` : ""}${data.creditsRemaining != null ? ` ${data.creditsRemaining} Shovels credits left.` : ""}`,
+        description: `${data.creditsUsed != null ? `Used ${data.creditsUsed} credits. ` : ""}Found ${data.permitsFound} permits (${data.permitsImported} new, ${Number(data.unitsImported ?? 0).toLocaleString()} new units). ${data.permitsMatched} matched existing companies, ${data.newCompaniesCreated} new leads.${data.greenLightLeads ? ` 🟢 ${data.greenLightLeads} green-light lead(s) sent to Instant Outreach.` : ""}${data.creditsRemaining != null ? ` ${data.creditsRemaining} Shovels credits left.` : ""}`,
       });
       refetchUsage();
       onSearchComplete();
