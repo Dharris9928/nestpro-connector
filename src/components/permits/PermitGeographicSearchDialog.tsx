@@ -169,6 +169,10 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
                   <SelectItem value="180">Last 6 months</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                New-construction permits are tagged about 45–60 days after filing, so short windows
+                often come back empty — 90 days or more works best.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Max permits: {maxResults}</Label>
