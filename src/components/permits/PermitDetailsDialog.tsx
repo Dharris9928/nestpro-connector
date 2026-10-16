@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Calendar, DollarSign, User, Phone, Mail } from "lucide-react";
+import { Building, MapPin, Calendar, DollarSign, User, Phone, Mail, HardHat, Globe } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PermitDetailsDialogProps {
   permit: any;
@@ -17,6 +19,26 @@ export const PermitDetailsDialog = ({
   onOpenChange,
   onUpdate
 }: PermitDetailsDialogProps) => {
+  const contractor: any = permit?.raw_data?.contractor ?? null;
+  const contractorId: string | undefined = contractor?.id;
+  const [localPermitCount, setLocalPermitCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLocalPermitCount(null);
+    if (!contractorId) return;
+    let cancelled = false;
+    supabase
+      .from("building_permits")
+      .select("id", { count: "exact", head: true })
+      .eq("raw_data->contractor->>id", contractorId)
+      .then(({ count }) => {
+        if (!cancelled) setLocalPermitCount(count ?? 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contractorId]);
+
   const formatCurrency = (value: number | null) => {
     if (!value) return 'N/A';
     return new Intl.NumberFormat('en-US', {
