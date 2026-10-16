@@ -118,6 +118,14 @@ export const PermitDetailsDialog = ({
                       <dd className="font-medium">{permit.project_type}</dd>
                     </>
                   )}
+                  {Array.isArray((permit as any).permit_tags) && (permit as any).permit_tags.length > 0 && (
+                    <>
+                      <dt className="text-muted-foreground">Filed For</dt>
+                      <dd className="font-medium capitalize">
+                        {((permit as any).permit_tags as string[]).map((t) => t === "adu" ? "ADU" : t === "hvac" ? "HVAC" : t.replace(/_/g, " ")).join(", ")}
+                      </dd>
+                    </>
+                  )}
                 </dl>
               </div>
 
