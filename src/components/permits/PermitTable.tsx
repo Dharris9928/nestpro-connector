@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Building, MapPin, Calendar, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { PermitDetailsDialog } from "./PermitDetailsDialog";
 import { useResizableColumns } from "@/hooks/useResizableColumns";
+import { getPermitUnits } from "@/lib/permits/permitUnits";
 
 interface Permit {
   id: string;
@@ -207,7 +208,15 @@ export const PermitTable = ({ permits, onRefetch }: PermitTableProps) => {
                   <TableCell style={{ width: columnWidths.num_units, maxWidth: columnWidths.num_units }}>
                     <div className="flex items-center gap-1">
                       <Building className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span>{permit.num_units || 'N/A'}</span>
+                      {(() => {
+                        const u = getPermitUnits(permit);
+                        if (!u.units) return <span>N/A</span>;
+                        return (
+                          <span title={u.estimated ? "Counted from the permit details — Shovels doesn't list a unit count for this permit" : undefined}>
+                            {u.estimated ? "~" : ""}{u.units.toLocaleString()}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </TableCell>
                   <TableCell style={{ width: columnWidths.estimated_value, maxWidth: columnWidths.estimated_value }}>
