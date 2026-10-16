@@ -135,6 +135,10 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
 
           <div className="space-y-2">
             <Label>Permit types</Label>
+            <p className="text-xs text-muted-foreground">
+              Only residential and mixed-use permits are pulled — commercial, office and industrial
+              permits are skipped. New construction is the default; the others add extra queries.
+            </p>
             {FOCUS.map((f) => (
               <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox
