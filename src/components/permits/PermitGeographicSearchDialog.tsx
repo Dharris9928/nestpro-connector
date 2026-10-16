@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,28 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
       return data;
     }
   });
+
+  const { data: reps } = useQuery({
+    queryKey: ['sales-reps-territories'],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('sales_reps').select('first_name, covered_states').eq('active', true);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Map state -> rep firm names covering it; states with no active rep are "Grey states"
+  const coveredByState = useMemo(() => {
+    const map = new Map<string, string[]>();
+    reps?.forEach((r) => (r.covered_states ?? []).forEach((s: string) => {
+      map.set(s, [...(map.get(s) ?? []), r.first_name]);
+    }));
+    return map;
+  }, [reps]);
+  const hasCoverage = (reps?.length ?? 0) > 0;
+  const coveredStates = US_STATES.filter((s) => coveredByState.has(s));
+  const greyStates = US_STATES.filter((s) => !coveredByState.has(s));
 
   const { data: usage, refetch: refetchUsage } = useQuery({
     queryKey: ['shovels-usage'],
