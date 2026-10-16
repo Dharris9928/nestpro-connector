@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       const addr = p.address ?? {};
       const units = p.property_unit_count ?? null;
       const value = p.job_value != null ? p.job_value / 100 : null;
-      const projectType = p.property_type === "mixed_use" ? "mixed_use"
+      const projectType = (p._property_type ?? p.property_type) === "mixed_use" ? "mixed_use"
         : p._focus === "large_residential" ? "multi_family"
         : p._focus === "new_construction" ? "new_construction" : "hvac";
 
@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
 
     await supabase.from("permit_scraping_logs").insert({
       data_source: "shovels",
-      search_params: { states, focus, minUnits, days, maxResults, statuses },
+      search_params: { states, focus, minUnits, days, maxResults, statuses, propertyTypes: PROPERTY_TYPES },
       permits_found: permits.length, permits_imported: imported, permits_matched: matched,
       new_companies_created: created, status: "success", created_by: user.id,
       completed_at: new Date().toISOString(),
