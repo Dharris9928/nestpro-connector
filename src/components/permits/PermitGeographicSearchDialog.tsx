@@ -18,7 +18,7 @@ import { ChevronDown, Loader2, Search, X } from "lucide-react";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSearchComplete: () => void;
+  onSearchComplete: (mode?: "permits" | "developments") => void;
   initialMode?: "permits" | "developments";
 }
 
@@ -146,7 +146,7 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
 
         {mode === "developments" ? (
           <DevelopmentDiscoveryPanel remaining={remaining}
-            onDone={() => { refetchUsage(); onSearchComplete(); }} onCancel={() => onOpenChange(false)} />
+            onDone={() => { refetchUsage(); onSearchComplete("developments"); }} onCancel={() => onOpenChange(false)} />
         ) : (
         <div className="space-y-5">
           <div className="space-y-2">

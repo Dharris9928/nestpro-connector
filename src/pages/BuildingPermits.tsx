@@ -311,9 +311,9 @@ const BuildingPermits = () => {
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
         initialMode={searchMode}
-        onSearchComplete={() => {
+        onSearchComplete={(mode) => {
           refetch();
-          if (searchMode === "permits") setSearchDialogOpen(false);
+          if (mode !== "developments") setSearchDialogOpen(false);
         }}
       />
     </div>
