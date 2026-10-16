@@ -69,10 +69,10 @@ export async function importPermits({ supabase, apiKey, userId, permits, project
     const addr = p.address ?? {};
     const units = p.property_unit_count ?? null;
     const value = p.job_value != null ? p.job_value / 100 : null;
-    const projectType = projectTypeOverride ?? (p._property_type ?? p.property_type) === "mixed_use" ? "mixed_use"
+    const projectType = projectTypeOverride ?? (((p._property_type ?? p.property_type) === "mixed_use" ? "mixed_use"
       : p._focus === "large_residential" ? "multi_family"
       : p._focus === "new_construction" ? "new_construction"
-      : p._focus === "remodel" || p._focus === "adu" || p._focus === "addition" ? p._focus : "hvac");
+      : p._focus === "remodel" || p._focus === "adu" || p._focus === "addition" ? p._focus : "hvac"));
 
     let companyId: string | null = null, confidence: number | null = null, wasNew = false;
     if (contractorName) {
