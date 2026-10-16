@@ -122,9 +122,13 @@ const BuildingPermits = () => {
               <Home className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{resultTotals.units.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {resultTotals.hasEstimates ? "≈" : ""}{resultTotals.units.toLocaleString()}
+              </div>
               <p className="text-xs text-muted-foreground">
-                {resultTotals.withUnits} of {resultTotals.count} permits list units
+                {resultTotals.estimated
+                  ? `${resultTotals.estimated} counted from permit details`
+                  : `${resultTotals.listed} of ${resultTotals.count} list a unit count`}
               </p>
             </CardContent>
           </Card>
@@ -182,7 +186,14 @@ const BuildingPermits = () => {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {resultTotals.count} permits ·{" "}
-                  <span className="font-semibold text-foreground">{resultTotals.units.toLocaleString()} units</span>
+                  <span
+                    className="font-semibold text-foreground"
+                    title={resultTotals.hasEstimates
+                      ? "Includes permits where Shovels lists no unit count — a single-family, duplex or ADU filing counts as its homes"
+                      : undefined}
+                  >
+                    {resultTotals.hasEstimates ? "≈" : ""}{resultTotals.units.toLocaleString()} units
+                  </span>
                 </p>
               </div>
             </CardHeader>
