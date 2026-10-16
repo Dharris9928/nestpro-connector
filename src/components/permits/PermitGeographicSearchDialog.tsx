@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronDown, Loader2, Search, X } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -110,12 +111,33 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
           <div className="space-y-2">
             <Label>States</Label>
             <div className="flex gap-2">
-              <Select value="" onValueChange={(v) => addStates([v])}>
-                <SelectTrigger><SelectValue placeholder="Add a state..." /></SelectTrigger>
-                <SelectContent>
-                  {US_STATES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex-1 justify-between font-normal">
+                    {states.length ? `${states.length} state${states.length > 1 ? "s" : ""} selected` : "Select states..."}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-2" align="start">
+                  <div className="flex justify-between items-center pb-2 text-xs text-muted-foreground">
+                    <span>Up to 15 states</span>
+                    <button className="underline" onClick={() => setStates([])}>Clear</button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1 max-h-64 overflow-y-auto">
+                    {US_STATES.map((s) => {
+                      const checked = states.includes(s);
+                      const disabled = !checked && states.length >= 15;
+                      return (
+                        <label key={s} className={`flex items-center gap-1.5 text-sm rounded px-1 py-1 hover:bg-muted ${disabled ? "opacity-40" : "cursor-pointer"}`}>
+                          <Checkbox checked={checked} disabled={disabled}
+                            onCheckedChange={(v) => v ? addStates([s]) : setStates(states.filter((x) => x !== s))} />
+                          {s}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Select value="" onValueChange={(v) => addStates(regions?.find((r) => r.region_name === v)?.states ?? [])}>
                 <SelectTrigger><SelectValue placeholder="Add a region..." /></SelectTrigger>
                 <SelectContent>
