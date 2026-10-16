@@ -23,6 +23,25 @@ const REGION_MAP: Record<string, string[]> = {
 const regionFor = (s: string) => Object.entries(REGION_MAP).find(([, l]) => l.includes(s))?.[0] ?? null;
 const titleCase = (s?: string | null) => s ? s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : s;
 
+// Shovels only fills property_unit_count on multi-family filings. On a single-family, duplex
+// or ADU permit the filing itself is the home, so count it that way instead of showing nothing.
+const COUNT_RE = /(\d[\d,]*)\s*(?:units?|homes?|doors?|townhomes?|apartments?|residences?)\b/;
+const TWO_RE = /\bduplex\b|\btwo[\s-]?plex\b/;
+const ONE_RE =
+  /single[\s_-]?family|\bsfd\b|\bsfr\b|\badu\b|accessory dwelling|town\s?home|townhouse|dwelling|single[\s_-]?unit|one[\s-]family/;
+const deriveUnits = (p: any): number => {
+  const listed = p.property_unit_count ?? 0;
+  if (listed > 0) return listed;
+  const detail = String(p.property_type_detail ?? "").toLowerCase();
+  const text = `${p.description ?? ""} ${p.description_derived ?? ""} ${p.subtype ?? ""}`.toLowerCase();
+  const m = text.match(COUNT_RE);
+  if (m) return parseInt(m[1].replace(/,/g, ""), 10) || 0;
+  if (TWO_RE.test(text)) return 2;
+  if (ONE_RE.test(`${detail} ${text}`)) return 1;
+  return 0;
+};
+
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -105,7 +124,7 @@ Deno.serve(async (req) => {
     }
 
     const permits = [...found.values()];
-    const unitsFound = permits.reduce((s: number, p: any) => s + (p.property_unit_count ?? 0), 0);
+    const unitsFound = permits.reduce((s: number, p: any) => s + deriveUnits(p), 0);
 
 
     // Skip permits we already have
@@ -133,7 +152,7 @@ Deno.serve(async (req) => {
       else console.error(`Shovels contractors failed [${r.status}]: ${await r.text()}`);
     }
 
-    let matched = 0, created = 0, imported = 0, greenLit = 0, unitsImported = 0;
+    let matched = 0, created = 0, imported = 0, greenLit = 0, unitsImported = 0, unitsListed = 0;
     for (const p of fresh) {
       const c = p.contractor_id ? contractors.get(p.contractor_id) : null;
       const contractorName = titleCase(c?.business_name || c?.name || null);
@@ -211,7 +230,8 @@ Deno.serve(async (req) => {
       }).select("id, green_light").single();
       if (ie) { console.error("Permit insert failed:", ie.message); continue; }
       imported++;
-      unitsImported += units ?? 0;
+      unitsImported += deriveUnits(p);
+      unitsListed += units ?? 0;
 
       if (ins?.green_light) greenLit++;
 
@@ -234,7 +254,7 @@ Deno.serve(async (req) => {
     return json({
       success: true, permitsFound: permits.length, alreadyHad: permits.length - fresh.length,
       permitsImported: imported, permitsMatched: matched, newCompaniesCreated: created, greenLightLeads: greenLit,
-      unitsFound, unitsImported,
+      unitsFound, unitsImported, unitsListedImported: unitsListed,
       creditsRemaining: creditsRemaining ? Number(creditsRemaining) : null,
       creditsUsed: creditsBefore != null && creditsRemaining ? creditsBefore - Number(creditsRemaining) : null,
 

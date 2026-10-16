@@ -13,6 +13,7 @@ import { PermitTable } from "@/components/permits/PermitTable";
 import { PermitAlertsPanel } from "@/components/permits/PermitAlertsPanel";
 import { PermitStats } from "@/components/permits/PermitStats";
 import { usePerspective } from "@/hooks/usePerspective";
+import { summarizePermitUnits } from "@/lib/permits/permitUnits";
 
 const BuildingPermits = () => {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
@@ -86,11 +87,7 @@ const BuildingPermits = () => {
   // Totals for what's actually on screen (respects the status filter and perspective)
   const resultTotals = useMemo(() => {
     const list = permits ?? [];
-    return {
-      count: list.length,
-      units: list.reduce((sum: number, p: any) => sum + (p.num_units || 0), 0),
-      withUnits: list.filter((p: any) => (p.num_units ?? 0) > 0).length,
-    };
+    return { count: list.length, ...summarizePermitUnits(list) };
   }, [permits]);
 
   return (
