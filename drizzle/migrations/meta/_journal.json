@@ -8,6 +8,13 @@
       "when": 1790694182798,
       "tag": "0000_job_quote_change_log",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792165306906,
+      "tag": "0001_migration",
+      "breakpoints": true
     }
   ]
 }
