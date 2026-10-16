@@ -17,7 +17,7 @@ import { usePerspective } from "@/hooks/usePerspective";
 const BuildingPermits = () => {
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [perspective] = useState<'my_records' | 'all_records'>('my_records');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'filed' | 'approved' | 'issued' | 'under_review'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'in_review' | 'active' | 'final' | 'inactive'>('all');
 
   const { data: user } = useQuery({
     queryKey: ['user'],
@@ -173,10 +173,10 @@ const BuildingPermits = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="filed">Filed</SelectItem>
-                      <SelectItem value="under_review">Under Review</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="issued">Issued</SelectItem>
+                      <SelectItem value="in_review">In Review</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="final">Final</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

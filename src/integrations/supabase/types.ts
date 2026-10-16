@@ -1041,24 +1041,32 @@ export type Database = {
           builder_company_id: string | null
           builder_name: string | null
           city: string
+          contractor_license: string | null
+          contractor_website: string | null
           county: string | null
           created_at: string
           created_by: string
           data_source: string | null
           estimated_value: number | null
+          external_id: string | null
           filed_date: string | null
           id: string
           is_high_value: boolean | null
           is_matched_to_company: boolean | null
           issued_date: string | null
+          jurisdiction: string | null
           match_confidence: number | null
           metro_area: string | null
           notes: string | null
           num_units: number | null
           permit_number: string | null
+          permit_tags: string[] | null
+          permit_type: string | null
           project_description: string | null
           project_name: string
           project_type: string | null
+          property_type: string | null
+          raw_data: Json | null
           region: string | null
           scraped_at: string | null
           search_vector: unknown
@@ -1075,24 +1083,32 @@ export type Database = {
           builder_company_id?: string | null
           builder_name?: string | null
           city: string
+          contractor_license?: string | null
+          contractor_website?: string | null
           county?: string | null
           created_at?: string
           created_by: string
           data_source?: string | null
           estimated_value?: number | null
+          external_id?: string | null
           filed_date?: string | null
           id?: string
           is_high_value?: boolean | null
           is_matched_to_company?: boolean | null
           issued_date?: string | null
+          jurisdiction?: string | null
           match_confidence?: number | null
           metro_area?: string | null
           notes?: string | null
           num_units?: number | null
           permit_number?: string | null
+          permit_tags?: string[] | null
+          permit_type?: string | null
           project_description?: string | null
           project_name: string
           project_type?: string | null
+          property_type?: string | null
+          raw_data?: Json | null
           region?: string | null
           scraped_at?: string | null
           search_vector?: unknown
@@ -1109,24 +1125,32 @@ export type Database = {
           builder_company_id?: string | null
           builder_name?: string | null
           city?: string
+          contractor_license?: string | null
+          contractor_website?: string | null
           county?: string | null
           created_at?: string
           created_by?: string
           data_source?: string | null
           estimated_value?: number | null
+          external_id?: string | null
           filed_date?: string | null
           id?: string
           is_high_value?: boolean | null
           is_matched_to_company?: boolean | null
           issued_date?: string | null
+          jurisdiction?: string | null
           match_confidence?: number | null
           metro_area?: string | null
           notes?: string | null
           num_units?: number | null
           permit_number?: string | null
+          permit_tags?: string[] | null
+          permit_type?: string | null
           project_description?: string | null
           project_name?: string
           project_type?: string | null
+          property_type?: string | null
+          raw_data?: Json | null
           region?: string | null
           scraped_at?: string | null
           search_vector?: unknown
@@ -1539,6 +1563,7 @@ export type Database = {
           social_media_presence: string | null
           state: string | null
           status: string | null
+          tags: string[] | null
           tech_adoption_signal: string | null
           technology_adoption_level: string | null
           total_employees: number | null
@@ -1647,6 +1672,7 @@ export type Database = {
           social_media_presence?: string | null
           state?: string | null
           status?: string | null
+          tags?: string[] | null
           tech_adoption_signal?: string | null
           technology_adoption_level?: string | null
           total_employees?: number | null
@@ -1755,6 +1781,7 @@ export type Database = {
           social_media_presence?: string | null
           state?: string | null
           status?: string | null
+          tags?: string[] | null
           tech_adoption_signal?: string | null
           technology_adoption_level?: string | null
           total_employees?: number | null
