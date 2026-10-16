@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Calendar, DollarSign, User, Phone, Mail } from "lucide-react";
+import { Building, MapPin, Calendar, DollarSign, User, Phone, Mail, HardHat, Globe } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PermitDetailsDialogProps {
   permit: any;
@@ -17,6 +19,26 @@ export const PermitDetailsDialog = ({
   onOpenChange,
   onUpdate
 }: PermitDetailsDialogProps) => {
+  const contractor: any = permit?.raw_data?.contractor ?? null;
+  const contractorId: string | undefined = contractor?.id;
+  const [localPermitCount, setLocalPermitCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLocalPermitCount(null);
+    if (!contractorId) return;
+    let cancelled = false;
+    supabase
+      .from("building_permits")
+      .select("id", { count: "exact", head: true })
+      .eq("raw_data->contractor->>id", contractorId)
+      .then(({ count }) => {
+        if (!cancelled) setLocalPermitCount(count ?? 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contractorId]);
+
   const formatCurrency = (value: number | null) => {
     if (!value) return 'N/A';
     return new Intl.NumberFormat('en-US', {
@@ -150,6 +172,65 @@ export const PermitDetailsDialog = ({
                   )}
                 </dl>
               </div>
+
+              {contractor && (
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <HardHat className="h-4 w-4" />
+                    Contractor
+                  </h3>
+                  <dl className="space-y-2 text-sm">
+                    {(contractor.business_name || contractor.name) && (
+                      <>
+                        <dt className="text-muted-foreground">Name</dt>
+                        <dd className="font-medium">{contractor.business_name || contractor.name}</dd>
+                      </>
+                    )}
+                    {contractor.permit_count != null && (
+                      <>
+                        <dt className="text-muted-foreground">Permits named on (all time)</dt>
+                        <dd className="font-medium">{Number(contractor.permit_count).toLocaleString()}</dd>
+                      </>
+                    )}
+                    {localPermitCount != null && (
+                      <>
+                        <dt className="text-muted-foreground">In your Permits list</dt>
+                        <dd className="font-medium">{localPermitCount.toLocaleString()}</dd>
+                      </>
+                    )}
+                    {contractor.license && (
+                      <>
+                        <dt className="text-muted-foreground">License</dt>
+                        <dd className="font-medium">{contractor.license}</dd>
+                      </>
+                    )}
+                    {contractor.primary_phone && (
+                      <>
+                        <dt className="text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" /> Phone
+                        </dt>
+                        <dd className="font-medium">{contractor.primary_phone}</dd>
+                      </>
+                    )}
+                    {contractor.primary_email && (
+                      <>
+                        <dt className="text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" /> Email
+                        </dt>
+                        <dd className="font-medium">{contractor.primary_email}</dd>
+                      </>
+                    )}
+                    {contractor.website && (
+                      <>
+                        <dt className="text-muted-foreground flex items-center gap-1">
+                          <Globe className="h-3 w-3" /> Website
+                        </dt>
+                        <dd className="font-medium truncate">{contractor.website}</dd>
+                      </>
+                    )}
+                  </dl>
+                </div>
+              )}
 
               {(permit.applicant_name || permit.applicant_phone || permit.applicant_email) && (
                 <div>
