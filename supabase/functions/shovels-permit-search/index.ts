@@ -6,7 +6,7 @@ const SHOVELS = "https://api.shovels.ai/v2";
 
 const Body = z.object({
   states: z.array(z.string().regex(/^[A-Z]{2}$/)).min(1).max(15),
-  focus: z.array(z.enum(["new_construction", "large_residential", "hvac"])).min(1).default(["new_construction"]),
+  focus: z.array(z.enum(["new_construction", "large_residential", "hvac", "remodel", "adu", "addition"])).min(1).default(["new_construction"]),
   minUnits: z.number().int().min(2).max(2000).default(50),
   days: z.number().int().min(1).max(365).default(30),
   maxResults: z.number().int().min(1).max(200).default(25),
@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
           if (f === "large_residential") p.set("property_min_unit_count", String(minUnits));
           if (f === "hvac") p.append("permit_tags", "hvac");
           if (f === "new_construction") p.append("permit_tags", "new_construction");
+          if (f === "remodel" || f === "adu" || f === "addition") p.append("permit_tags", f);
           statuses?.forEach((s) => p.append("permit_status", s));
 
           const r = await fetch(`${SHOVELS}/permits/search?${p}`, { headers: { "X-API-Key": apiKey } });
@@ -130,7 +131,8 @@ Deno.serve(async (req) => {
       const value = p.job_value != null ? p.job_value / 100 : null;
       const projectType = (p._property_type ?? p.property_type) === "mixed_use" ? "mixed_use"
         : p._focus === "large_residential" ? "multi_family"
-        : p._focus === "new_construction" ? "new_construction" : "hvac";
+        : p._focus === "new_construction" ? "new_construction"
+        : p._focus === "remodel" || p._focus === "adu" || p._focus === "addition" ? p._focus : "hvac";
 
       let companyId: string | null = null, confidence: number | null = null, wasNew = false;
       if (contractorName) {
