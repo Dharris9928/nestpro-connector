@@ -38,7 +38,15 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) return json({ error: "Not signed in" }, 401);
 
-    const parsed = Body.safeParse(await req.json());
+    const raw = await req.json();
+    if (raw?.action === "usage") {
+      const r = await fetch(`${SHOVELS}/usage`, { headers: { "X-API-Key": apiKey } });
+      if (!r.ok) return json({ error: `Shovels error ${r.status}`, details: await r.text() }, r.status);
+      const u = await r.json();
+      return json({ used: u.credits_used ?? null, limit: u.credit_limit ?? null,
+        remaining: u.credit_limit != null ? u.credit_limit - (u.credits_used ?? 0) : null });
+    }
+    const parsed = Body.safeParse(raw);
     if (!parsed.success) return json({ error: parsed.error.flatten().fieldErrors }, 400);
     const { states, focus, minUnits, days, maxResults, statuses } = parsed.data;
 
@@ -88,14 +96,22 @@ Deno.serve(async (req) => {
     const have = new Set((existing ?? []).map((e: any) => e.external_id));
     const fresh = permits.filter((p) => !have.has(p.id));
 
-    // Fetch contractor details in one batch
-    const contractorIds = [...new Set(fresh.map((p) => p.contractor_id).filter(Boolean))];
+    // Contractor details: reuse ones we already pulled (free), only buy the rest
+    const allIds = [...new Set(fresh.map((p) => p.contractor_id).filter(Boolean))] as string[];
     const contractors = new Map<string, any>();
+    if (allIds.length) {
+      const { data: known } = await supabase.from("building_permits").select("raw_data")
+        .in("raw_data->contractor->>id", allIds).limit(500);
+      (known ?? []).forEach((k: any) => k.raw_data?.contractor && contractors.set(k.raw_data.contractor.id, k.raw_data.contractor));
+    }
+    const contractorIds = allIds.filter((id) => !contractors.has(id));
+    let contractorCreditsUsed = 0;
     for (let i = 0; i < contractorIds.length; i += 50) {
       const q = new URLSearchParams();
       contractorIds.slice(i, i + 50).forEach((id) => q.append("id", id));
       const r = await fetch(`${SHOVELS}/contractors?${q}`, { headers: { "X-API-Key": apiKey } });
-      if (r.ok) (await r.json()).items?.forEach((c: any) => contractors.set(c.id, c));
+      creditsRemaining = r.headers.get("x-credits-remaining") ?? creditsRemaining;
+      if (r.ok) (await r.json()).items?.forEach((c: any) => { contractors.set(c.id, c); contractorCreditsUsed++; });
       else console.error(`Shovels contractors failed [${r.status}]: ${await r.text()}`);
     }
 
