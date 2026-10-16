@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,28 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
       return data;
     }
   });
+
+  const { data: reps } = useQuery({
+    queryKey: ['sales-reps-territories'],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('sales_reps').select('first_name, covered_states').eq('active', true);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Map state -> rep firm names covering it; states with no active rep are "Grey states"
+  const coveredByState = useMemo(() => {
+    const map = new Map<string, string[]>();
+    reps?.forEach((r) => (r.covered_states ?? []).forEach((s: string) => {
+      map.set(s, [...(map.get(s) ?? []), r.first_name]);
+    }));
+    return map;
+  }, [reps]);
+  const hasCoverage = (reps?.length ?? 0) > 0;
+  const coveredStates = US_STATES.filter((s) => coveredByState.has(s));
+  const greyStates = US_STATES.filter((s) => !coveredByState.has(s));
 
   const { data: usage, refetch: refetchUsage } = useQuery({
     queryKey: ['shovels-usage'],
@@ -123,19 +145,46 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
                     <span>Up to 15 states</span>
                     <button className="underline" onClick={() => setStates([])}>Clear</button>
                   </div>
-                  <div className="grid grid-cols-4 gap-1 max-h-64 overflow-y-auto">
-                    {US_STATES.map((s) => {
+                  {(() => {
+                    const renderState = (s: string, isGrey: boolean) => {
                       const checked = states.includes(s);
                       const disabled = !checked && states.length >= 15;
+                      const repNames = coveredByState.get(s)?.join(", ");
                       return (
-                        <label key={s} className={`flex items-center gap-1.5 text-sm rounded px-1 py-1 hover:bg-muted ${disabled ? "opacity-40" : "cursor-pointer"}`}>
+                        <label key={s} title={repNames ? `Covered by ${repNames}` : "Grey state — no rep assigned"}
+                          className={`flex items-center gap-1.5 text-sm rounded px-1 py-1 hover:bg-muted ${disabled ? "opacity-40" : "cursor-pointer"} ${isGrey ? "text-muted-foreground" : ""}`}>
                           <Checkbox checked={checked} disabled={disabled}
                             onCheckedChange={(v) => v ? addStates([s]) : setStates(states.filter((x) => x !== s))} />
                           {s}
                         </label>
                       );
-                    })}
-                  </div>
+                    };
+                    return (
+                      <div className="max-h-64 overflow-y-auto pr-1">
+                        {hasCoverage && (
+                          <>
+                            <p className="text-xs font-medium pt-1 pb-1">Covered states <span className="font-normal text-muted-foreground">(rep territory)</span></p>
+                            <div className="grid grid-cols-4 gap-1">
+                              {coveredStates.map((s) => renderState(s, false))}
+                            </div>
+                            {greyStates.length > 0 && (
+                              <>
+                                <p className="text-xs font-medium text-muted-foreground pt-3 pb-1">Grey states <span className="font-normal">(no rep assigned)</span></p>
+                                <div className="grid grid-cols-4 gap-1">
+                                  {greyStates.map((s) => renderState(s, true))}
+                                </div>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {!hasCoverage && (
+                          <div className="grid grid-cols-4 gap-1">
+                            {US_STATES.map((s) => renderState(s, false))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </PopoverContent>
               </Popover>
               <Select value="" onValueChange={(v) => addStates(regions?.find((r) => r.region_name === v)?.states ?? [])}>
@@ -146,12 +195,17 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
               </Select>
             </div>
             <div className="flex flex-wrap gap-1">
-              {states.map((s) => (
-                <Badge key={s} variant="secondary" className="gap-1">
-                  {s}
-                  <button onClick={() => setStates(states.filter((x) => x !== s))} aria-label={`Remove ${s}`}><X className="h-3 w-3" /></button>
-                </Badge>
-              ))}
+              {states.map((s) => {
+                const isGrey = hasCoverage && !coveredByState.has(s);
+                return (
+                  <Badge key={s} variant={isGrey ? "outline" : "secondary"}
+                    className={`gap-1 ${isGrey ? "border-dashed text-muted-foreground" : ""}`}
+                    title={isGrey ? "Grey state — no rep assigned" : `Covered by ${coveredByState.get(s)?.join(", ")}`}>
+                    {s}
+                    <button onClick={() => setStates(states.filter((x) => x !== s))} aria-label={`Remove ${s}`}><X className="h-3 w-3" /></button>
+                  </Badge>
+                );
+              })}
             </div>
           </div>
 
