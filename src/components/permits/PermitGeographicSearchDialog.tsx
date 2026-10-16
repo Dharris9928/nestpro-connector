@@ -26,9 +26,12 @@ const US_STATES = [
 ];
 
 const FOCUS = [
-  { id: "new_construction", label: "New construction", hint: "New builds — searched by default" },
+  { id: "new_construction", label: "Residential new construction (RNC)", hint: "New builds — searched by default" },
   { id: "large_residential", label: "Large residential", hint: "Multi-family / big developments" },
   { id: "hvac", label: "HVAC / thermostat", hint: "Permits tagged HVAC" },
+  { id: "remodel", label: "Remodel", hint: "Renovations of existing homes" },
+  { id: "adu", label: "ADU", hint: "Accessory dwelling units (backyard homes, garage conversions)" },
+  { id: "addition", label: "Addition", hint: "Square footage added to an existing home" },
 ] as const;
 
 export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchComplete }: Props) => {
