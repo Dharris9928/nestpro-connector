@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { getPermitUnits, summarizePermitUnits } from "@/lib/permits/permitUnits";
 
 interface PermitStatsProps {
   permits: any[];
@@ -12,7 +13,7 @@ export const PermitStats = ({ permits }: PermitStatsProps) => {
       acc[state] = { state, count: 0, totalUnits: 0, totalValue: 0 };
     }
     acc[state].count += 1;
-    acc[state].totalUnits += permit.num_units || 0;
+    acc[state].totalUnits += getPermitUnits(permit).units;
     acc[state].totalValue += permit.estimated_value || 0;
     return acc;
   }, {});
@@ -41,7 +42,7 @@ export const PermitStats = ({ permits }: PermitStatsProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {permits.reduce((sum, p) => sum + (p.num_units || 0), 0).toLocaleString()}
+              {summarizePermitUnits(permits).units.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -67,7 +68,7 @@ export const PermitStats = ({ permits }: PermitStatsProps) => {
             <div className="text-2xl font-bold">
               {permits.length > 0
                 ? Math.round(
-                    permits.reduce((sum, p) => sum + (p.num_units || 0), 0) / permits.length
+                    summarizePermitUnits(permits).units / permits.length
                   )
                 : 0}{' '}
               units
