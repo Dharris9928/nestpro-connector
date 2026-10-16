@@ -195,12 +195,17 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
               </Select>
             </div>
             <div className="flex flex-wrap gap-1">
-              {states.map((s) => (
-                <Badge key={s} variant="secondary" className="gap-1">
-                  {s}
-                  <button onClick={() => setStates(states.filter((x) => x !== s))} aria-label={`Remove ${s}`}><X className="h-3 w-3" /></button>
-                </Badge>
-              ))}
+              {states.map((s) => {
+                const isGrey = hasCoverage && !coveredByState.has(s);
+                return (
+                  <Badge key={s} variant={isGrey ? "outline" : "secondary"}
+                    className={`gap-1 ${isGrey ? "border-dashed text-muted-foreground" : ""}`}
+                    title={isGrey ? "Grey state — no rep assigned" : `Covered by ${coveredByState.get(s)?.join(", ")}`}>
+                    {s}
+                    <button onClick={() => setStates(states.filter((x) => x !== s))} aria-label={`Remove ${s}`}><X className="h-3 w-3" /></button>
+                  </Badge>
+                );
+              })}
             </div>
           </div>
 
