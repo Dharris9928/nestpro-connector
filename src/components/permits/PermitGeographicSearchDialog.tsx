@@ -145,19 +145,46 @@ export const PermitGeographicSearchDialog = ({ open, onOpenChange, onSearchCompl
                     <span>Up to 15 states</span>
                     <button className="underline" onClick={() => setStates([])}>Clear</button>
                   </div>
-                  <div className="grid grid-cols-4 gap-1 max-h-64 overflow-y-auto">
-                    {US_STATES.map((s) => {
+                  {(() => {
+                    const renderState = (s: string, isGrey: boolean) => {
                       const checked = states.includes(s);
                       const disabled = !checked && states.length >= 15;
+                      const repNames = coveredByState.get(s)?.join(", ");
                       return (
-                        <label key={s} className={`flex items-center gap-1.5 text-sm rounded px-1 py-1 hover:bg-muted ${disabled ? "opacity-40" : "cursor-pointer"}`}>
+                        <label key={s} title={repNames ? `Covered by ${repNames}` : "Grey state — no rep assigned"}
+                          className={`flex items-center gap-1.5 text-sm rounded px-1 py-1 hover:bg-muted ${disabled ? "opacity-40" : "cursor-pointer"} ${isGrey ? "text-muted-foreground" : ""}`}>
                           <Checkbox checked={checked} disabled={disabled}
                             onCheckedChange={(v) => v ? addStates([s]) : setStates(states.filter((x) => x !== s))} />
                           {s}
                         </label>
                       );
-                    })}
-                  </div>
+                    };
+                    return (
+                      <div className="max-h-64 overflow-y-auto pr-1">
+                        {hasCoverage && (
+                          <>
+                            <p className="text-xs font-medium pt-1 pb-1">Covered states <span className="font-normal text-muted-foreground">(rep territory)</span></p>
+                            <div className="grid grid-cols-4 gap-1">
+                              {coveredStates.map((s) => renderState(s, false))}
+                            </div>
+                            {greyStates.length > 0 && (
+                              <>
+                                <p className="text-xs font-medium text-muted-foreground pt-3 pb-1">Grey states <span className="font-normal">(no rep assigned)</span></p>
+                                <div className="grid grid-cols-4 gap-1">
+                                  {greyStates.map((s) => renderState(s, true))}
+                                </div>
+                              </>
+                            )}
+                          </>
+                        )}
+                        {!hasCoverage && (
+                          <div className="grid grid-cols-4 gap-1">
+                            {US_STATES.map((s) => renderState(s, false))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </PopoverContent>
               </Popover>
               <Select value="" onValueChange={(v) => addStates(regions?.find((r) => r.region_name === v)?.states ?? [])}>
